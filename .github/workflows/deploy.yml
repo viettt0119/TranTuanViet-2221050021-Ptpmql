@@ -28,6 +28,10 @@ jobs:
         run: |
           echo "<html><body><h1>Updating...</h1></body></html>" > app_offline.htm
           curl -s --ftp-pasv -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -T app_offline.htm "ftp://${{ secrets.FTP_SERVER }}/wwwroot/app_offline.htm"
+      # Thêm bước chờ máy chủ giải thoát các tập tin khoá 
+
+      - name: ⏳ Wait for server to release file locks
+        run: sleep 15
 
       # 4. DEPLOY CODE: Chỉ gọi FTP Action 1 lần duy nhất ở đây
       - name: 🚀 Deploy App
