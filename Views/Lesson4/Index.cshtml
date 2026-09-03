@@ -1,0 +1,16 @@
+<h1>Ôn tập lại nội dung buổi 4 </h1>
+- Định tuyến - routing : quyết định cách một URL (đường dẫn web) trỏ đến Controller và Action nào. <br />
+- Cú pháp mặc định trong ASP.NET MVC là: {controller}/{action}/{id?} <br />
+- {controller}: Tên của Controller (nếu bỏ trống trên URL, mặc định là Home).<br />
+
+-   {action}: Tên của phương thức bên trong Controller (mặc định là Index). <br />
+
+- {id?}: Tham số phụ truyền vào (dấu ? nghĩa là không bắt buộc).<br />
+<br />
+<h2>Student View index: @ViewBag.ThongBao</h2>
+<form asp-action="Index" method="post">
+    <input type="text" name="FullName" placeholder="Nhập họ tên của bạn" />
+    <input type="text" name="Address" placeholder="Nhập địa chỉ của bạn" />
+    <input type="text" name="University" placeholder="Nhập tên trường của bạn" />
+    <button type="submit">Gửi dữ liệu</button>
+</form>
