@@ -16,3 +16,6 @@
 - Trong đó namespace Tên dự án.Controller,
 - public class Tênfile + Controller :Controller
 - Muốn hiển thị thông tin thì tạo thư mục trong Vỉew trùng tên với tên Controller vừa tạo, Các action hiển thị dưới dạng file .cshtml
+### lec 4 
+- Ôn tập về định tuyến , cơ bản cấu trúc 
+- Học về viewbag, viewdata, gửi nhận dữ liệu qua model - controller - view
