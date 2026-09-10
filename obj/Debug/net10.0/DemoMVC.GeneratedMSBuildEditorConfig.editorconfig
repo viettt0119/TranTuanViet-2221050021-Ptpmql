@@ -31,6 +31,14 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
 build_metadata.AdditionalFiles.CssScope = 
 
+[D:/tmp/DemoMVC/Views/Lec5/Create.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVjNVxDcmVhdGUuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/tmp/DemoMVC/Views/Lec5/Index.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVjNVxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
 [D:/tmp/DemoMVC/Views/Lesson4/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVzc29uNFxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
