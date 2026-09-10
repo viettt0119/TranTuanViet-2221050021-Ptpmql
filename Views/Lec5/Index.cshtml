@@ -1,0 +1,52 @@
+@model List<Lec5Model>
+
+<h2>@ViewBag.Title</h2>
+
+<p><strong>ViewData:</strong> @ViewData["DemoViewData"]</p>
+<p><strong>ViewBag:</strong> @ViewBag.DemoViewBag</p>
+
+
+<p>Đây là danh sách người dùng của bạn...</p>
+
+<table border="1" cellpadding="10" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+    <thead>
+        <tr>
+            <th>STT</th>
+            <th>Tên đăng nhập</th>
+            <th>Quyền truy cập</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model == null || Model.Count == 0)
+        {
+            <tr>
+                <td colspan="3" style="text-align: center;">Chưa có người dùng nào.</td>
+            </tr>
+        }
+        else
+        {
+            var stt = 1;
+            foreach (var user in Model)
+            {
+                <tr>
+                    <td>@stt</td>
+                    <td>@user.Username</td>
+                    <td>@user.Role</td>
+                </tr>
+                stt++;
+            }
+        }
+    </tbody>
+</table>
+
+ @if (TempData["AlertMessage"] != null)
+{
+    <div style="color:green;">@TempData["AlertMessage"]</div>
+}
+
+<br />
+<a href="/Lec5/Create">Thêm người dùng mới</a>
+<br />
+
+<p> 
+     </p>
