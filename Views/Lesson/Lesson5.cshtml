@@ -1,0 +1,224 @@
+@{
+    ViewData["Title"] = "Hướng Dẫn Tích Hợp Bootstrap 5 Trong ASP.NET Core MVC";
+}
+
+<!-- 1. HERO BANNER -->
+<section class="hero-banner-bs5 mb-5 text-center text-lg-start shadow">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <span class="badge bg-warning text-dark mb-2 px-3 py-2 fs-6">UI Framework</span>
+            <h1 class="display-4 fw-bold text-white mb-3">Tích Hợp Bootstrap 5</h1>
+            <p class="lead text-white-50 mb-4">
+                Tối ưu hóa giao diện ứng dụng ASP.NET Core MVC với framework CSS phổ biến nhất thế giới.
+                Hướng dẫn từ cài đặt cục bộ qua LibMan, tích hợp CDN đến nhúng vào <code>_Layout.cshtml</code>.
+            </p>
+            <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
+                <a href="#install-methods" class="btn btn-warning btn-lg fw-semibold">Cách Cài Đặt</a>
+                <a href="#layout-integration" class="btn btn-outline-light btn-lg">Tích Hợp Layout</a>
+            </div>
+        </div>
+        <div class="col-lg-4 text-center mt-4 mt-lg-0">
+            <div class="display-1 fw-bold text-white opacity-75">
+                B5
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. PHƯƠNG PHÁP CÀI ĐẶT -->
+<section id="install-methods" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Các Phương Pháp Tích Hợp Bootstrap 5</h2>
+        <p class="text-muted">Lựa chọn giải pháp phù hợp với mô hình triển khai của dự án</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Cách 1: LibMan -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-primary text-white p-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Cách 1: Cài Cục Bộ Qua LibMan</h5>
+                    <span class="badge bg-light text-primary">Khuyên Dùng</span>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted">
+                        Library Manager (LibMan) giúp tải và quản lý thư viện client trực tiếp vào thư mục
+                        <code>wwwroot/lib</code> trong Visual Studio mà không cần Node.js/NPM.
+                    </p>
+                    <ol class="small text-muted mb-3 ps-3">
+                        <li class="mb-1">Click chuột phải vào Project &#10142; chọn <strong>Add</strong> &#10142;
+                            <strong>Client-Side Library...</strong>
+                        </li>
+                        <li class="mb-1">Provider chọn <strong>cdnjs</strong> hoặc <strong>unpkg</strong>.</li>
+                        <li class="mb-1">Nhập Library: <code>bootstrap@5.3.3</code> (hoặc phiên bản mới nhất).</li>
+                        <li>Bấm <strong>Install</strong> để hoàn tất.</li>
+                    </ol>
+                    <div class="code-block">
+                        <div class="text-secondary small mb-1">// libman.json cấu hình tự động</div>
+                        <pre class="m-0"><code class="text-light">{
+                            <span class="text-danger">"provider"</span>: <span class="text-warning">"cdnjs"</span>,
+                            <span class="text-danger">"library"</span>: <span class="text-warning">"bootstrap@5.3.3"</span>,
+                            <span class="text-danger">"destination"</span>: <span class="text-warning">"wwwroot/lib/bootstrap/"</span>
+                            }</code>
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cách 2: CDN -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-dark text-white p-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0">Cách 2: Sử Dụng CDN Trực Tiếp</h5>
+                    <span class="badge bg-secondary">Nhanh Gọn</span>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted">
+                        Thích hợp cho thử nghiệm nhanh hoặc ứng dụng nhỏ. Nhúng trực tiếp đường dẫn CDN từ jsDelivr vào
+                        thẻ <code>&lt;head&gt;</code> và trước khi đóng <code>&lt;/body&gt;</code>.
+                    </p>
+                    <div class="code-block mb-3">
+                        <div class="text-secondary small mb-1">&lt;!-- CSS Bootstrap 5 --&gt;</div>
+                        <pre class="m-0">
+                            <code class="text-light">&lt;<span class="text-warning">link</span> <span class="text-info">rel</span>=<span class="text-danger">"stylesheet"</span> 
+                            <span class="text-info">href</span>=<span class="text-danger">"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"</span>&gt;</code>
+                        </pre>
+                    </div>
+                    <div class="code-block">
+                        <div class="text-secondary small mb-1">&lt;!-- JS Bundle (Bao gồm Popper.js) --&gt;</div>
+                        <pre class="m-0"><code class="text-light">
+                            &lt;<span class="text-warning">script</span> <span class="text-info">src</span>=<span class="text-danger">"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"</span>&gt;&lt;/<span class="text-warning">script</span>&gt;</code>
+                        </pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. TÍCH HỢP VÀO _LAYOUT.CSHTML -->
+<section id="layout-integration" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Tích Hợp Vào Cấu Trúc _Layout.cshtml</h2>
+        <p class="text-muted">Đảm bảo toàn bộ View trong ứng dụng đều kế thừa Bootstrap 5</p>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header p-3 text-white" style="background-color: #7952b3;">
+            <h5 class="fw-bold mb-0">&#128196; Views/Shared/_Layout.cshtml</h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="code-block">
+                <pre class="m-0"><code class="text-light">&lt;!<span class="text-warning">DOCTYPE</span> <span class="text-info">html</span>&gt;
+                    &lt;<span class="text-warning">html</span> <span class="text-info">lang</span>=<span class="text-danger">"vi"</span>&gt;
+                    &lt;<span class="text-warning">head</span>&gt;
+                        &lt;<span class="text-warning">meta</span> <span class="text-info">charset</span>=<span class="text-danger">"utf-8"</span> /&gt;
+                        &lt;<span class="text-warning">meta</span> <span class="text-info">name</span>=<span class="text-danger">"viewport"</span> <span class="text-info">content</span>=<span class="text-danger">"width=device-width, initial-scale=1.0"</span> /&gt;
+                        &lt;<span class="text-warning">title</span>&gt;@ViewData["Title"] - MyWebApp&lt;/<span class="text-warning">title</span>&gt;
+
+                        <span class="text-secondary">&lt;!-- 1. Bootstrap 5 CSS --&gt;</span>
+                        &lt;<span class="text-warning">link</span> <span class="text-info">rel</span>=<span class="text-danger">"stylesheet"</span> <span class="text-info">href</span>=<span class="text-danger">"~/lib/bootstrap/dist/css/bootstrap.min.css"</span> /&gt;
+                        <span class="text-secondary">&lt;!-- 2. Custom CSS của dự án --&gt;</span>
+                        &lt;<span class="text-warning">link</span> <span class="text-info">rel</span>=<span class="text-danger">"stylesheet"</span> <span class="text-info">href</span>=<span class="text-danger">"~/css/site.css"</span> <span class="text-info">asp-append-version</span>=<span class="text-danger">"true"</span> /&gt;
+                    &lt;/<span class="text-warning">head</span>&gt;
+                    &lt;<span class="text-warning">body</span>&gt;
+                        &lt;<span class="text-warning">header</span>&gt;
+                            <span class="text-secondary">&lt;!-- Navbar Bootstrap --&gt;</span>
+                            &lt;<span class="text-warning">nav</span> <span class="text-info">class</span>=<span class="text-danger">"navbar navbar-expand-sm navbar-dark bg-dark"</span>&gt;
+                                &lt;<span class="text-warning">div</span> <span class="text-info">class</span>=<span class="text-danger">"container"</span>&gt;
+                                    &lt;<span class="text-warning">a</span> <span class="text-info">class</span>=<span class="text-danger">"navbar-brand"</span> <span class="text-info">asp-controller</span>=<span class="text-danger">"Home"</span> <span class="text-info">asp-action</span>=<span class="text-danger">"Index"</span>&gt;MyWebApp&lt;/<span class="text-warning">a</span>&gt;
+                                &lt;/<span class="text-warning">div</span>&gt;
+                            &lt;/<span class="text-warning">nav</span>&gt;
+                        &lt;/<span class="text-warning">header</span>&gt;
+
+                        &lt;<span class="text-warning">main</span> <span class="text-info">class</span>=<span class="text-danger">"container my-4"</span>&gt;
+                            @@RenderBody()
+                        &lt;/<span class="text-warning">main</span>&gt;
+
+                        &lt;<span class="text-warning">footer</span> <span class="text-info">class</span>=<span class="text-danger">"border-top footer text-muted py-3 bg-light"</span>&gt;
+                            &lt;<span class="text-warning">div</span> <span class="text-info">class</span>=<span class="text-danger">"container text-center"</span>&gt;
+                                &amp;copy; @@DateTime.Now.Year - MyWebApp
+                            &lt;/<span class="text-warning">div</span>&gt;
+                        &lt;/<span class="text-warning">footer</span>&gt;
+
+                        <span class="text-secondary">&lt;!-- Bootstrap 5 JavaScript Bundle (đã gồm Popper.js) --&gt;</span>
+                        &lt;<span class="text-warning">script</span> <span class="text-info">src</span>=<span class="text-danger">"~/lib/bootstrap/dist/js/bootstrap.bundle.min.css"</span>&gt;&lt;/<span class="text-warning">script</span>&gt;
+                        @@await RenderSectionAsync("Scripts", required: false)
+                    &lt;/<span class="text-warning">body</span>&gt;
+                    &lt;/<span class="text-warning">html</span>&gt;</code>
+                </pre>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. QUY TRÌNH KIỂM TRA TÍCH HỢP -->
+<section class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Các Bước Kiểm Tra Tích Hợp Thành Công</h2>
+        <p class="text-muted">Đảm bảo cả CSS và JavaScript Components của Bootstrap 5 đều hoạt động</p>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="p-3 bg-white rounded shadow-sm border h-100 d-flex gap-3 align-items-start">
+                <span class="step-number flex-shrink-0">1</span>
+                <div>
+                    <h6 class="fw-bold text-dark mb-1">Kiểm Tra CSS Grid</h6>
+                    <small class="text-muted">Thêm lớp <code>.row</code> và <code>.col-md-6</code> vào View để xem lưới
+                        responsive có chia cột chính xác không.</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded shadow-sm border h-100 d-flex gap-3 align-items-start">
+                    <span class="step-number flex-shrink-0">2</span>
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">Test JS Components</h6>
+                        <small class="text-muted">Thêm một <strong>Modal</strong> hoặc <strong>Dropdown</strong> để xác nhận
+                            file <code>bootstrap.bundle.min.js</code> được tải đúng.</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-white rounded shadow-sm border h-100 d-flex gap-3 align-items-start">
+                        <span class="step-number flex-shrink-0">3</span>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-1">Kiểm Tra Console</h6>
+                            <small class="text-muted">Mở F12 (Developer Tools) trong trình duyệt để chắc chắn không có lỗi 404
+                                missing file CSS/JS.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. TÍNH NĂNG MỚI NỔI BẬT CỦA BOOTSTRAP 5 -->
+<section class="mb-5 p-4 bg-body-tertiary rounded-3 border">
+    <h3 class="fw-bold text-primary mb-3">Những Điểm Cần Lưu Ý Ở Bootstrap 5</h3>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="p-3 bg-white rounded border h-100">
+                <span class="badge feature-badge mb-2">Loại Bỏ jQuery</span>
+                <h6 class="fw-bold text-dark">Thuần JavaScript (Vanilla JS)</h6>
+                <p class="small text-muted mb-0">Bootstrap 5 không còn phụ thuộc vào jQuery, giúp giảm dung lượng tải
+                    trang và tăng hiệu năng ứng dụng MVC đáng kể.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 bg-white rounded border h-100">
+                    <span class="badge feature-badge mb-2">Cú Pháp Attribute Mới</span>
+                    <h6 class="fw-bold text-dark">Sử Dụng Tiền Tố <code>data-bs-*</code></h6>
+                    <p class="small text-muted mb-0">Các thuộc tính data HTML đã chuyển sang chuẩn mới: dùng
+                        <code>data-bs-toggle</code>, <code>data-bs-target</code>, <code>data-bs-dismiss</code> thay cho cú
+                        pháp v4.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

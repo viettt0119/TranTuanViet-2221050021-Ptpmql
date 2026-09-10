@@ -1,0 +1,162 @@
+/* Custom style nhẹ trang trí cho trang Index */
+.hero-banner {
+    background: linear-gradient(135deg, #512bd4 0%, #17072b 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+}
+
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.code-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.folder-tree {
+    background-color: #f8f9fa;
+    border-left: 3px solid #512bd4;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+/* Custom style trang trí cho trang Routing */
+.hero-banner-routing {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a2540 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+}
+
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.code-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.routing-flow {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+}
+
+/* Custom style trang trí cho trang Data Transfer */
+.hero-banner-data {
+    background: linear-gradient(135deg, #0d9488 0%, #0f172a 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+}
+
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.code-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.data-flow-box {
+    background-color: #f0fdf4;
+    border-left: 4px solid #10b981;
+}
+/* Custom style cho trang State Management */
+.hero-banner-state {
+    background: linear-gradient(135deg, #6f42c1 0%, #1e1035 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+}
+
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.code-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.lifespan-box {
+    background-color: #f8f5ff;
+    border-left: 4px solid #6f42c1;
+}
+/* Custom styles cho bài hướng dẫn Bootstrap 5 */
+.hero-banner-bs5 {
+    background: linear-gradient(135deg, #7952b3 0%, #2b1154 100%);
+    color: white;
+    border-radius: 1rem;
+    padding: 3rem 2rem;
+}
+
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.code-block {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.875rem;
+}
+
+.step-number {
+    width: 38px;
+    height: 38px;
+    background-color: #7952b3;
+    color: white;
+    font-weight: bold;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feature-badge {
+    background-color: #f3eefb;
+    color: #7952b3;
+    border: 1px solid #d8c2f8;
+}

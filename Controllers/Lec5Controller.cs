@@ -36,7 +36,7 @@ public class Lec5Controller : Controller
     public IActionResult Index()
     {
         ViewBag.Title = "Index Page";
-        ViewBag.DemoViewBag = "Dữ liệu này được truyền bằng ViewBag trên trang Index.";
+        ViewBag.DemoViewBag = "Dữ liệu này được truyền bằng ViewBag .";
         ViewData["DemoViewData"] = "Dữ liệu này được truyền bằng ViewData trên trang Index.";
 
         return View(Users);
