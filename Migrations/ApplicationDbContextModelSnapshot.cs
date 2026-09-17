@@ -29,9 +29,6 @@ namespace DemoMVC.Migrations
                     b.Property<DateTime>("HireDate")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("TEXT");
-
                     b.HasKey("EmpId");
 
                     b.ToTable("Employees");
