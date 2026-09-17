@@ -160,3 +160,27 @@
     color: #7952b3;
     border: 1px solid #d8c2f8;
 }
+
+#toc {
+        position: static !important;
+    }
+
+
+.code-block {
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.code-block pre {
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.code-block code {
+    font-family:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        Menlo,
+        monospace;
+}

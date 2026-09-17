@@ -1,0 +1,71 @@
+<section id="step6" class="mb-5" aria-labelledby="step6-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step6-title" class="fw-bold text-primary mb-1">
+            Bước 6: Tạo Migration Đầu Tiên
+        </h2>
+
+        <p class="text-body-secondary mb-0">
+            Tạo phiên bản mã nguồn quản lý việc thay đổi cấu trúc CSDL.
+        </p>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- .NET CLI -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white fw-bold py-3">
+                    <i class="bi bi-terminal me-2" aria-hidden="true"></i>
+                    Sử dụng .NET CLI
+                </div>
+
+                <div class="card-body bg-dark text-light rounded-bottom">
+                    <p class="small text-body-secondary mb-3">
+                        Chạy trên Terminal hoặc Command Prompt
+                        tại thư mục dự án:
+                    </p>
+
+                    <div class="code-block overflow-auto">
+                        <pre class="m-0"><code class="text-info">dotnet ef migrations add InitialCreate</code></pre>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- Package Manager Console -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-dark text-white fw-bold py-3">
+                    <i class="bi bi-window-sidebar me-2" aria-hidden="true"></i>
+                    Package Manager Console (PMC)
+                </div>
+
+                <div class="card-body bg-dark text-light rounded-bottom">
+                    <p class="small text-body-secondary mb-3">
+                        Chạy trong cửa sổ Package Manager Console
+                        của Visual Studio:
+                    </p>
+
+                    <div class="code-block overflow-auto">
+                        <pre class="m-0"><code class="text-warning">Add-Migration InitialCreate</code></pre>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+    </div>
+
+    <!-- Warning -->
+    <div class="alert alert-warning d-flex align-items-start gap-3 mt-4 shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5 flex-shrink-0" aria-hidden="true"></i>
+
+        <div>
+            <strong>Chú ý:</strong>
+            Nếu hệ thống chưa nhận lệnh <code>dotnet ef</code>,
+            hãy cài đặt công cụ EF Core CLI bằng lệnh:
+            <div class="mt-2">
+                <code>dotnet tool install --global dotnet-ef</code>
+            </div>
+        </div>
+    </div>
+</section>

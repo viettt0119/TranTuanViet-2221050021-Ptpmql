@@ -1,0 +1,77 @@
+<section id="step7" class="mb-5" aria-labelledby="step7-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step7-title" class="fw-bold text-primary mb-1">
+            Bước 7: Cập Nhật CSDL (Update Database)
+        </h2>
+        <p class="text-body-secondary mb-0">
+            Thực thi Migration để tạo và cập nhật các bảng dữ liệu
+            trong Database.
+        </p>
+    </div>
+
+    <div class="row g-4 mb-4">
+
+        <!-- .NET CLI -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-secondary text-white fw-bold py-3">
+                    <i class="bi bi-terminal me-2" aria-hidden="true"></i>
+                    Sử dụng .NET CLI
+                </div>
+
+                <div class="card-body bg-dark text-light rounded-bottom">
+                    <p class="small text-body-secondary mb-3">
+                        Chạy trên Terminal tại thư mục dự án:
+                    </p>
+
+                    <div class="code-block overflow-auto">
+                        <pre class="m-0"><code class="text-info">dotnet ef database update</code></pre>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+        <!-- Package Manager Console -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-0 shadow-sm">
+                <div class="card-header bg-dark text-white fw-bold py-3">
+                    <i class="bi bi-window-sidebar me-2" aria-hidden="true"></i>
+                    Package Manager Console (PMC)
+                </div>
+
+                <div class="card-body bg-dark text-light rounded-bottom">
+                    <p class="small text-body-secondary mb-3">
+                        Chạy trong cửa sổ Package Manager Console
+                        của Visual Studio:
+                    </p>
+
+                    <div class="code-block overflow-auto">
+                        <pre class="m-0"><code class="text-warning">Update-Database</code></pre>
+                    </div>
+                </div>
+            </article>
+        </div>
+
+    </div>
+
+    <!-- Completion -->
+    <div class="card border-success shadow-sm">
+        <div class="card-body text-center py-4">
+
+            <div class="text-success display-5 mb-3">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+            </div>
+
+            <h4 class="fw-bold text-success mb-2">
+                Cấu Hình Hoàn Tất!
+            </h4>
+
+            <p class="text-body-secondary col-12 col-md-8 mx-auto mb-0">
+                Chúc mừng bạn đã hoàn thành việc kết nối cơ sở dữ liệu
+                và tạo bảng <code>Students</code> bằng Entity Framework Core
+                trong ứng dụng ASP.NET Core MVC .NET 10.
+            </p>
+
+        </div>
+    </div>
+</section>

@@ -1,0 +1,111 @@
+<section id="step1" class="mb-5" aria-labelledby="step1-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step1-title" class="fw-bold text-primary mb-1">
+            Bước 1: Cài Đặt Các Gói EF Core NuGet
+        </h2>
+        <p class="text-body-secondary mb-0">
+            Lựa chọn và cài đặt Provider phù hợp cho SQL Server hoặc SQLite
+            trong .NET 10 CLI.
+        </p>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- SQL Server -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-0 shadow-sm">
+                <header class="card-header bg-primary text-white fw-bold py-3">
+                    <i class="bi bi-database-fill me-2" aria-hidden="true"></i>
+                    Cài đặt cho SQL Server
+                </header>
+                <div class="card-body d-flex flex-column">
+
+                    <p class="card-text text-body-secondary small">
+                        Phù hợp cho các hệ thống doanh nghiệp,
+                        cơ sở dữ liệu quy mô lớn và các ứng dụng
+                        yêu cầu khả năng quản lý dữ liệu mạnh mẽ.
+                    </p>
+
+                    <!-- Command -->
+                    <div class="code-block bg-dark rounded-3 p-3 mb-3 overflow-auto">
+                        <pre class="m-0"><code class="text-light"><span class="text-info">dotnet add package</span> Microsoft.EntityFrameworkCore.SqlServer
+                        
+<span class="text-info">dotnet add package</span> Microsoft.EntityFrameworkCore.Tools</code></pre>
+                    </div>
+                    <!-- Description -->
+                    <ul class="list-unstyled small mb-0">
+                        <li class="d-flex align-items-start gap-2 mb-2">
+                            <i class="bi bi-check-circle-fill text-success mt-1" aria-hidden="true"></i>
+
+                            <span>
+                                <strong>SqlServer:</strong>
+                                Database Provider dành cho Microsoft SQL Server.
+                            </span>
+                        </li>
+
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-success mt-1" aria-hidden="true"></i>
+
+                            <span>
+                                <strong>Tools:</strong>
+                                Cung cấp các công cụ hỗ trợ quản lý
+                                Entity Framework Core trong Visual Studio.
+                            </span>
+                        </li>
+                    </ul>
+
+                </div>
+            </article>
+        </div>
+
+        <!-- SQLite -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-0 shadow-sm">
+
+                <header class="card-header bg-success text-white fw-bold py-3">
+                    <i class="bi bi-file-earmark-code-fill me-2" aria-hidden="true"></i>
+                    Cài đặt cho SQLite
+                </header>
+
+                <div class="card-body d-flex flex-column">
+
+                    <p class="card-text text-body-secondary small">
+                        Phù hợp cho môi trường phát triển,
+                        thử nghiệm, ứng dụng nhỏ hoặc các ứng dụng
+                        sử dụng cơ sở dữ liệu local.
+                    </p>
+
+                    <!-- Command -->
+                    <div class="code-block bg-dark rounded-3 p-3 mb-3 overflow-auto">
+                        <pre class="m-0"><code class="text-light"><span class="text-info">dotnet add package</span> Microsoft.EntityFrameworkCore.Sqlite
+
+<span class="text-info">dotnet add package</span> Microsoft.EntityFrameworkCore.Tools</code></pre>
+                    </div>
+
+                    ```
+                    <!-- Description -->
+                    <ul class="list-unstyled small mb-0">
+                        <li class="d-flex align-items-start gap-2 mb-2">
+                            <i class="bi bi-check-circle-fill text-success mt-1" aria-hidden="true"></i>
+
+                            <span>
+                                <strong>Sqlite:</strong>
+                                Database Provider dành cho SQLite.
+                            </span>
+                        </li>
+
+                        <li class="d-flex align-items-start gap-2">
+                            <i class="bi bi-check-circle-fill text-success mt-1" aria-hidden="true"></i>
+
+                            <span>
+                                <strong>Tools:</strong>
+                                Hỗ trợ các công cụ làm việc với
+                                Entity Framework Core.
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
