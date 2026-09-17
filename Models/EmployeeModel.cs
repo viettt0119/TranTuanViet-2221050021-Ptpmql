@@ -8,7 +8,6 @@ namespace DemoMVC.Models
         public string EmpId { get; set; } = default!;
         public string FullName { get; set; } = default!;
 
-         public string? PhoneNumber { get; set; }      
         public DateTime HireDate { get; set; } = DateTime.Now; 
     }
 }
