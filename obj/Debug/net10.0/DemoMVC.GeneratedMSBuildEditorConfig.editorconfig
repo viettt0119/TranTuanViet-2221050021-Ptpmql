@@ -27,10 +27,6 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxJbmRleC5jc2h0bWw=
 build_metadata.AdditionalFiles.CssScope = 
 
-[D:/tmp/DemoMVC/Views/Home/Privacy.cshtml]
-build_metadata.AdditionalFiles.TargetPath = Vmlld3NcSG9tZVxQcml2YWN5LmNzaHRtbA==
-build_metadata.AdditionalFiles.CssScope = 
-
 [D:/tmp/DemoMVC/Views/Lec5/Create.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVjNVxDcmVhdGUuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
@@ -41,6 +37,22 @@ build_metadata.AdditionalFiles.CssScope =
 
 [D:/tmp/DemoMVC/Views/Lesson4/Index.cshtml]
 build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVzc29uNFxJbmRleC5jc2h0bWw=
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/tmp/DemoMVC/Views/Lesson/Lesson1.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVzc29uXExlc3NvbjEuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/tmp/DemoMVC/Views/Lesson/Lesson2.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVzc29uXExlc3NvbjIuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/tmp/DemoMVC/Views/Lesson/Lesson3.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVzc29uXExlc3NvbjMuY3NodG1s
+build_metadata.AdditionalFiles.CssScope = 
+
+[D:/tmp/DemoMVC/Views/Lesson/Lesson4.cshtml]
+build_metadata.AdditionalFiles.TargetPath = Vmlld3NcTGVzc29uXExlc3NvbjQuY3NodG1s
 build_metadata.AdditionalFiles.CssScope = 
 
 [D:/tmp/DemoMVC/Views/Lesson/Lesson5.cshtml]

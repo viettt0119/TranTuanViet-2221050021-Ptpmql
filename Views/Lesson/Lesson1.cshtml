@@ -1,0 +1,307 @@
+@{
+    ViewData["Title"] = "Tổng Quan Kiến Trúc .NET MVC";
+}
+
+<style>
+    /* Custom style nhẹ trang trí cho trang Index */
+    .hero-banner {
+        background: linear-gradient(135deg, #512bd4 0%, #17072b 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 3rem 2rem;
+    }
+
+    .card-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .code-block {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .folder-tree {
+        background-color: #f8f9fa;
+        border-left: 3px solid #512bd4;
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+</style>
+
+<!-- 1. HERO BANNER -->
+<section class="hero-banner mb-5 text-center text-lg-start shadow">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <span class="badge bg-warning text-dark mb-2 px-3 py-2 fs-6">Kiến Thức Cốt Lõi</span>
+            <h1 class="display-4 fw-bold text-white mb-3">Kiến Trúc ASP.NET MVC</h1>
+            <p class="lead text-white-50 mb-4">
+                Mô hình thiết kế giúp phân tách ứng dụng web thành 3 phần độc lập:
+                <strong class="text-white">Model</strong>, <strong class="text-white">View</strong>, và <strong
+                class="text-white">Controller</strong>.
+                Giúp mã nguồn dễ bảo trì, dễ mở rộng và tối ưu hóa quy trình phát triển.
+            </p>
+            <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
+                <a href="#mvc-architecture" class="btn btn-warning btn-lg fw-semibold">Tìm hiểu 3 tầng</a>
+                <a href="#folder-structure" class="btn btn-outline-light btn-lg">Cấu trúc thư mục</a>
+            </div>
+        </div>
+        <div class="col-lg-4 text-center mt-4 mt-lg-0">
+            <div class="display-1 text-warning opacity-75">
+                &#128187;
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. MÔ HÌNH 3 TẦNG (MODEL - VIEW - CONTROLLER) -->
+<section id="mvc-architecture" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Ba Thành Phần Cốt Lõi (Separation of Concerns)</h2>
+        <p class="text-muted">Mỗi thành phần đảm nhận một nhiệm vụ riêng biệt trong luồng xử lý dữ liệu</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Model -->
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm card-hover bg-light">
+                <div class="card-body p-4 text-center">
+                    <div class="badge bg-primary fs-3 p-3 mb-3 rounded-circle">M</div>
+                    <h4 class="card-title fw-bold text-primary">Model</h4>
+                    <p class="card-text text-muted">
+                        Chứa logic nghiệp vụ (Business Logic) và quản lý trạng thái dữ liệu của ứng dụng.
+                        Model trực tiếp tương tác với CSDL qua ORM như Entity Framework Core hay Dapper.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- View -->
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm card-hover bg-light">
+                <div class="card-body p-4 text-center">
+                    <div class="badge bg-success fs-3 p-3 mb-3 rounded-circle">V</div>
+                    <h4 class="card-title fw-bold text-success">View</h4>
+                    <p class="card-text text-muted">
+                        Chịu trách nhiệm về giao diện người dùng (UI). View render dữ liệu nhận được từ Controller thành
+                        mã HTML5, CSS3 và JavaScript để hiển thị trên trình duyệt.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controller -->
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm card-hover bg-light">
+                <div class="card-body p-4 text-center">
+                    <div class="badge bg-warning text-dark fs-3 p-3 mb-3 rounded-circle">C</div>
+                    <h4 class="card-title fw-bold text-warning">Controller</h4>
+                    <p class="card-text text-muted">
+                        Bộ điều hướng xử lý HTTP Request từ client. Nó truy xuất dữ liệu từ Model, xử lý logic tương
+                        ứng, rồi chọn và trả về View thích hợp cho người dùng.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. CẤU TRÚC THƯ MỤC DỰ ÁN (.NET MVC FOLDER STRUCTURE) -->
+<section id="folder-structure" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Cấu Trúc Thư Mục Dự Án Standard</h2>
+        <p class="text-muted">Tổ chức các tệp tin theo đúng chuẩn convention trong ASP.NET MVC</p>
+    </div>
+
+    <div class="row g-4 align-items-center">
+        <!-- Cây thư mục minh họa -->
+        <div class="col-lg-5">
+            <div class="folder-tree p-3 rounded shadow-sm">
+                <div class="fw-bold text-dark mb-2">&#128193; MyMvcProject/</div>
+                <div class="ps-3 text-secondary">&#128193; Controllers/</div>
+                <div class="ps-4 text-muted">&#128196; HomeController.cs</div>
+                <div class="ps-4 text-muted">&#128196; ProductController.cs</div>
+                <div class="ps-3 text-secondary">&#128193; Models/</div>
+                <div class="ps-4 text-muted">&#128196; Product.cs</div>
+                <div class="ps-4 text-muted">&#128196; ErrorViewModel.cs</div>
+                <div class="ps-3 text-secondary">&#128193; Views/</div>
+                <div class="ps-4 text-muted">&#128193; Home/</div>
+                <div class="ps-5 text-dark fw-bold">&#128196; Index.cshtml</div>
+                <div class="ps-4 text-muted">&#128193; Shared/</div>
+                <div class="ps-5 text-muted">&#128196; _Layout.cshtml</div>
+                <div class="ps-5 text-muted">&#128196; _ViewStart.cshtml</div>
+                <div class="ps-3 text-secondary">&#128193; wwwroot/ (Static files)</div>
+                <div class="ps-4 text-muted">&#128193; css/ , js/ , lib/ (Bootstrap)</div>
+                <div class="ps-3 text-danger">&#128196; appsettings.json</div>
+                <div class="ps-3 text-danger">&#128196; Program.cs</div>
+            </div>
+        </div>
+
+        <!-- Giải thích các thư mục chính -->
+        <div class="col-lg-7">
+            <div class="accordion shadow-sm" id="accordionFolder">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button fw-bold text-primary" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#colControllers">
+                            &#128193; Thư mục Controllers/
+                        </button>
+                    </h2>
+                    <div id="colControllers" class="accordion-collapse collapse show" data-bs-parent="#accordionFolder">
+                        <div class="accordion-body text-muted">
+                            Chứa các lớp C# kế thừa từ <code>Controller</code> (ví dụ: <code>HomeController.cs</code>).
+                            Mỗi phương thức trong Controller đại diện cho một <strong>Action</strong> xử lý Request từ
+                            người dùng.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed fw-bold text-primary" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#colModels">
+                            &#128193; Thư mục Models/
+                        </button>
+                    </h2>
+                    <div id="colModels" class="accordion-collapse collapse" data-bs-parent="#accordionFolder">
+                        <div class="accordion-body text-muted">
+                            Chứa các lớp đối tượng đại diện cho dữ liệu (Entities) hoặc các ViewModel dùng để chuyển đổi
+                            dữ liệu giữa Controller và View.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed fw-bold text-primary" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#colViews">
+                            &#128193; Thư mục Views/
+                        </button>
+                    </h2>
+                    <div id="colViews" class="accordion-collapse collapse" data-bs-parent="#accordionFolder">
+                        <div class="accordion-body text-muted">
+                            Chứa các file giao diện Razor (<code>.cshtml</code>). Được tổ chức thành từng thư mục con
+                            tương ứng với tên của Controller (ví dụ: <code>Views/Home/Index.cshtml</code> thuộc
+                            <code>HomeController</code>).
+                            Thư mục <code>Shared/</code> chứa trang khung <code>_Layout.cshtml</code> dùng chung.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed fw-bold text-primary" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#colOthers">
+                            &#128193; wwwroot & File cấu hình
+                        </button>
+                    </h2>
+                    <div id="colOthers" class="accordion-collapse collapse" data-bs-parent="#accordionFolder">
+                        <div class="accordion-body text-muted">
+                            <ul class="mb-0">
+                                <li><strong>wwwroot/:</strong> Thư mục chứa tài nguyên tĩnh public như CSS, JavaScript,
+                                    hình ảnh, thư viện Bootstrap/jQuery.</li>
+                                    <li><strong>appsettings.json:</strong> Cấu hình hệ thống (Chuỗi kết nối CSDL,
+                                        AppKeys...).</li>
+                                        <li><strong>Program.cs:</strong> Điểm khởi chạy ứng dụng (Entry point), cấu hình
+                                            Dependency Injection (DI) và Middleware Routing.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. ƯU ĐIỂM CỦA .NET MVC -->
+            <section class="mb-5 p-4 bg-body-tertiary rounded-3 border">
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-1 text-success me-3">&#10004;</div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Code Sạch Sẽ</h6>
+                                <small class="text-muted">Dễ quản lý và phân chia công việc trong team.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-1 text-success me-3">&#10004;</div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Razor Engine</h6>
+                                <small class="text-muted">Nhúng trực tiếp C# vào mã HTML cực kỳ linh hoạt.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-1 text-success me-3">&#10004;</div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Thân Thiện SEO</h6>
+                                <small class="text-muted">Hệ thống Routing hỗ trợ URL tùy biến đẹp mắt.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <div class="fs-1 text-success me-3">&#10004;</div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Dễ Viết Unit Test</h6>
+                                <small class="text-muted">Kiểm thử Controller độc lập không phụ thuộc UI.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. VÍ DỤ MINH HỌA CODE MẪU -->
+<section id="code-example" class="mb-5">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-5">
+            <h3 class="fw-bold text-primary mb-3">Luồng Xử Lý Mã Nguồn</h3>
+            <p class="text-muted">
+                Dưới đây là ví dụ minh họa cách một <strong>Controller</strong> lấy dữ liệu danh sách sản phẩm và đẩy
+                sang <strong>Razor View</strong> để render ra giao diện sử dụng Bootstrap 5.
+            </p>
+            <ul class="list-group list-group-flush mb-3">
+                <li class="list-group-item bg-transparent">
+                    <strong>1. Controller:</strong> Nhận Request và trả về <code>View(data)</code>.
+                </li>
+                <li class="list-group-item bg-transparent">
+                    <strong>2. View:</strong> Khai báo <code>@@model</code> nhận kiểu dữ liệu.
+                </li>
+                <li class="list-group-item bg-transparent">
+                    <strong>3. Razor Loop:</strong> Dùng <code>@@foreach</code> kết hợp Grid System Bootstrap.
+                </li>
+            </ul>
+        </div>
+        <div class="col-lg-7">
+            <div class="code-block shadow">
+                <div class="text-secondary small mb-2">// File: Views/Product/Index.cshtml</div>
+                <pre class="m-0"><code class="text-light"><span class="text-info">@@model</span> IEnumerable&lt;Product&gt;
+                    &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"row g-3"</span>&gt;
+                    <span class="text-info">@@foreach</span> (var item <span class="text-info">in</span> Model)
+                    {
+                        &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"col-md-4"</span>&gt;
+                            &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"card h-100 p-3 shadow-sm"</span>&gt;
+                                &lt;<span class="text-warning">h5</span> <span class="text-success">class</span>=<span class="text-danger">"fw-bold"</span>&gt;<span class="text-info">@@item.Name</span>&lt;/<span class="text-warning">h5</span>&gt;
+                                &lt;<span class="text-warning">span</span> <span class="text-success">class</span>=<span class="text-danger">"badge bg-primary"</span>&gt;<span class="text-info">@@item.Price.ToString("N0") VNĐ</span>&lt;/<span class="text-warning">span</span>&gt;
+                            &lt;/<span class="text-warning">div</span>&gt;
+                        &lt;/<span class="text-warning">div</span>&gt;
+                    }
+                    &lt;/<span class="text-warning">div</span>&gt;</code>
+                </pre>
+            </div>
+        </div>
+    </div>
+</section>

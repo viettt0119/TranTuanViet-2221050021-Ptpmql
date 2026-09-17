@@ -1,0 +1,363 @@
+@{
+    ViewData["Title"] = "Gửi & Nhận Dữ Liệu Trong .NET MVC";
+}
+
+<style>
+    /* Custom style trang trí cho trang Data Transfer */
+    .hero-banner-data {
+        background: linear-gradient(135deg, #0d9488 0%, #0f172a 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 3rem 2rem;
+    }
+
+    .card-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .code-block {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .data-flow-box {
+        background-color: #f0fdf4;
+        border-left: 4px solid #10b981;
+    }
+</style>
+
+<!-- 1. HERO BANNER -->
+<section class="hero-banner-data mb-5 text-center text-lg-start shadow">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <span class="badge bg-warning text-dark mb-2 px-3 py-2 fs-6">Luồng Dữ Liệu (Data Flow)</span>
+            <h1 class="display-4 fw-bold text-white mb-3">Truyền & Nhận Dữ Liệu Trong .NET MVC</h1>
+            <p class="lead text-white-50 mb-4">
+                Tìm hiểu cơ chế luân chuyển dữ liệu hai chiều: Từ <strong class="text-white">Controller sang
+                View</strong> (Render giao diện)
+                và từ <strong class="text-white">View về Controller</strong> (Xử lý Form/Model Binding) với đối tượng
+                thực tế
+                <strong class="text-warning">Student</strong>.
+            </p>
+            <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
+                <a href="#controller-to-view" class="btn btn-warning btn-lg fw-semibold">Controller &#10142; View</a>
+                <a href="#view-to-controller" class="btn btn-outline-light btn-lg">View &#10142; Controller</a>
+            </div>
+        </div>
+        <div class="col-lg-4 text-center mt-4 mt-lg-0">
+            <div class="display-1 text-warning opacity-75">
+                &#127891;
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. MODEL CHUẨN ĐƯỢC SỬ DỤNG (STUDENT MODEL) -->
+<section class="mb-5">
+    <div class="card border-0 shadow-sm bg-light">
+        <div class="card-body p-4">
+            <div class="row align-items-center">
+                <div class="col-lg-4">
+                    <h3 class="fw-bold text-teal mb-2" style="color: #0d9488;">&#128100; Model: Student.cs</h3>
+                    <p class="text-muted mb-0">Lớp mô tả đối tượng Sinh viên dùng xuyên suốt các ví dụ trong bài học.
+                    </p>
+                </div>
+                <div class="col-lg-8">
+                    <div class="code-block shadow-sm">
+                        <pre class="m-0"><code class="text-light"><span class="text-warning">public class</span> <span class="text-success">Student</span>
+{
+    <span class="text-warning">public int</span> <span class="text-info">StudentId</span> { <span class="text-warning">get; set;</span> }
+    <span class="text-warning">public string</span> <span class="text-info">FullName</span> { <span class="text-warning">get; set;</span> } = <span class="text-danger">""</span>;
+    <span class="text-warning">public string</span> <span class="text-info">Address</span> { <span class="text-warning">get; set;</span> } = <span class="text-danger">""</span>;
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. CHIỀU 1: CONTROLLER SANG VIEW (CONTROLLER -> VIEW) -->
+<section id="controller-to-view" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-success">Chiều 1: Gửi Dữ Liệu Từ Controller Sang View</h2>
+        <p class="text-muted">Có 3 cơ chế chính để Controller chuyển dữ liệu cho Razor View render</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Strongly Typed View (Khuyên dùng) -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-success text-white p-3">
+                    <span class="badge bg-light text-dark float-end">Best Practice</span>
+                    <h5 class="fw-bold mb-0">1. Strongly Typed Model</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small">Truyền trực tiếp đối tượng <code>Student</code> vào phương thức
+                        <code>View(student)</code>. Giúp Intellisense hỗ trợ nhắc code và bắt lỗi lúc biên dịch
+                        (Compile-time error).
+                    </p>
+
+                    <div class="code-block mb-3">
+                        <div class="text-secondary small mb-1">// Controller</div>
+                        <pre class="m-0"><code class="text-light"><span class="text-warning">var</span> student = <span class="text-warning">new</span> <span class="text-success">Student</span> { 
+    StudentId = <span class="text-danger">101</span>, 
+    FullName = <span class="text-danger">"Nguyễn Văn A"</span>, 
+    Address = <span class="text-danger">"Hà Nội"</span> 
+};
+<span class="text-warning">return</span> View(student);</code></pre>
+                    </div>
+
+                    <div class="code-block">
+                        <div class="text-secondary small mb-1">// Razor View (.cshtml)</div>
+                        <pre
+                        class="m-0"><code class="text-light"><span class="text-info">@@model</span> Student
+
+&lt;<span class="text-warning">h3</span>&gt;<span class="text-info">@@Model.FullName</span>&lt;/<span class="text-warning">h3</span>&gt;
+&lt;<span class="text-warning">p</span>&gt;Mã SV: <span class="text-info">@@Model.StudentId</span> | Địa chỉ: <span class="text-info">@@Model.Address</span>&lt;/<span class="text-warning">p</span>&gt;</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ViewData & ViewBag -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-dark text-white p-3">
+                    <span class="badge bg-secondary float-end">Dynamic / Key-Value</span>
+                    <h5 class="fw-bold mb-0">2. ViewData & ViewBag</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small">Dùng cho dữ liệu ngắn hạn hoặc phụ (như tiêu đề trang, danh sách thông
+                        báo). <code>ViewData</code> dạng Dictionary, <code>ViewBag</code> dùng thuộc tính động
+                        (Dynamic).</p>
+
+                        <div class="code-block mb-3">
+                            <div class="text-secondary small mb-1">// Controller</div>
+                            <pre class="m-0"><code class="text-light">ViewData[<span class="text-danger">"PageTitle"</span>] = <span class="text-danger">"Chi Tiết Sinh Viên"</span>;
+ViewBag.Message = <span class="text-danger">"Tải dữ liệu thành công!"</span>;
+<span class="text-warning">return</span> View();</code></pre>
+                        </div>
+
+                        <div class="code-block">
+                            <div class="text-secondary small mb-1">// Razor View (.cshtml)</div>
+                            <pre
+                            class="m-0"><code class="text-light">&lt;<span class="text-warning">h2</span>&gt;<span class="text-info">@@ViewData["PageTitle"]</span>&lt;/<span class="text-warning">h2</span>&gt;
+&lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"alert alert-info"</span>&gt;<span class="text-info">@@ViewBag.Message</span>&lt;/<span class="text-warning">div</span>&gt;</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. CHIỀU 2: VIEW SANG CONTROLLER (VIEW -> CONTROLLER) -->
+    <section id="view-to-controller" class="mb-5">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold text-primary">Chiều 2: Gửi Dữ Liệu Từ View Trở Về Controller</h2>
+            <p class="text-muted">Sử dụng Form HTML và cơ chế <strong>Model Binding</strong> tự động của ASP.NET Core</p>
+        </div>
+
+        <div class="row align-items-center g-4">
+            <!-- Mã Form HTML -->
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-primary text-white p-3 fw-bold">
+                        &#128221; Form Thêm Mới Sinh Viên (View)
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="code-block">
+                            <div class="text-secondary small mb-2">// Views/Student/Create.cshtml</div>
+                            <pre class="m-0"><code class="text-light"><span class="text-info">@@model</span> Student
+
+&lt;<span class="text-warning">form</span> <span class="text-success">asp-action</span>=<span class="text-danger">"Create"</span> <span class="text-success">method</span>=<span class="text-danger">"post"</span>&gt;
+    &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"mb-3"</span>&gt;
+        &lt;<span class="text-warning">label</span>&gt;Mã Sinh Viên:&lt;/<span class="text-warning">label</span>&gt;
+        &lt;<span class="text-warning">input</span> <span class="text-success">asp-for</span>=<span class="text-danger">"StudentId"</span> <span class="text-success">class</span>=<span class="text-danger">"form-control"</span> /&gt;
+    &lt;/<span class="text-warning">div</span>&gt;
+    &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"mb-3"</span>&gt;
+        &lt;<span class="text-warning">label</span>&gt;Họ và Tên:&lt;/<span class="text-warning">label</span>&gt;
+        &lt;<span class="text-warning">input</span> <span class="text-success">asp-for</span>=<span class="text-danger">"FullName"</span> <span class="text-success">class</span>=<span class="text-danger">"form-control"</span> /&gt;
+    &lt;/<span class="text-warning">div</span>&gt;
+    &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"mb-3"</span>&gt;
+        &lt;<span class="text-warning">label</span>&gt;Địa chỉ:&lt;/<span class="text-warning">label</span>&gt;
+        &lt;<span class="text-warning">input</span> <span class="text-success">asp-for</span>=<span class="text-danger">"Address"</span> <span class="text-success">class</span>=<span class="text-danger">"form-control"</span> /&gt;
+    &lt;/<span class="text-warning">div</span>&gt;
+    &lt;<span class="text-warning">button</span> <span class="text-success">type</span>=<span class="text-danger">"submit"</span> <span class="text-success">class</span>=<span class="text-danger">"btn btn-success"</span>&gt;Lưu Sinh Viên&lt;/<span class="text-warning">button</span>&gt;
+&lt;/<span class="text-warning">form</span>&gt;</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Các cách hứng Dữ liệu ở Controller -->
+            <div class="col-lg-6">
+                <div class="accordion shadow-sm" id="accordionModelBinding">
+                    <!-- Cách 1: Automatic Model Binding (Khuyên Dùng) -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button fw-bold text-success" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#bindModel">
+                                &#9989; Cách 1: Model Binding Tự Động (Khuyên Dùng)
+                            </button>
+                        </h2>
+                        <div id="bindModel" class="accordion-collapse collapse show"
+                             data-bs-parent="#accordionModelBinding">
+                            <div class="accordion-body text-muted">
+                                <p class="small mb-2">ASP.NET tự động ánh xạ các ô `input` từ Form khớp với các thuộc tính
+                                    của `Student` dựa trên thuộc tính `name` hoặc `asp-for`.</p>
+                                    <div class="code-block">
+                                        <pre class="m-0"><code class="text-light"><span class="text-info">[HttpPost]</span>
+<span class="text-warning">public</span> <span class="text-success">IActionResult</span> <span class="text-white">Create</span>(<span class="text-success">Student</span> student)
+{
+    <span class="text-secondary">// Dữ liệu đã tự chui vào object student</span>
+    <span class="text-warning">string</span> name = student.FullName;
+    <span class="text-warning">return</span> RedirectToAction(<span class="text-danger">"Index"</span>);
+}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cách 2: Tham số rời rạc -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold text-primary" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#bindParams">
+                                    &#128269; Cách 2: Tham Số Bằng Tên (Primitive Parameters)
+                                </button>
+                            </h2>
+                            <div id="bindParams" class="accordion-collapse collapse" data-bs-parent="#accordionModelBinding">
+                                <div class="accordion-body text-muted">
+                                    <p class="small mb-2">Truyền tên tham số trùng với tên thẻ input trong Form HTML.</p>
+                                    <div class="code-block">
+                                        <pre class="m-0"><code class="text-light"><span class="text-info">[HttpPost]</span>
+<span class="text-warning">public</span> <span class="text-success">IActionResult</span> <span class="text-white">Create</span>(<span class="text-warning">int</span> studentId, <span class="text-warning">string</span> fullName, <span class="text-warning">string</span> address)
+{
+    <span class="text-secondary">// Xử lý logic...</span>
+    <span class="text-warning">return</span> View();
+}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cách 3: IFormCollection -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed fw-bold text-secondary" type="button"
+                                        data-bs-toggle="collapse" data-bs-target="#bindForm">
+                                    &#128230; Cách 3: Dùng IFormCollection (Thuần Túy)
+                                </button>
+                            </h2>
+                            <div id="bindForm" class="accordion-collapse collapse" data-bs-parent="#accordionModelBinding">
+                                <div class="accordion-body text-muted">
+                                    <p class="small mb-2">Đọc thủ công giá trị qua key chuỗi từ `IFormCollection` (ít dùng trừ
+                                        khi Form có cấu trúc động).</p>
+                                        <div class="code-block">
+                                            <pre class="m-0"><code class="text-light"><span class="text-info">[HttpPost]</span>
+<span class="text-warning">public</span> <span class="text-success">IActionResult</span> <span class="text-white">Create</span>(<span class="text-success">IFormCollection</span> form)
+{
+    <span class="text-warning">string</span> name = form[<span class="text-danger">"FullName"</span>]!;
+    <span class="text-warning">return</span> View();
+}</code></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. BẢNG TỔNG HỢP SO SÁNH CÁC PHƯƠNG THỨC TRUYỀN DỮ LIỆU -->
+<section class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Bảng So Sánh Các Cơ Chế Chuyển Dữ Liệu</h2>
+        <p class="text-muted">Lựa chọn giải pháp phù hợp tùy theo kịch bản sử dụng</p>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-3">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" style="width: 20%;">Cơ Chế</th>
+                    <th scope="col" style="width: 20%;">Kiểu Dữ Liệu</th>
+                    <th scope="col" style="width: 25%;">Phạm Vi Hoạt Động</th>
+                    <th scope="col" style="width: 35%;">Trường Hợp Sử Dụng</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge bg-success">Strongly Typed Model</span></td>
+                    <td>Strongly Typed (Rõ ràng)</td>
+                    <td>Từ Controller &#10142; View hiện tại</td>
+                    <td>Truyền dữ liệu chính cho trang (Entity, List, ViewModel). Bắt lỗi Compile-time.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">ViewData</span></td>
+                    <td>Dictionary <code>string, object</code></td>
+                    <td>Từ Controller &#10142; View hiện tại</td>
+                    <td>Truyền các thông tin nhỏ (Tiêu đề trang, cấu hình layout). Cần ép kiểu khi dùng.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-info text-dark">ViewBag</span></td>
+                    <td>Dynamic (Động)</td>
+                    <td>Từ Controller &#10142; View hiện tại</td>
+                    <td>Cú pháp ngắn gọn hơn ViewData. Không có Intellisense, dễ gõ sai tên thuộc tính.</td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-warning text-dark">TempData</span></td>
+                    <td>Dictionary (Dùng Session/Cookie)</td>
+                    <td>Tồn tại qua 1 lượt <strong>Redirect</strong></td>
+                    <td>Truyền thông báo thành công / lỗi sau khi thực hiện Action và Redirect sang trang khác.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- 6. VÍ DỤ NÂNG CAO: DÙNG TEMPDATA KHI REDIRECT -->
+<section class="mb-5 p-4 bg-body-tertiary rounded-3 border">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-6">
+            <h3 class="fw-bold text-primary mb-3">Truyền Thông Báo Nhờ TempData</h3>
+            <p class="text-muted">
+                Khi sử dụng mẫu thiết kế <strong>PRG (Post/Redirect/Get)</strong> để tránh submit trùng Form,
+                <code>ViewData</code> và <code>ViewBag</code> sẽ bị xóa mất. <code>TempData</code> là giải pháp hoàn hảo
+                để lưu dữ liệu tạm thời qua một câu lệnh <code>RedirectToAction</code>.
+            </p>
+            <div class="alert alert-warning py-2 mb-0 small">
+                <strong>Lưu ý:</strong> <code>TempData</code> tự động bị xóa ngay sau khi được View đọc một lần.
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="code-block shadow">
+                <div class="text-secondary small mb-2">// Luồng Redirect trong StudentController.cs</div>
+                <pre class="m-0"><code class="text-light"><span class="text-info">[HttpPost]</span>
+                    <span class="text-warning">public</span> <span class="text-success">IActionResult</span> <span class="text-white">Create</span>(<span class="text-success">Student</span> student)
+                    {
+                        <span class="text-secondary">// 1. Lưu vào CSDL...</span>
+                        
+                        <span class="text-secondary">// 2. Gán thông báo vào TempData</span>
+                        TempData[<span class="text-danger">"SuccessMsg"</span>] = <span class="text-danger">$"Đã thêm sinh viên {student.FullName} thành công!"</span>;
+                        
+                        <span class="text-secondary">// 3. Chuyển hướng sang danh sách</span>
+                        <span class="text-warning">return</span> RedirectToAction(<span class="text-danger">"Index"</span>);
+                    }</code>
+                </pre>
+            </div>
+        </div>
+    </div>
+</section>

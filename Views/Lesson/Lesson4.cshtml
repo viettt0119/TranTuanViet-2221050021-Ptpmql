@@ -1,0 +1,311 @@
+@{
+    ViewData["Title"] = "Quản Lý Trạng Thái Dữ Liệu Tạm Thời trong .NET MVC";
+}
+
+<style>
+    /* Custom style cho trang State Management */
+    .hero-banner-state {
+        background: linear-gradient(135deg, #6f42c1 0%, #1e1035 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 3rem 2rem;
+    }
+
+    .card-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .code-block {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .lifespan-box {
+        background-color: #f8f5ff;
+        border-left: 4px solid #6f42c1;
+    }
+</style>
+
+<!-- 1. HERO BANNER -->
+<section class="hero-banner-state mb-5 text-center text-lg-start shadow">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <span class="badge bg-warning text-dark mb-2 px-3 py-2 fs-6">State Management</span>
+            <h1 class="display-4 fw-bold text-white mb-3">ViewData, ViewBag & TempData</h1>
+            <p class="lead text-white-50 mb-4">
+                Tìm hiểu cơ chế lưu trữ và quản lý dữ liệu ngắn hạn giữa <strong class="text-white">Controller</strong>
+                và <strong class="text-white">View</strong>.
+                Hiểu rõ vòng đời (Lifespan) của từng đối tượng để lựa chọn đúng giải pháp truyền dữ liệu phù hợp.
+            </p>
+            <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
+                <a href="#state-compare" class="btn btn-warning btn-lg fw-semibold">So Sánh 3 Bộ Lưu Trữ</a>
+                <a href="#tempdata-methods" class="btn btn-outline-light btn-lg">Kỹ Thuật TempData</a>
+            </div>
+        </div>
+        <div class="col-lg-4 text-center mt-4 mt-lg-0">
+            <div class="display-1 text-warning opacity-75">
+                &#128190;
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. PHÂN LOẠI CHI TIẾT 3 ĐỐI TƯỢNG QUẢN LÝ TRẠNG THÁI -->
+<section id="state-compare" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Chi Tiết Các Bộ Lưu Trữ Tạm Thời</h2>
+        <p class="text-muted">Đặc điểm kỹ thuật, kiểu dữ liệu và cú pháp truy xuất</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- ViewData -->
+        <div class="col-lg-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-primary text-white p-3">
+                    <span class="badge bg-light text-dark float-end">Dictionary</span>
+                    <h5 class="fw-bold mb-0">1. ViewData</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted small">
+                        Lớp dữ liệu kiểu <code>ViewDataDictionary</code> lưu trữ dưới dạng cặp Key-Value. Truy xuất dữ
+                        liệu theo dạng chuỗi khóa.
+                    </p>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li>&#10004; <strong>Kiểu dữ liệu:</strong> <code>object</code> (Cần ép kiểu khi đọc)</li>
+                        <li>&#10004; <strong>Vòng đời:</strong> Chỉ tồn tại trong Request hiện tại</li>
+                        <li>&#10004; <strong>Bắt lỗi:</strong> Compile-time (cho Key chuỗi)</li>
+                    </ul>
+                    <div class="code-block">
+                        <div class="text-secondary small mb-1">// Cú pháp</div>
+                        <pre class="m-0"><code class="text-light">ViewData[<span class="text-danger">"Title"</span>] = <span class="text-danger">"Trang Chủ"</span>;
+<span class="text-warning">string</span> t = (string)ViewData[<span class="text-danger">"Title"</span>]!;</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ViewBag -->
+        <div class="col-lg-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-dark text-white p-3">
+                    <span class="badge bg-secondary float-end">Dynamic Wrapper</span>
+                    <h5 class="fw-bold mb-0">2. ViewBag</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted small">
+                        Là một wrapper động (Dynamic Object) bao bọc quanh <code>ViewData</code>. Giúp gán thuộc tính
+                        trực tiếp không qua chuỗi khóa.
+                    </p>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li>&#10004; <strong>Kiểu dữ liệu:</strong> <code>dynamic</code> (Không cần ép kiểu)</li>
+                        <li>&#10004; <strong>Vòng đời:</strong> Chỉ tồn tại trong Request hiện tại</li>
+                        <li>&#10004; <strong>Hạn chế:</strong> Không có Intellisense nhắc code</li>
+                    </ul>
+                    <div class="code-block">
+                        <div class="text-secondary small mb-1">// Cú pháp</div>
+                        <pre class="m-0"><code class="text-light">ViewBag.Title = <span class="text-danger">"Trang Chủ"</span>;
+<span class="text-warning">string</span> t = ViewBag.Title;</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TempData -->
+        <div class="col-lg-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header p-3 text-white" style="background-color: #6f42c1;">
+                    <span class="badge bg-warning text-dark float-end">Session/Cookie</span>
+                    <h5 class="fw-bold mb-0">3. TempData</h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted small">
+                        Sử dụng <code>ITempDataDictionary</code> để lưu dữ liệu tạm. Tồn tại qua một câu lệnh
+                        <code>Redirect</code> (2 HTTP Request liên tiếp).
+                    </p>
+                    <ul class="list-unstyled small text-muted mb-3">
+                        <li>&#10004; <strong>Kiểu dữ liệu:</strong> <code>object</code> (Cần ép kiểu khi đọc)</li>
+                        <li>&#10004; <strong>Vòng đời:</strong> Tự xóa sau khi đọc một lần</li>
+                        <li>&#10004; <strong>Ứng dụng:</strong> Mẫu PRG (Post-Redirect-Get)</li>
+                    </ul>
+                    <div class="code-block">
+                        <div class="text-secondary small mb-1">// Cú pháp</div>
+                        <pre class="m-0"><code class="text-light">TempData[<span class="text-danger">"Msg"</span>] = <span class="text-danger">"Thành công!"</span>;
+<span class="text-warning">return</span> RedirectToAction(<span class="text-danger">"Index"</span>);</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. PHÂN BIỆT VÒNG ĐỜI (REQUEST LIFESPAN) -->
+<section class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Sự Khác Biệt Về Luồng Request (Request Lifecycle)</h2>
+        <p class="text-muted">Khi nào dữ liệu bị xóa khỏi bộ nhớ?</p>
+    </div>
+
+    <div class="lifespan-box p-4 rounded shadow-sm mb-4">
+        <div class="row align-items-center text-center text-lg-start g-3">
+            <div class="col-lg-6 border-end-lg">
+                <h5 class="fw-bold text-primary mb-2">&#128260; 1 Lượt Request (Render View)</h5>
+                <p class="text-muted small mb-0">
+                    Client gửi Request &#10142; Controller gán dữ liệu &#10142; Trả về View.<br />
+                    cả <strong>ViewData</strong>, <strong>ViewBag</strong> và <strong>TempData</strong> đều hoạt động
+                    tốt.
+                </p>
+            </div>
+            <div class="col-lg-6">
+                <h5 class="fw-bold text-danger mb-2">&#128257; 2 Lượt Request (RedirectToAction)</h5>
+                <p class="text-muted small mb-0">
+                    Client gửi POST &#10142; Controller xử lý &#10142; <strong>Redirect (302)</strong> &#10142; Client
+                    gửi GET mới.<br />
+                    Chỉ duy nhất <strong>TempData</strong> giữ được giá trị sang Request thứ 2.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. TỐI ƯU SỬ DỤNG TEMPDATA: KEEP() VÀ PEEK() -->
+<section id="tempdata-methods" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Kỹ Thuật Giữ Dữ Liệu TempData (Keep & Peek)</h2>
+        <p class="text-muted">Ngăn không cho TempData tự động hủy sau khi đọc</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white p-3 fw-bold">
+                    &#128274; Phương Thức Keep()
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small">
+                        Đọc dữ liệu bình thường, sau đó gọi phương thức <code>Keep()</code> để đánh dấu giữ lại Key đó
+                        cho lượt Request kế tiếp nữa.
+                    </p>
+                    <div class="code-block">
+                        <pre class="m-0"><code class="text-light"><span class="text-secondary">// Đọc dữ liệu (bình thường sẽ bị đánh dấu xóa)</span>
+<span class="text-warning">string</span> msg = TempData[<span class="text-danger">"SuccessMsg"</span>]?.ToString()!;
+
+<span class="text-secondary">// Yêu cầu giữ lại Key này cho Request tiếp theo</span>
+TempData.Keep(<span class="text-danger">"SuccessMsg"</span>);</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-dark text-white p-3 fw-bold">
+                    &#128065; Phương Thức Peek()
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-muted small">
+                        Đọc giá trị dữ liệu mà <strong>không làm mất đi</strong> trạng thái (không đánh dấu xóa). Kết
+                        hợp đọc và giữ chỉ trong một thao tác.
+                    </p>
+                    <div class="code-block">
+                        <pre class="m-0"><code class="text-light"><span class="text-secondary">// Đọc dữ liệu nhưng KHÔNG đánh dấu là đã đọc</span>
+<span class="text-warning">string</span> msg = TempData.Peek(<span class="text-danger">"SuccessMsg"</span>)?.ToString()!;
+
+<span class="text-secondary">// Dữ liệu vẫn tiếp tục tồn tại ở các Request sau</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. BẢNG TỔNG HỢP SO SÁNH NHAU -->
+<section class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Bảng So Sánh Tiêu Chi Kỹ Thuật</h2>
+        <p class="text-muted">Tổng hợp để tra cứu nhanh khi làm dự án</p>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-3">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" style="width: 20%;">Tiêu Chi</th>
+                    <th scope="col" style="width: 25%;">ViewData</th>
+                    <th scope="col" style="width: 25%;">ViewBag</th>
+                    <th scope="col" style="width: 30%;">TempData</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Kiểu Đối Tượng</strong></td>
+                    <td><code>ViewDataDictionary</code></td>
+                    <td><code>Dynamic</code></td>
+                    <td><code>ITempDataDictionary</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Cú Pháp Ký Tự</strong></td>
+                    <td>Cú pháp ngoặc vuông <code>["Key"]</code></td>
+                    <td>Cú pháp thuộc tính <code>.Property</code></td>
+                    <td>Cú pháp ngoặc vuông <code>["Key"]</code></td>
+                </tr>
+                <tr>
+                    <td><strong>Ép Kiểu (Casting)</strong></td>
+                    <td><span class="badge bg-warning text-dark">Bắt buộc</span></td>
+                    <td><span class="badge bg-success">Không cần</span></td>
+                    <td><span class="badge bg-warning text-dark">Bắt buộc</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Thời Gian Tồn Tại</strong></td>
+                    <td>Chỉ trong Request hiện tại</td>
+                    <td>Chỉ trong Request hiện tại</td>
+                    <td>Tới Request tiếp theo (Hoặc tới khi bị đọc)</td>
+                </tr>
+                <tr>
+                    <td><strong>Lưu Trữ Bên Dưới</strong></td>
+                    <td>Bộ nhớ RAM Request</td>
+                    <td>Sử dụng chung bộ nhớ ViewData</td>
+                    <td>Cookie hoặc Session Storage</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- 6. KHUYÊN DÙNG (BEST PRACTICES) -->
+<section class="mb-5 p-4 bg-body-tertiary rounded-3 border">
+    <h3 class="fw-bold text-primary mb-3">Lời Khuyên Lựa Chọn Giải Pháp (Best Practices)</h3>
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="p-3 bg-white rounded shadow-sm border h-100">
+                <h6 class="fw-bold text-success">&#10004; Dùng Strongly Typed Model</h6>
+                <small class="text-muted">Ưu tiên truyền dữ liệu chính của trang qua Model/ViewModel để tận dụng
+                    Type-Safety và Intellisense.</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded shadow-sm border h-100">
+                    <h6 class="fw-bold text-primary">&#10004; Dùng ViewData / ViewBag</h6>
+                    <small class="text-muted">Chỉ dùng cho thông tin nhỏ, phụ trợ như Title trang, Breadcrumb, hoặc danh
+                        sách DropdownList đơn giản.</small>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 bg-white rounded shadow-sm border h-100">
+                        <h6 class="fw-bold style=" color: #6f42c1;">&#10004; Dùng TempData</h6>
+                        <small class="text-muted">Đặc trị cho việc truyền thông báo trạng thái (Alert Toast/Notification) sau
+                            khi xử lý Form và Redirect.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
