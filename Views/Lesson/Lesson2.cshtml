@@ -1,0 +1,255 @@
+@{
+    ViewData["Title"] = "Định Tuyến Trong ASP.NET Core MVC (Routing)";
+}
+
+<style>
+    /* Custom style trang trí cho trang Routing */
+    .hero-banner-routing {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a2540 100%);
+        color: white;
+        border-radius: 1rem;
+        padding: 3rem 2rem;
+    }
+
+    .card-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-hover:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .code-block {
+        background-color: #1e1e1e;
+        color: #d4d4d4;
+        border-radius: 0.5rem;
+        padding: 1.25rem;
+        font-family: 'Consolas', 'Courier New', monospace;
+    }
+
+    .routing-flow {
+        background-color: #f8f9fa;
+        border-left: 4px solid #0d6efd;
+    }
+</style>
+
+<!-- 1. HERO BANNER -->
+<section class="hero-banner-routing mb-5 text-center text-lg-start shadow">
+    <div class="row align-items-center">
+        <div class="col-lg-8">
+            <span class="badge bg-info text-dark mb-2 px-3 py-2 fs-6">Luồng Xử Lý HTTP Request</span>
+            <h1 class="display-4 fw-bold text-white mb-3">Định Tuyến (Routing) Trong .NET MVC</h1>
+            <p class="lead text-white-50 mb-4">
+                Routing là cơ chế khớp <strong class="text-white">URL từ HTTP Request</strong> với các
+                <strong class="text-white">Action Method</strong> tương ứng trong Controller.
+                Giúp ứng dụng sở hữu cấu trúc URL thân thiện, chuẩn SEO và linh hoạt.
+            </p>
+            <div class="d-flex gap-2 justify-content-center justify-content-lg-start">
+                <a href="#routing-types" class="btn btn-info btn-lg fw-semibold text-dark">2 Loại Routing</a>
+                <a href="#routing-constraints" class="btn btn-outline-light btn-lg">Ràng Buộc Constraint</a>
+            </div>
+        </div>
+        <div class="col-lg-4 text-center mt-4 mt-lg-0">
+            <div class="display-1 text-info opacity-75">
+                &#128739;
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. NGUYÊN LÝ HOẠT ĐỘNG (ROUTING PIPELINE) -->
+<section class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Cơ Chế Hoạt Động Của Routing Middleware</h2>
+        <p class="text-muted">Cách một URL từ trình duyệt tìm đến đúng Action trong Controller</p>
+    </div>
+
+    <div class="routing-flow p-4 rounded shadow-sm mb-4">
+        <div class="row text-center g-3 align-items-center">
+            <div class="col-md-3">
+                <div class="p-3 bg-white rounded shadow-sm border">
+                    <span class="badge bg-secondary mb-2">Bước 1</span>
+                    <h6 class="fw-bold mb-0">HTTP Request</h6>
+                    <small class="text-muted"><code>/Product/Detail/5</code></small>
+                </div>
+            </div>
+            <div class="col-md-1 fs-3 text-primary">&#10142;</div>
+            <div class="col-md-3">
+                <div class="p-3 bg-primary text-white rounded shadow-sm">
+                    <span class="badge bg-light text-dark mb-2">Bước 2</span>
+                    <h6 class="fw-bold mb-0">Routing Middleware</h6>
+                    <small class="text-white-50">Phân tích Pattern URL</small>
+                </div>
+            </div>
+            <div class="col-md-1 fs-3 text-primary">&#10142;</div>
+            <div class="col-md-4">
+                <div class="p-3 bg-white rounded shadow-sm border">
+                    <span class="badge bg-success mb-2">Bước 3</span>
+                    <h6 class="fw-bold mb-0">Controller & Action</h6>
+                    <small class="text-muted"><code>ProductController.Detail(id=5)</code></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. PHÂN LOẠI ROUTING: CONVENTION-BASED VS ATTRIBUTE ROUTING -->
+<section id="routing-types" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Hai Phương Pháp Định Tuyến Chính</h2>
+        <p class="text-muted">ASP.NET Core hỗ trợ 2 kỹ thuật thiết lập định tuyến linh hoạt</p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Conventional Routing -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-primary text-white p-3">
+                    <h4 class="card-title fw-bold mb-0">1. Convention-Based Routing</h4>
+                    <small>Cấu hình tập trung tại file Program.cs</small>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted">
+                        Thiết lập một hoặc nhiều mẫu URL quy ước chung cho toàn bộ hệ thống. Thường áp dụng cho các
+                        trang giao diện Web MVC truyền thống.
+                    </p>
+                    <div class="code-block mb-3">
+                        <div class="text-secondary small mb-2">// Trong Program.cs</div>
+                        <pre class="m-0"><code class="text-light">app.MapControllerRoute(
+    name: <span class="text-danger">"default"</span>,
+    pattern: <span class="text-danger">"{controller=Home}/{action=Index}/{id?}"</span>
+);</code></pre>
+                    </div>
+                    <ul class="list-group list-group-flush small text-muted">
+                        <li class="list-group-item"><code>{controller}</code>: Tên Controller (mặc định Home)</li>
+                        <li class="list-group-item"><code>{action}</code>: Phương thức Action (mặc định Index)</li>
+                        <li class="list-group-item"><code>{id?}</code>: Tham số tùy chọn (Optional Parameter)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attribute Routing -->
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-header bg-dark text-white p-3">
+                    <h4 class="card-title fw-bold mb-0">2. Attribute Routing</h4>
+                    <small>Khai báo trực tiếp trên Controller / Action</small>
+                </div>
+                <div class="card-body p-4">
+                    <p class="card-text text-muted">
+                        Sử dụng các C# Attributes (<code>[Route]</code>, <code>[HttpGet]</code>) gắn thẳng lên từng
+                        Controller hoặc Action. Thường dùng cho RESTful API và các Route tùy chỉnh phức tạp.
+                    </p>
+                    <div class="code-block mb-3">
+                        <div class="text-secondary small mb-2">// Trong ProductController.cs</div>
+                        <pre class="m-0"><code class="text-light"><span class="text-info">[Route]</span>(<span class="text-danger">"san-pham"</span>)
+<span class="text-warning">public class</span> <span class="text-success">ProductController</span> : <span class="text-success">Controller</span>
+{
+    <span class="text-info">[HttpGet]</span>(<span class="text-danger">"chi-tiet/{id:int}"</span>)
+    <span class="text-warning">public</span> <span class="text-success">IActionResult</span> <span class="text-white">Detail</span>(<span class="text-warning">int</span> id) { ... }
+}</code></pre>
+                    </div>
+                    <div class="alert alert-info py-2 mb-0 small">
+                        <strong>URL kết quả:</strong> <code>/san-pham/chi-tiet/5</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. ROUTE CONSTRAINTS & PARAMETERS -->
+<section id="routing-constraints" class="mb-5">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold text-primary">Ràng Buộc Dữ Liệu Route (Route Constraints)</h2>
+        <p class="text-muted">Đảm bảo tham số truyền từ URL phải thỏa mãn kiểu dữ liệu hoặc quy tắc nhất định</p>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-3">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th scope="col" style="width: 20%;">Constraint</th>
+                    <th scope="col" style="width: 35%;">Cú Pháp Mẫu</th>
+                    <th scope="col" style="width: 25%;">Ví Dụ URL Hợp Lệ</th>
+                    <th scope="col" style="width: 20%;">URL Không Hợp Lệ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="badge bg-primary">int</span></td>
+                    <td><code>{id:int}</code></td>
+                    <td><code>/Product/Detail/12</code></td>
+                    <td><span class="text-danger">/Product/Detail/abc</span></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">guid</span></td>
+                    <td><code>{id:guid}</code></td>
+                    <td><code>/User/Edit/c9bf9e57-...</code></td>
+                    <td><span class="text-danger">/User/Edit/123</span></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">min / max</span></td>
+                    <td><code>{age:int:min(18)}</code></td>
+                    <td><code>/Profile/View/20</code></td>
+                    <td><span class="text-danger">/Profile/View/15</span></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">regex</span></td>
+                    <td><code>{slug:regex(^[a-z0-9-]+$)}</code></td>
+                    <td><code>/Blog/post-bai-viet-1</code></td>
+                    <td><span class="text-danger">/Blog/Bai_Viet@1</span></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">alpha</span></td>
+                    <td><code>{category:alpha}</code></td>
+                    <td><code>/Shop/Laptops</code></td>
+                    <td><span class="text-danger">/Shop/Laptops123</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- 5. TẠO SLUG THÂN THIỆN SEO (PRACTICAL EXAMPLE) -->
+<section class="mb-5 p-4 bg-body-tertiary rounded-3 border">
+    <div class="row align-items-center g-4">
+        <div class="col-lg-6">
+            <h3 class="fw-bold text-primary mb-3">Tối Ưu SEO Với URL Slug</h3>
+            <p class="text-muted">
+                Thay vì truyền Query String dạng <code>/Product/Detail?id=102</code>,
+                việc sử dụng Attribute Routing kết hợp Slug giúp URL đẹp mắt và chuẩn SEO hơn rất nhiều:
+            </p>
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-danger">Thô</span>
+                <code>domain.com/Product/Detail?id=102</code>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="badge bg-success">SEO</span>
+                <code>domain.com/dien-thoai/iphone-15-pro-max-102</code>
+            </div>
+            <p class="small text-muted mb-0">
+                <strong>Mẹo:</strong> Bạn có thể dùng <code>[Route("[controller]/[action]")]</code> để tự động ánh xạ
+                theo tên Controller và Action mà không cần gõ cứng tên.
+            </p>
+        </div>
+        <div class="col-lg-6">
+            <div class="code-block shadow">
+                <div class="text-secondary small mb-2">// Ánh xạ URL SEO cho tin tức</div>
+                <pre class="m-0"><code class="text-light"><span class="text-info">[Route]</span>(<span class="text-danger">"tin-tuc"</span>)
+                    <span class="text-warning">public class</span> <span class="text-success">NewsController</span> : <span class="text-success">Controller</span>
+                    {
+                        <span class="text-info">[HttpGet]</span>(<span class="text-danger">"{slug}-{id:int}"</span>)
+                        <span class="text-warning">public</span> <span class="text-success">IActionResult</span> <span class="text-white">Details</span>(<span class="text-warning">string</span> slug, <span class="text-warning">int</span> id)
+                        {
+                            <span class="text-secondary">// Xử lý lấy bài viết theo id</span>
+                            <span class="text-warning">return</span> View();
+                        }
+                    }</code>
+                </pre>
+            </div>
+        </div>
+    </div>
+</section>

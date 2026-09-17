@@ -22,7 +22,6 @@ D:\tmp\DemoMVC\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
 D:\tmp\DemoMVC\obj\Debug\net10.0\scopedcss\Views\Shared\_Layout.cshtml.rz.scp.css
 D:\tmp\DemoMVC\obj\Debug\net10.0\scopedcss\bundle\DemoMVC.styles.css
 D:\tmp\DemoMVC\obj\Debug\net10.0\scopedcss\projectbundle\DemoMVC.bundle.scp.css
-D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\3xqpwvxjmo-{0}-b9sayid5wm-b9sayid5wm.gz
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\wxksowlaa2-{0}-61n19gt1b8-61n19gt1b8.gz
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\i7pifeklos-{0}-xtxxf3hu2r-xtxxf3hu2r.gz
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\ffshl3hb68-{0}-bqjiyaj88i-bqjiyaj88i.gz
@@ -141,3 +140,4 @@ D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\v0u718dlzv-{0}-notf2xhcfb-notf2xhcfb
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\yck0ubjv9l-{0}-h1s4sie4z3-h1s4sie4z3.gz
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\7nep1sqk76-{0}-63fj8s7r0e-63fj8s7r0e.gz
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\90f1gz7m9q-{0}-0j3bgjxly4-0j3bgjxly4.gz
+D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\uoog3p6aoc-{0}-1fknpusi2r-1fknpusi2r.gz
