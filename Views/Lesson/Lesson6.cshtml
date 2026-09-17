@@ -1,0 +1,66 @@
+@{
+    ViewData["Title"] = "Cấu Hình Entity Framework Core Trong ASP.NET Core 10 MVC";
+}
+
+<!-- Hero Banner -->
+<div class="bg-gradient bg-primary text-white p-5 rounded-4 mb-5 shadow-sm">
+    <div class="container-fluid py-3">
+        <span class="badge bg-light text-primary fw-bold text-uppercase px-3 py-2 mb-3">ASP.NET Core 10 MVC</span>
+        <h1 class="display-4 fw-bold">Cấu Hình Entity Framework Core</h1>
+        <p class="col-md-9 fs-5 text-light opacity-90">
+            Hướng dẫn chi tiết từng bước cấu hình EF Core với SQL Server và SQLite trong ứng dụng .NET 10. Tích hợp mô
+            hình Partial Views giúp quản lý mã nguồn sạch và dễ bảo trì.
+        </p>
+        <div class="d-flex gap-2 mt-4">
+            <a href="#step1" class="btn btn-light btn-lg text-primary fw-semibold px-4">Bắt đầu học</a>
+            <a href="#toc" class="btn btn-outline-light btn-lg px-4">Mục lục</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Sidebar: Mục lục / Điều hướng nhanh -->
+    <div class="col-lg-3">
+        <div class="card border-0 shadow-sm sticky-top" id="toc" style="top: 2rem; z-index: 100;">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="fw-bold m-0"><i class="bi bi-list-nested me-2 text-primary"></i>Mục Lục Bài Học</h5>
+            </div>
+            <div class="card-body px-3 pb-4">
+                <nav id="navbar-lesson" class="nav nav-pills flex-column gap-1">
+                    <a class="nav-link link-dark" href="#step1"><span class="badge bg-secondary me-2">1</span>Cài đặt
+                        Packages
+                    </a>
+                    <a class="nav-link link-dark" href="#step2"><span class="badge bg-secondary me-2">2</span>Cấu hình
+                        appsettings
+                    </a>
+                    <a class="nav-link link-dark" href="#step3"><span class="badge bg-secondary me-2">3</span>Khai báo
+                        Student Entity
+                    </a>
+                    <a class="nav-link link-dark" href="#step4"><span class="badge bg-secondary me-2">4</span>Tạo
+                        DbContext
+                    </a>
+                    <a class="nav-link link-dark" href="#step5"><span class="badge bg-secondary me-2">5</span>Đăng ký DI
+                        (Program.cs)
+                    </a>
+                    <a class="nav-link link-dark" href="#step6"><span class="badge bg-secondary me-2">6</span>Tạo
+                        Migration
+                    </a>
+                    <a class="nav-link link-dark" href="#step7"><span class="badge bg-secondary me-2">7</span>Update
+                        Database
+                    </a>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content: Render 7 Partial Views -->
+    <div class="col-lg-9">
+        <partial name="../Shared/Lesson6/_Step1InstallPackages.cshtml" />
+        <partial name="../Shared/Lesson6/_Step2AppSettings.cshtml" />
+        <partial name="../Shared/Lesson6/_Step3StudentEntity.cshtml" />
+        <partial name="../Shared/Lesson6/_Step4DbContext.cshtml" />
+        <partial name="../Shared/Lesson6/_Step5ProgramSetup.cshtml" />
+        <partial name="../Shared/Lesson6/_Step6AddMigration.cshtml" />
+        <partial name="../Shared/Lesson6/_Step7UpdateDatabase.cshtml" />
+    </div>
+</div>

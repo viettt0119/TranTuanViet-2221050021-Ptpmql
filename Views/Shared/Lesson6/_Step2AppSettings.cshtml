@@ -1,0 +1,51 @@
+<section id="step2" class="mb-5" aria-labelledby="step2-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step2-title" class="fw-bold text-primary mb-1">
+            Bước 2: Cấu Hình Chuỗi Kết Nối (appsettings.json)
+        </h2>
+        <p class="text-body-secondary mb-0">
+            Thêm ConnectionStrings trong tập tin cấu hình của ứng dụng.
+        </p>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white fw-bold py-3">
+            <i class="bi bi-filetype-json me-2 text-warning" aria-hidden="true"></i>
+            appsettings.json
+        </div>
+
+        <div class="card-body bg-dark rounded-bottom">
+            <div class="code-block overflow-auto">
+                <pre class="m-0"><code class="text-light">{
+    <span class="text-warning">"Logging"</span>: {
+        <span class="text-warning">"LogLevel"</span>: {
+            <span class="text-warning">"Default"</span>: <span class="text-info">"Information"</span>,
+            <span class="text-warning">"Microsoft.AspNetCore"</span>: <span class="text-info">"Warning"</span>
+        }
+    },
+
+    <span class="text-warning">"AllowedHosts"</span>: <span class="text-info">"*"</span>,
+
+    <span class="text-warning">"ConnectionStrings"</span>: {
+        <span class="text-danger">// 1. Chuỗi kết nối SQL Server Local / Express</span>
+        <span class="text-warning">"SqlServerConnection"</span>: <span class="text-info">"Server=(localdb)\\mssqllocaldb;Database=StudentDb_NET10;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"</span>,
+
+        <span class="text-danger">// 2. Chuỗi kết nối SQLite file</span>
+        <span class="text-warning">"SqliteConnection"</span>: <span class="text-info">"Data Source=StudentDb.db"</span>
+    }
+
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-info d-flex align-items-start gap-3 shadow-sm" role="alert">
+        <i class="bi bi-info-circle-fill fs-4 flex-shrink-0" aria-hidden="true"></i>
+        <div>
+            <strong>Lưu ý:</strong>
+            Đối với SQL Server 2022 trở lên hoặc Server yêu cầu SSL,
+            thuộc tính <code>TrustServerCertificate=True</code> giúp tránh lỗi
+            chứng chỉ SSL khi thử nghiệm ở môi trường Development.
+        </div>
+    </div>
+</section>

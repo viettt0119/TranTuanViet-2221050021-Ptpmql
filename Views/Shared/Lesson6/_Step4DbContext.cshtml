@@ -1,0 +1,40 @@
+<section id="step4" class="mb-5" aria-labelledby="step4-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step4-title" class="fw-bold text-primary mb-1">
+            Bước 4: Tạo ApplicationDbContext
+        </h2>
+        <p class="text-body-secondary mb-0">
+            Lớp cầu nối làm việc giữa các Model C# và Cơ sở dữ liệu.
+        </p>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold py-3">
+            <i class="bi bi-cpu me-2 text-warning" aria-hidden="true"></i>
+            Data/ApplicationDbContext.cs
+        </div>
+
+        <div class="card-body bg-dark rounded-bottom">
+            <div class="code-block overflow-auto">
+                <pre class="m-0"><code class="text-light"><span class="text-primary">using</span> Microsoft.EntityFrameworkCore;
+```
+
+<span class="text-primary">using</span> AppMvcNet10.Models;
+
+<span class="text-primary">namespace</span> <span class="text-info">AppMvcNet10.Data</span>;
+
+<span class="text-primary">public class</span> <span class="text-success">ApplicationDbContext</span> : <span class="text-success">DbContext</span>
+{
+    <span class="text-primary">public</span> <span class="text-warning">ApplicationDbContext</span>( <span class="text-success">DbContextOptions</span><<span class="text-success">ApplicationDbContext</span>> options) : <span class="text-primary">base</span>(options)
+    {
+    }
+
+    <span class="text-danger">// Khai báo DbSet đại diện cho bảng Students trong CSDL</span>
+    <span class="text-primary">public</span> <span class="text-success">DbSet</span>&lt;<span class="text-success">Student</span>&gt; Students { <span class="text-primary">get</span>; <span class="text-primary">set</span>; } <span class="text-primary">= default!;</span>
+    ```
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+</section>

@@ -1,0 +1,79 @@
+<section id="step5" class="mb-5" aria-labelledby="step5-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step5-title" class="fw-bold text-primary mb-1">
+            Bước 5: Đăng Ký DbContext Trong Program.cs
+        </h2>
+
+        <p class="text-body-secondary mb-0">
+            Thiết lập Dependency Injection (DI) trong ASP.NET Core 10.
+        </p>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white fw-bold py-3">
+            <i class="bi bi-gear-wide-connected me-2 text-info" aria-hidden="true"></i>
+            Program.cs (.NET 10)
+        </div>
+
+        <div class="card-body bg-dark rounded-bottom">
+            <div class="code-block overflow-auto">
+                <pre class="m-0"><code class="text-light"><span class="text-primary">using</span> Microsoft.EntityFrameworkCore;
+<span class="text-primary">using</span> AppMvcNet10.Data;
+
+<span class="text-primary">var</span> builder = <span class="text-success">WebApplication</span>.CreateBuilder(args);
+
+builder.Services.AddControllersWithViews();
+
+<span class="text-danger">// TÙY CHỌN 1: Đăng ký sử dụng SQL Server</span>
+builder.Services.AddDbContext<<span class="text-success">ApplicationDbContext</span>>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString( <span class="text-info">"SqlServerConnection"</span>)));
+
+<span class="text-danger">// TÙY CHỌN 2: Đăng ký sử dụng SQLite (Bỏ comment nếu dùng SQLite)</span> <span class="text-danger">
+// builder.Services.AddDbContext<ApplicationDbContext>(options =></span> <span class="text-danger">options.UseSqlite(</span><span class="text-danger">builder.Configuration.GetConnectionString("SqliteConnection")));</span>
+
+<span class="text-primary">var</span> app = builder.Build();
+
+app.Run();</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- SQL Server -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-start border-4 border-primary shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold text-primary mb-2">
+                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                        Phương thức cho SQL Server
+                    </h6>
+
+                    <p class="small text-body-secondary mb-0">
+                        Sử dụng phương thức mở rộng
+                        <code>UseSqlServer()</code> được cung cấp bởi gói NuGet
+                        <code>Microsoft.EntityFrameworkCore.SqlServer</code>.
+                    </p>
+                </div>
+            </article>
+        </div>
+
+        <!-- SQLite -->
+        <div class="col-12 col-lg-6">
+            <article class="card h-100 border-start border-4 border-success shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold text-success mb-2">
+                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i>
+                        Phương thức cho SQLite
+                    </h6>
+
+                    <p class="small text-body-secondary mb-0">
+                        Sử dụng phương thức mở rộng
+                        <code>UseSqlite()</code> được cung cấp bởi gói NuGet
+                        <code>Microsoft.EntityFrameworkCore.Sqlite</code>.
+                    </p>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>

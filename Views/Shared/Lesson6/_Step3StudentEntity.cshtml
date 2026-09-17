@@ -1,0 +1,111 @@
+<section id="step3" class="mb-5" aria-labelledby="step3-title">
+    <div class="border-start border-4 border-primary ps-3 mb-4">
+        <h2 id="step3-title" class="fw-bold text-primary mb-1">
+            Bước 3: Khai Báo Class Student (Model)
+        </h2>
+        <p class="text-body-secondary mb-0">
+            Định nghĩa cấu trúc Entity và áp dụng Data Annotations để ràng buộc dữ liệu.
+        </p>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white fw-bold py-3">
+            <i class="bi bi-code-slash me-2 text-info" aria-hidden="true"></i>
+            Models/Student.cs
+        </div>
+
+        <div class="card-body bg-dark rounded-bottom">
+            <div class="code-block overflow-auto">
+                <pre class="m-0"><code class="text-light"><span class="text-primary">using</span> System.ComponentModel.DataAnnotations;
+```
+
+<span class="text-primary">namespace</span> <span class="text-info">AppMvcNet10.Models</span>;
+
+<span class="text-primary">public class</span> <span class="text-success">Student</span>
+{
+    [<span class="text-warning">Key</span>] <span class="text-primary">public int</span> StudentId { <span class="text-primary">get</span>; <span class="text-primary">set</span>; }
+
+    ```
+    [<span class="text-warning">Required</span>(ErrorMessage = <span class="text-info">"Họ và tên không được để trống"</span>)]
+    [<span class="text-warning">StringLength</span>(100, ErrorMessage = <span class="text-info">"Tên không được vượt quá 100 ký tự"</span>)]
+    <span class="text-primary">public string</span> FullName { <span class="text-primary">get</span>; <span class="text-primary">set</span>; } = <span class="text-primary">string</span>.Empty;
+
+    [<span class="text-warning">Required</span>(ErrorMessage = <span class="text-info">"Email không được để trống"</span>)]
+    [<span class="text-warning">EmailAddress</span>(ErrorMessage = <span class="text-info">"Định dạng Email không hợp lệ"</span>)]
+    [<span class="text-warning">StringLength</span>(150)]
+    <span class="text-primary">public string</span> Email { <span class="text-primary">get</span>; <span class="text-primary">set</span>; } = <span class="text-primary">string</span>.Empty;
+    ```
+
+}</code></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Annotations -->
+    <h5 class="fw-bold text-secondary mb-3">
+        Mô tả Chi tiết Attributes
+    </h5>
+
+    <div class="table-responsive shadow-sm rounded-3 mb-3">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-primary">
+                <tr>
+                    <th scope="col">Thuộc tính</th>
+                    <th scope="col">Data Annotation</th>
+                    <th scope="col">Mô tả &amp; Ý nghĩa</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>
+                        <code>StudentId</code>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-danger">[Key]</span>
+                    </td>
+
+                    <td>
+                        Đánh dấu là Khóa chính (Primary Key).
+                        Với Entity Framework Core và kiểu <code>int</code>,
+                        khóa có thể được cấu hình tự động tăng theo quy ước.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <code>FullName</code>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-warning text-dark">[Required]</span>
+                        <span class="badge bg-info text-dark">[StringLength(100)]</span>
+                    </td>
+
+                    <td>
+                        Bắt buộc nhập dữ liệu và giới hạn tối đa
+                        100 ký tự.
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <code>Email</code>
+                    </td>
+
+                    <td>
+                        <span class="badge bg-warning text-dark">[Required]</span>
+                        <span class="badge bg-success">[EmailAddress]</span>
+                        <span class="badge bg-info text-dark">[StringLength(150)]</span>
+                    </td>
+
+                    <td>
+                        Bắt buộc nhập Email, kiểm tra định dạng Email
+                        và giới hạn tối đa 150 ký tự.
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
