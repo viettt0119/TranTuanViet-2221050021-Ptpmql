@@ -17,9 +17,9 @@ namespace DemoMVC.Controllers
         [HttpGet]
         public async Task<IActionResult> Index()
         {
-            // Truy vấn lấy toàn bộ dữ liệu từ bảng Products
+        
             var products = await _context.Products.ToListAsync();
-            return View(products); // Truyền dữ liệu sang View
+            return View(products); 
         }
         [HttpGet]
         public IActionResult Create()
