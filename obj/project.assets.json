@@ -6578,11 +6578,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+      "projectUniqueName": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
       "projectName": "DemoMVC",
-      "projectPath": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+      "projectPath": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
       "packagesPath": "C:\\Users\\viett\\.nuget\\packages\\",
-      "outputPath": "D:\\tmp\\DemoMVC\\obj\\",
+      "outputPath": "D:\\tmp\\DemoMVc\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\viett\\AppData\\Roaming\\NuGet\\NuGet.Config"

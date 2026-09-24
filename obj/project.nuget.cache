@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "/oUnvQYHz4A=",
+  "dgSpecHash": "XqpDhNu1p8M=",
   "success": true,
-  "projectFilePath": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+  "projectFilePath": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\viett\\.nuget\\packages\\azure.core\\1.50.0\\azure.core.1.50.0.nupkg.sha512",
     "C:\\Users\\viett\\.nuget\\packages\\azure.identity\\1.17.1\\azure.identity.1.17.1.nupkg.sha512",
@@ -144,9 +144,9 @@
       "code": "NU1901",
       "level": "Warning",
       "message": "Package 'NuGet.Packaging' 6.12.1 has a known low severity vulnerability, https://github.com/advisories/GHSA-g4vj-cjjj-v7hg",
-      "projectPath": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+      "projectPath": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+      "filePath": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
       "libraryId": "NuGet.Packaging",
       "targetGraphs": [
         "net10.0"
@@ -156,9 +156,9 @@
       "code": "NU1901",
       "level": "Warning",
       "message": "Package 'NuGet.Protocol' 6.12.1 has a known low severity vulnerability, https://github.com/advisories/GHSA-g4vj-cjjj-v7hg",
-      "projectPath": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+      "projectPath": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
       "warningLevel": 1,
-      "filePath": "D:\\tmp\\DemoMVC\\DemoMVC.csproj",
+      "filePath": "D:\\tmp\\DemoMVc\\DemoMVC.csproj",
       "libraryId": "NuGet.Protocol",
       "targetGraphs": [
         "net10.0"

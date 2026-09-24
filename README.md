@@ -19,3 +19,6 @@
 ### lec 4 
 - Ôn tập về định tuyến , cơ bản cấu trúc 
 - Học về viewbag, viewdata, gửi nhận dữ liệu qua model - controller - view
+### lec 6 
+- sinh code tự động 
+- dotnet aspnet-codegenerator controller -name EmployeeController -m EmployeeModel -dc DemoMVC.Data.ApplicationDbContext --relativeFolderPath Controllers --useDefaultLayout --referenceScriptLibraries --databaseProvider sqlite
