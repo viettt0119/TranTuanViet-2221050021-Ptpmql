@@ -1,0 +1,55 @@
+@model IEnumerable<DemoMVC.Models.ProductModel>
+
+@{
+    ViewData["Title"] = "Danh sách Sản phẩm";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Danh sách Sản phẩm</h2>
+        <a asp-action="Create" class="btn btn-primary">
+            + Thêm mới
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center" style="width: 80px;">ID</th>
+                        <th>Tên sản phẩm</th>
+                        <th class="text-end">Giá (VNĐ)</th>
+                        <th class="text-center" style="width: 150px;">Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="text-center">@item.Id</td>
+                                <td>@item.Name</td>
+                                <!-- Format số tiền có dấu phẩy ngăn cách hàng nghìn -->
+                                <td class="text-end">@item.Price.ToString("N0")</td>
+                                <td class="text-center">
+                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">Sửa</a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Xóa</a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">
+                                Chưa có sản phẩm nào trong cơ sở dữ liệu.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

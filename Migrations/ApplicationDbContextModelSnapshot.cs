@@ -34,6 +34,25 @@ namespace DemoMVC.Migrations
                     b.ToTable("Employees");
                 });
 
+            modelBuilder.Entity("DemoMVC.Models.ProductModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Products");
+                });
+
             modelBuilder.Entity("DemoMVC.Models.StudentModel", b =>
                 {
                     b.Property<int>("Id")

@@ -1,0 +1,59 @@
+@model DemoMVC.Models.ProductModel
+
+@{
+    ViewData["Title"] = "Thêm mới Sản phẩm";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <!-- Sử dụng Card của Bootstrap để tạo khung viền đẹp mắt -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Thêm mới Sản phẩm</h4>
+                </div>
+                
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <!-- Nơi hiển thị lỗi chung (nếu có) -->
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                        <!-- Trường nhập Tên sản phẩm -->
+                        <div class="form-group mb-3">
+                            <label for="Name" class="form-label fw-bold">Tên sản phẩm</label>
+                            <input id="Name" name="Name" value="@ViewData.Eval("Name")" class="form-control" placeholder="Nhập tên sản phẩm..." />
+                            <!-- text-danger của Bootstrap giúp dòng thông báo lỗi có màu đỏ -->
+                            <span class="text-danger">@ViewData.ModelState["Name"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                        </div>
+
+                        <!-- Trường nhập Giá -->
+                        <div class="form-group mb-4">
+                            <label for="Price" class="form-label fw-bold">Giá sản phẩm (VNĐ)</label>
+                            <input id="Price" name="Price" value="@ViewData.Eval("Price")" type="number" class="form-control" placeholder="Ví dụ: 150000" />
+                            <span class="text-danger">@ViewData.ModelState["Price"]?.Errors.FirstOrDefault()?.ErrorMessage</span>
+                        </div>
+
+                        <!-- Cụm nút bấm -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Index" class="btn btn-outline-secondary me-md-2">
+                                Hủy & Quay lại
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save"></i> Lưu Sản Phẩm
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ĐÂY LÀ PHẦN QUAN TRỌNG CHO VALIDATE PHÍA CLIENT -->
+@section Scripts {
+    @{
+        // File _ValidationScriptsPartial.cshtml có sẵn trong thư mục Views/Shared/
+        // Nó chứa thư viện jQuery Validation giúp báo lỗi ngay lập tức mà không cần load lại trang
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}
