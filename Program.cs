@@ -31,6 +31,12 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Product}/{action=Index}/{id?}")
     .WithStaticAssets();
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    // Lệnh này tương đương việc bạn gõ "dotnet ef database update" nhưng nó chạy tự động trên server
+    dbContext.Database.Migrate(); 
+}
 
 
 app.Run();
