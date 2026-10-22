@@ -29,7 +29,7 @@ app.MapStaticAssets();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Product}/{action=Index}/{id?}")
+    pattern: "{controller=Student}/{action=Index}/{id?}")
     .WithStaticAssets();
 using (var scope = app.Services.CreateScope())
 {
