@@ -1,7 +1,7 @@
 @model DemoMVC.Models.StudentModel
 @{ ViewData["Title"] = "Thêm sinh viên"; }
 <h1>Thêm sinh viên</h1>
-<p>Mã được cấp tự động khi lưu.</p>
+<p>---------------</p>
 @if (!(bool)ViewBag.HasDepartments)
 {
     <div class="alert alert-warning">Chưa có Khoa. <a asp-controller="Department" asp-action="Create">Thêm Khoa</a> trước khi lưu sinh viên.</div>
@@ -20,7 +20,7 @@
     <div class="mb-3"><label asp-for="AdmissionYear">Năm nhập học</label><input asp-for="AdmissionYear" class="form-control" /></div>
     <div class="mb-3"><label asp-for="TrainingSystemCode">Mã hệ (2 chữ số)</label><input asp-for="TrainingSystemCode" class="form-control" maxlength="2" /></div>
     <div class="mb-3"><label asp-for="MajorCode">Mã ngành (2 chữ số)</label><input asp-for="MajorCode" class="form-control" maxlength="2" /></div>
-    <p>Theo ví dụ đề bài: hệ 21 là đại học chính quy, ngành 05 là Công nghệ thông tin. Nhập đúng mã ngành tương ứng Khoa; đây là mã quy ước của bài tập.</p>
+    <p>----------</p>
     <button class="btn btn-primary" type="submit" disabled="@(!(bool)ViewBag.HasDepartments)">Lưu sinh viên</button>
     <a asp-action="Index" class="btn btn-secondary">Quay lại</a>
 </form>
