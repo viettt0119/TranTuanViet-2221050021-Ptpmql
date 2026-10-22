@@ -1,0 +1,11 @@
+@model DemoMVC.Models.DepartmentModel
+@{ ViewData["Title"] = "Sửa Khoa"; }
+<h1>Sửa Khoa @Model.DepartmentCode</h1>
+<form asp-action="Edit" asp-route-id="@Model.DepartmentCode" method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input asp-for="DepartmentCode" type="hidden" />
+    <div class="mb-3"><label asp-for="DepartmentName">Tên Khoa</label><input asp-for="DepartmentName" class="form-control" /></div>
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a asp-action="Index">Quay lại</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,41 +1,18 @@
 @model DemoMVC.Models.StudentModel
-
-@{
-    ViewData["Title"] = "Edit";
-}
-
-<h1>Edit</h1>
-
-<h4>StudentModel</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="FullName" class="control-label"></label>
-                <input asp-for="FullName" class="form-control" />
-                <span asp-validation-for="FullName" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Address" class="control-label"></label>
-                <input asp-for="Address" class="form-control" />
-                <span asp-validation-for="Address" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="University" class="control-label"></label>
-                <input asp-for="University" class="form-control" />
-                <span asp-validation-for="University" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+@{ ViewData["Title"] = "Sửa sinh viên"; }
+<h1>Sửa sinh viên @Model.StudentCode</h1>
+<p>Mã, năm nhập học, hệ và ngành được giữ nguyên. Bạn có thể sửa thông tin cá nhân và Khoa quản lý.</p>
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="mb-3"><label asp-for="FullName">Họ tên</label><input asp-for="FullName" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="Address">Địa chỉ</label><input asp-for="Address" class="form-control" /></div>
+    <div class="mb-3"><label asp-for="University">Trường</label><input asp-for="University" class="form-control" /></div>
+    <div class="mb-3">
+        <label asp-for="DepartmentCode"></label>
+        <select asp-for="DepartmentCode" asp-items="ViewBag.DepartmentCode" class="form-select"><option value="">-- Chọn Khoa --</option></select>
     </div>
-</div>
-
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
+    <div class="alert alert-info">Năm: @Model.AdmissionYear — Hệ: @Model.TrainingSystemCode — Ngành: @Model.MajorCode</div>
+    <button type="submit" class="btn btn-primary">Lưu</button>
+    <a asp-action="Index">Quay lại</a>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

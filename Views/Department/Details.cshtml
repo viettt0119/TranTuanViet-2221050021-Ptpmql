@@ -1,0 +1,30 @@
+@model DemoMVC.Models.DepartmentModel
+@{ ViewData["Title"] = "Chi tiết Khoa"; }
+<h1>@Model.DepartmentName</h1>
+<p>Mã Khoa: <strong>@Model.DepartmentCode</strong> — Số sinh viên: <strong>@Model.Students.Count</strong></p>
+<p>
+    <a asp-action="Edit" asp-route-id="@Model.DepartmentCode" class="btn btn-primary">Sửa tên Khoa</a>
+    <a asp-action="Index" class="btn btn-outline-secondary">Quay lại</a>
+</p>
+<h2 class="h4">Sinh viên thuộc Khoa</h2>
+@if (Model.Students.Count == 0)
+{
+    <div class="alert alert-info">Khoa chưa có sinh viên.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead><tr><th>Mã sinh viên</th><th>Họ tên</th><th>Năm nhập học</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var student in Model.Students.OrderBy(s => s.StudentCode))
+            {
+                <tr>
+                    <td>@student.StudentCode</td><td>@student.FullName</td><td>@student.AdmissionYear</td>
+                    <td><a asp-controller="Student" asp-action="Details" asp-route-id="@student.Id">Chi tiết sinh viên</a></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

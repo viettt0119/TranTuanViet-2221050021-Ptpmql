@@ -418,3 +418,6 @@ D:\tmp\DemoMVC\bin\Debug\net10.0\runtimes\win-x86\native\e_sqlite3.dll
 D:\tmp\DemoMVC\obj\Debug\net10.0\DemoMVC.csproj.AssemblyReference.cache
 D:\tmp\DemoMVC\obj\Debug\net10.0\DemoMVC.csproj.Up2Date
 D:\tmp\DemoMVC\obj\Debug\net10.0\compressed\uoog3p6aoc-{0}-n9cei7yq9k-n9cei7yq9k.gz
+D:\tmp\DemoMVC\bin\Debug\net10.0\EPPlus.dll
+D:\tmp\DemoMVC\bin\Debug\net10.0\EPPlus.Interfaces.dll
+D:\tmp\DemoMVC\bin\Debug\net10.0\Microsoft.IO.RecyclableMemoryStream.dll
