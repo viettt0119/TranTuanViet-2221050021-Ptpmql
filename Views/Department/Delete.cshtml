@@ -1,0 +1,9 @@
+@model DemoMVC.Models.DepartmentModel
+@{ ViewData["Title"] = "Xóa Khoa"; }
+<h1>Xóa Khoa</h1>
+<div asp-validation-summary="All" class="text-danger"></div>
+<p>Xác nhận xóa @Model.DepartmentName (@Model.DepartmentCode)?</p>
+<form asp-action="Delete" asp-route-id="@Model.DepartmentCode" method="post">
+    <button type="submit" class="btn btn-danger">Xóa</button>
+    <a asp-action="Index">Hủy</a>
+</form>

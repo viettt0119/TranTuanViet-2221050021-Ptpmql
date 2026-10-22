@@ -1,36 +1,13 @@
 @model DemoMVC.Models.StudentModel
-
-@{
-    ViewData["Title"] = "Details";
-}
-
-<h1>Details</h1>
-
-<div>
-    <h4>StudentModel</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.FullName)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.FullName)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Address)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Address)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.University)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.University)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+@{ ViewData["Title"] = "Chi tiết sinh viên"; }
+<h1>@Model.StudentCode</h1>
+<dl>
+    <dt>Họ tên</dt><dd>@Model.FullName</dd>
+    <dt>Địa chỉ</dt><dd>@Model.Address</dd>
+    <dt>Trường</dt><dd>@Model.University</dd>
+    <dt>Khoa</dt><dd>@Model.Department?.DepartmentName (@Model.DepartmentCode)</dd>
+    <dt>Năm nhập học</dt><dd>@Model.AdmissionYear</dd>
+    <dt>Mã hệ</dt><dd>@Model.TrainingSystemCode</dd>
+    <dt>Mã ngành</dt><dd>@Model.MajorCode</dd>
+</dl>
+<a asp-action="Edit" asp-route-id="@Model.Id">Sửa</a> | <a asp-action="Index">Quay lại</a>

@@ -17,6 +17,22 @@ namespace DemoMVC.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
+            modelBuilder.Entity("DemoMVC.Models.DepartmentModel", b =>
+                {
+                    b.Property<string>("DepartmentCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DepartmentName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("DepartmentCode");
+
+                    b.ToTable("Departments");
+                });
+
             modelBuilder.Entity("DemoMVC.Models.EmployeeModel", b =>
                 {
                     b.Property<string>("EmpId")
@@ -53,6 +69,27 @@ namespace DemoMVC.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("DemoMVC.Models.StudentCodeCounter", b =>
+                {
+                    b.Property<int>("AdmissionYear")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("TrainingSystemCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MajorCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LastNumber")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("AdmissionYear", "TrainingSystemCode", "MajorCode");
+
+                    b.ToTable("StudentCodeCounters");
+                });
+
             modelBuilder.Entity("DemoMVC.Models.StudentModel", b =>
                 {
                     b.Property<int>("Id")
@@ -63,9 +100,30 @@ namespace DemoMVC.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("AdmissionYear")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("DepartmentCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MajorCode")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("StudentCode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TrainingSystemCode")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("University")
@@ -74,7 +132,28 @@ namespace DemoMVC.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DepartmentCode");
+
+                    b.HasIndex("StudentCode")
+                        .IsUnique();
+
                     b.ToTable("Students");
+                });
+
+            modelBuilder.Entity("DemoMVC.Models.StudentModel", b =>
+                {
+                    b.HasOne("DemoMVC.Models.DepartmentModel", "Department")
+                        .WithMany("Students")
+                        .HasForeignKey("DepartmentCode")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("DemoMVC.Models.DepartmentModel", b =>
+                {
+                    b.Navigation("Students");
                 });
 #pragma warning restore 612, 618
         }
