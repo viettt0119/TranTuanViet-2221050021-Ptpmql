@@ -1,4 +1,4 @@
-@model IEnumerable<DemoMVC.Models.ProductModel>
+@model DemoMVC.Models.PagedList<DemoMVC.Models.ProductModel>
 
 @{
     ViewData["Title"] = "Danh sách Sản phẩm";
@@ -24,9 +24,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model != null && Model.Any())
+                    @if (Model.Items.Count > 0)
                     {
-                        foreach (var item in Model)
+                        foreach (var item in Model.Items)
                         {
                             <tr>
                                 <td class="text-center">@item.Id</td>
@@ -51,5 +51,85 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
+        <form asp-action="Index" method="get" class="d-flex align-items-center gap-2">
+            <label for="pageSize" class="form-label mb-0">Số sản phẩm mỗi trang</label>
+            <select id="pageSize" name="pageSize" class="form-select w-auto">
+                @foreach (var size in DemoMVC.Models.PagedList<DemoMVC.Models.ProductModel>.PageSizeOptions)
+                {
+                    if (Model.PageSize == size)
+                    {
+                        <option value="@size" selected>@size</option>
+                    }
+                    else
+                    {
+                        <option value="@size">@size</option>
+                    }
+                }
+            </select>
+            <button type="submit" class="btn btn-outline-primary">Áp dụng</button>
+        </form>
+
+        @if (Model.TotalPages > 0)
+        {
+            var startPage = Math.Max(1, Model.PageIndex - 2);
+            var endPage = Math.Min(Model.TotalPages, startPage + 4);
+            startPage = Math.Max(1, endPage - 4);
+
+            <nav aria-label="Phân trang sản phẩm">
+                <ul class="pagination mb-0">
+                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-pageSize="@Model.PageSize">Đầu</a>
+                        }
+                        else
+                        {
+                            <span class="page-link">Đầu</span>
+                        }
+                    </li>
+                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-pageSize="@Model.PageSize">Trước</a>
+                        }
+                        else
+                        {
+                            <span class="page-link">Trước</span>
+                        }
+                    </li>
+                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
+                    {
+                        <li class="page-item @(pageNumber == Model.PageIndex ? "active" : "")">
+                            <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-pageSize="@Model.PageSize" aria-current="@(pageNumber == Model.PageIndex ? "page" : null)">@pageNumber</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                        @if (Model.HasNextPage)
+                        {
+                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-pageSize="@Model.PageSize">Sau</a>
+                        }
+                        else
+                        {
+                            <span class="page-link">Sau</span>
+                        }
+                    </li>
+                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                        @if (Model.HasNextPage)
+                        {
+                            <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-pageSize="@Model.PageSize">Cuối</a>
+                        }
+                        else
+                        {
+                            <span class="page-link">Cuối</span>
+                        }
+                    </li>
+                </ul>
+            </nav>
+
+            <span class="text-muted">Trang @Model.PageIndex / @Model.TotalPages (@Model.TotalRecords sản phẩm)</span>
+        }
     </div>
 </div>
