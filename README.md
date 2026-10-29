@@ -20,5 +20,10 @@
 - Ôn tập về định tuyến , cơ bản cấu trúc 
 - Học về viewbag, viewdata, gửi nhận dữ liệu qua model - controller - view
 ### lec 6 
+#### Phân trang sản phẩm
+- Danh sách sản phẩm hỗ trợ phân trang phía máy chủ tại `/Product`.
+- Có thể truyền `page` và `pageSize` trên query string; `pageSize` được hỗ trợ là 10, 20 hoặc 50 (mặc định 10).
+- Trang vượt phạm vi được đưa về trang cuối; trang không hợp lệ hoặc `pageSize` không hỗ trợ được chuẩn hóa về giá trị mặc định.
+- Chạy kiểm thử phân trang bằng `dotnet test Tests\DemoMVC.Tests\DemoMVC.Tests.csproj`.
 - sinh code tự động 
 - dotnet aspnet-codegenerator controller -name EmployeeController -m EmployeeModel -dc DemoMVC.Data.ApplicationDbContext --relativeFolderPath Controllers --useDefaultLayout --referenceScriptLibraries --databaseProvider sqlite

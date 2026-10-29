@@ -15,11 +15,14 @@ namespace DemoMVC.Controllers
         _context = context; 
     }
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
-        
-            var products = await _context.Products.ToListAsync();
-            return View(products); 
+            var products = await PagedList<ProductModel>.CreateAsync(
+                _context.Products.OrderBy(product => product.Id),
+                page,
+                pageSize,
+                HttpContext.RequestAborted);
+            return View(products);
         }
         [HttpGet]
         public IActionResult Create()
