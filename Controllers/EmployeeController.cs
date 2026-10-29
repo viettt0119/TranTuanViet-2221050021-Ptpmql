@@ -19,39 +19,30 @@ namespace DemoMVC.Controllers
             _context = context;
         }
 
-        // GET: Employee
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Employees.ToListAsync());
+            return View(await _context.Employees.OrderBy(employee => employee.EmpId).ToListAsync());
         }
 
-        // GET: Employee/Details/5
+        [HttpGet]
         public async Task<IActionResult> Details(string id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
             var employeeModel = await _context.Employees
                 .FirstOrDefaultAsync(m => m.EmpId == id);
             if (employeeModel == null)
-            {
                 return NotFound();
-            }
-
-            return View(employeeModel);
+            return PartialView("_DetailsModal", employeeModel);
         }
 
-        // GET: Employee/Create
+        [HttpGet]
         public IActionResult Create()
         {
-            return View();
+            ViewData["ModalTitle"] = "Thêm nhân viên";
+            ViewData["FormActionUrl"] = Url.Action(nameof(Create));
+            ViewData["IsCreate"] = true;
+            return PartialView("_FormModal", new EmployeeModel());
         }
 
-        // POST: Employee/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("EmpId,FullName,HireDate")] EmployeeModel employeeModel)
@@ -59,99 +50,92 @@ namespace DemoMVC.Controllers
             if (ModelState.IsValid)
             {
                 _context.Add(employeeModel);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            return View(employeeModel);
-        }
-
-        // GET: Employee/Edit/5
-        public async Task<IActionResult> Edit(string id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var employeeModel = await _context.Employees.FindAsync(id);
-            if (employeeModel == null)
-            {
-                return NotFound();
-            }
-            return View(employeeModel);
-        }
-
-        // POST: Employee/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(string id, [Bind("EmpId,FullName,HireDate")] EmployeeModel employeeModel)
-        {
-            if (id != employeeModel.EmpId)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
                 try
                 {
-                    _context.Update(employeeModel);
                     await _context.SaveChangesAsync();
+                    return Json(new { success = true, message = "Đã thêm nhân viên." });
                 }
-                catch (DbUpdateConcurrencyException)
+                catch (DbUpdateException)
                 {
-                    if (!EmployeeModelExists(employeeModel.EmpId))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    ModelState.AddModelError("", "Không thể lưu nhân viên. Kiểm tra mã nhân viên có bị trùng không.");
                 }
-                return RedirectToAction(nameof(Index));
             }
-            return View(employeeModel);
+            return FormModal(employeeModel, nameof(Create), "Thêm nhân viên", true);
         }
 
-        // GET: Employee/Delete/5
+        [HttpGet]
+        public async Task<IActionResult> Edit(string id)
+        {
+            var employeeModel = await _context.Employees.FindAsync(id);
+            if (employeeModel == null)
+                return NotFound();
+            ViewData["ModalTitle"] = "Sửa nhân viên";
+            ViewData["FormActionUrl"] = Url.Action(nameof(Edit), new { id });
+            ViewData["IsCreate"] = false;
+            return PartialView("_FormModal", employeeModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(string id, [Bind("EmpId,FullName,HireDate")] EmployeeModel form)
+        {
+            if (id != form.EmpId) return BadRequest();
+            if (!ModelState.IsValid)
+                return FormModal(form, nameof(Edit), "Sửa nhân viên", false, new { id });
+
+            var employee = await _context.Employees.FindAsync(id);
+            if (employee == null) return NotFound();
+            employee.FullName = form.FullName;
+            employee.HireDate = form.HireDate;
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Json(new { success = true, message = "Đã cập nhật nhân viên." });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound();
+            }
+            catch (DbUpdateException)
+            {
+                ModelState.AddModelError("", "Không thể cập nhật nhân viên.");
+                return FormModal(form, nameof(Edit), "Sửa nhân viên", false, new { id });
+            }
+        }
+
+        [HttpGet]
         public async Task<IActionResult> Delete(string id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var employeeModel = await _context.Employees
-                .FirstOrDefaultAsync(m => m.EmpId == id);
+            var employeeModel = await _context.Employees.FindAsync(id);
             if (employeeModel == null)
-            {
                 return NotFound();
-            }
-
-            return View(employeeModel);
+            ViewData["FormActionUrl"] = Url.Action(nameof(Delete), new { id });
+            return PartialView("_DeleteModal", employeeModel);
         }
 
-        // POST: Employee/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var employeeModel = await _context.Employees.FindAsync(id);
-            if (employeeModel != null)
-            {
-                _context.Employees.Remove(employeeModel);
-            }
-
+            if (employeeModel == null) return NotFound();
+            _context.Employees.Remove(employeeModel);
             await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            return Json(new { success = true, message = "Đã xóa nhân viên." });
         }
 
-        private bool EmployeeModelExists(string id)
+        private PartialViewResult FormModal(
+            EmployeeModel employee,
+            string action,
+            string title,
+            bool isCreate,
+            object? routeValues = null)
         {
-            return _context.Employees.Any(e => e.EmpId == id);
+            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            ViewData["ModalTitle"] = title;
+            ViewData["FormActionUrl"] = Url.Action(action, routeValues);
+            ViewData["IsCreate"] = isCreate;
+            return PartialView("_FormModal", employee);
         }
     }
 }

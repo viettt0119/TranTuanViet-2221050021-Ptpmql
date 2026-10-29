@@ -2,7 +2,7 @@
 @{ ViewData["Title"] = "Sinh viên"; }
 <h1>Sinh viên</h1>
 @if (TempData["Success"] is string message) { <div class="alert alert-success">@message</div> }
-<p><a asp-action="Create" class="btn btn-primary">Thêm sinh viên</a> <a asp-controller="Department" asp-action="Index">Quản lý Khoa</a></p>
+<p><a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">Thêm sinh viên</a> <a asp-controller="Department" asp-action="Index">Quản lý Khoa</a></p>
 <table class="table table-bordered">
     <thead><tr><th>Mã sinh viên</th><th>Họ tên</th><th>Khoa</th><th>Thao tác</th></tr></thead>
     <tbody>
@@ -11,11 +11,12 @@
         <tr>
             <td>@student.StudentCode</td><td>@student.FullName</td><td>@student.Department?.DepartmentName</td>
             <td>
-                <a asp-action="Details" asp-route-id="@student.Id">Chi tiết</a> |
-                <a asp-action="Edit" asp-route-id="@student.Id">Sửa</a> |
-                <a asp-action="Delete" asp-route-id="@student.Id">Xóa</a>
+                <a asp-action="Details" asp-route-id="@student.Id" data-modal-url="@Url.Action("Details", new { id = student.Id })">Chi tiết</a> |
+                <a asp-action="Edit" asp-route-id="@student.Id" data-modal-url="@Url.Action("Edit", new { id = student.Id })">Sửa</a> |
+                <a asp-action="Delete" asp-route-id="@student.Id" data-modal-url="@Url.Action("Delete", new { id = student.Id })">Xóa</a>
             </td>
         </tr>
     }
     </tbody>
 </table>
+@await Html.PartialAsync("_CrudModalHost")

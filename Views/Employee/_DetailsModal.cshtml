@@ -1,0 +1,16 @@
+@model DemoMVC.Models.EmployeeModel
+<div class="modal fade" tabindex="-1" aria-labelledby="employeeDetailsTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="employeeDetailsTitle">Chi tiết nhân viên</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <dl class="modal-body row mb-0">
+                <dt class="col-sm-4">Mã nhân viên</dt><dd class="col-sm-8">@Model.EmpId</dd>
+                <dt class="col-sm-4">Họ tên</dt><dd class="col-sm-8">@Model.FullName</dd>
+                <dt class="col-sm-4">Ngày tuyển dụng</dt><dd class="col-sm-8">@Model.HireDate.ToString("g")</dd>
+            </dl>
+        </div>
+    </div>
+</div>

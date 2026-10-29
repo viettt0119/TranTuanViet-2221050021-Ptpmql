@@ -1,0 +1,25 @@
+@model DemoMVC.Models.DepartmentModel
+@{
+    var formActionUrl = (string)ViewData["FormActionUrl"]!;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="deleteDepartmentTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="@formActionUrl" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="deleteDepartmentTitle">Xóa Khoa</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    <p>Bạn có chắc muốn xóa Khoa <strong>@Model.DepartmentName</strong> (@Model.DepartmentCode) không?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xóa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

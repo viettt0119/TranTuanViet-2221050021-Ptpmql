@@ -7,7 +7,7 @@
 <h1>Index</h1>
 
 <p>
-    <a asp-action="Create">Create New</a>
+    <a asp-action="Create" data-modal-url="@Url.Action("Create")">Create New</a>
 </p>
 <table class="table">
     <thead>
@@ -31,11 +31,12 @@
                 @Html.DisplayFor(modelItem => item.HireDate)
             </td>
             <td>
-                <a asp-action="Edit" asp-route-id="@item.EmpId">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.EmpId">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.EmpId">Delete</a>
+                <a asp-action="Edit" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Edit", new { id = item.EmpId })">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Details", new { id = item.EmpId })">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Delete", new { id = item.EmpId })">Delete</a>
             </td>
         </tr>
 }
     </tbody>
 </table>
+@await Html.PartialAsync("_CrudModalHost")
