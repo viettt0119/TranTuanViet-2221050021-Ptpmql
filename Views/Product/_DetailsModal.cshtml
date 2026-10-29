@@ -1,0 +1,16 @@
+@model DemoMVC.Models.ProductModel
+<div class="modal fade" tabindex="-1" aria-labelledby="productDetailsTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="productDetailsTitle">Chi tiết sản phẩm</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <dl class="modal-body row mb-0">
+                <dt class="col-sm-4">ID</dt><dd class="col-sm-8">@Model.Id</dd>
+                <dt class="col-sm-4">Tên sản phẩm</dt><dd class="col-sm-8">@Model.Name</dd>
+                <dt class="col-sm-4">Giá</dt><dd class="col-sm-8">@Model.Price.ToString("N0") VNĐ</dd>
+            </dl>
+        </div>
+    </div>
+</div>

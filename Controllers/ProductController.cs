@@ -25,66 +25,91 @@ namespace DemoMVC.Controllers
             return View(products);
         }
         [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            return product == null ? NotFound() : PartialView("_DetailsModal", product);
+        }
+
+        [HttpGet]
         public IActionResult Create()
         {
-            return View();
+            ViewData["ModalTitle"] = "Thêm sản phẩm";
+            ViewData["FormActionUrl"] = Url.Action(nameof(Create));
+            return PartialView("_FormModal", new ProductModel());
         }
 
         [HttpPost]
-        public IActionResult Create(ProductModel product)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create([Bind("Name,Price")] ProductModel product)
         {
-            if (ModelState.IsValid)
-            {
-                _context.Products.Add(product);
-                _context.SaveChanges();
+            if (!ModelState.IsValid)
+                return FormModal(product, nameof(Create), "Thêm sản phẩm");
 
-                return RedirectToAction("Index"); 
-            }
-            return View(product);
-    }
-    [HttpGet]
-    public async Task<IActionResult> Edit(int id)
-    {
-        if (id == 0) return NotFound();
-        var product = await _context.Products.FindAsync(id);
-        if (product == null) return NotFound();
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Đã thêm sản phẩm." });
+        }
 
-        return View(product); 
-    }
-    [HttpPost]
-    public async Task<IActionResult> Edit(int id, ProductModel product)
-    {
-    if (id != product.Id) return NotFound();
+        [HttpGet]
+        public async Task<IActionResult> Edit(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
 
-    if (ModelState.IsValid)
-    {
-        _context.Update(product);
-        await _context.SaveChangesAsync();
-        return RedirectToAction(nameof(Index));
-    }
-    return View(product);
-}
-    [HttpGet]
-    public async Task<IActionResult> Delete(int? id)
-    {
-    if (id == null) return NotFound();
+            ViewData["ModalTitle"] = "Sửa sản phẩm";
+            ViewData["FormActionUrl"] = Url.Action(nameof(Edit), new { id });
+            return PartialView("_FormModal", product);
+        }
 
-    var product = await _context.Products.FindAsync(id);
-    if (product == null) return NotFound();
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, [Bind("Name,Price")] ProductModel form)
+        {
+            if (!ModelState.IsValid)
+                return FormModal(form, nameof(Edit), "Sửa sản phẩm", new { id });
 
-    return View(product); 
-    }
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
 
-    [HttpPost, ActionName("Delete")]
-    public async Task<IActionResult> DeleteConfirmed(int id)
-    {
-    var product = await _context.Products.FindAsync(id);
-    if (product != null)
-    {
-        _context.Products.Remove(product);
-        await _context.SaveChangesAsync();
-    }
-    return RedirectToAction(nameof(Index));
-    }
+            product.Name = form.Name;
+            product.Price = form.Price;
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Đã cập nhật sản phẩm." });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            ViewData["FormActionUrl"] = Url.Action(nameof(Delete), new { id });
+            return PartialView("_DeleteModal", product);
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null) return NotFound();
+
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Đã xóa sản phẩm." });
+        }
+
+        private PartialViewResult FormModal(
+            ProductModel product,
+            string action,
+            string title,
+            object? routeValues = null)
+        {
+            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            ViewData["ModalTitle"] = title;
+            ViewData["FormActionUrl"] = Url.Action(action, routeValues);
+            return PartialView("_FormModal", product);
+        }
     }
 }

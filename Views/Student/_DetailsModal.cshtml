@@ -1,0 +1,20 @@
+@model DemoMVC.Models.StudentModel
+<div class="modal fade" tabindex="-1" aria-labelledby="studentDetailsTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="studentDetailsTitle">Chi tiết sinh viên</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <dl class="modal-body row mb-0">
+                <dt class="col-sm-4">Mã sinh viên</dt><dd class="col-sm-8">@Model.StudentCode</dd>
+                <dt class="col-sm-4">Họ tên</dt><dd class="col-sm-8">@Model.FullName</dd>
+                <dt class="col-sm-4">Địa chỉ</dt><dd class="col-sm-8">@Model.Address</dd>
+                <dt class="col-sm-4">Trường</dt><dd class="col-sm-8">@Model.University</dd>
+                <dt class="col-sm-4">Khoa</dt><dd class="col-sm-8">@Model.Department?.DepartmentName</dd>
+                <dt class="col-sm-4">Năm nhập học</dt><dd class="col-sm-8">@Model.AdmissionYear</dd>
+                <dt class="col-sm-4">Hệ / Ngành</dt><dd class="col-sm-8">@Model.TrainingSystemCode / @Model.MajorCode</dd>
+            </dl>
+        </div>
+    </div>
+</div>

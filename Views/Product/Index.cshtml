@@ -7,7 +7,7 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2>Danh sách Sản phẩm</h2>
-        <a asp-action="Create" class="btn btn-primary">
+        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">
             + Thêm mới
         </a>
     </div>
@@ -34,8 +34,9 @@
                                 <!-- Format số tiền có dấu phẩy ngăn cách hàng nghìn -->
                                 <td class="text-end">@item.Price.ToString("N0")</td>
                                 <td class="text-center">
-                                    <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-outline-warning">Sửa</a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-outline-danger">Xóa</a>
+                                    <a asp-action="Details" asp-route-id="@item.Id" data-modal-url="@Url.Action("Details", new { id = item.Id })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id" data-modal-url="@Url.Action("Edit", new { id = item.Id })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id" data-modal-url="@Url.Action("Delete", new { id = item.Id })" class="btn btn-sm btn-outline-danger">Xóa</a>
                                 </td>
                             </tr>
                         }
@@ -51,6 +52,7 @@
                 </tbody>
             </table>
         </div>
+        @await Html.PartialAsync("_CrudModalHost")
     </div>
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">

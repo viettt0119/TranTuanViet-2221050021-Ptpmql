@@ -1,0 +1,83 @@
+@model DemoMVC.Models.StudentModel
+@{
+    var title = (string)ViewData["ModalTitle"]!;
+    var formActionUrl = (string)ViewData["FormActionUrl"]!;
+    var isCreate = (bool)ViewData["IsCreate"]!;
+    var hasDepartments = (bool)ViewBag.HasDepartments;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="studentModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form action="@formActionUrl" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="studentModalTitle">@title</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    @if (!hasDepartments)
+                    {
+                        <div class="alert alert-warning">Chưa có Khoa. Hãy thêm Khoa trước khi lưu sinh viên.</div>
+                    }
+                    @if (!isCreate)
+                    {
+                        <div class="alert alert-info">
+                            Mã sinh viên: @Model.StudentCode —
+                            Năm: @Model.AdmissionYear — Hệ: @Model.TrainingSystemCode — Ngành: @Model.MajorCode.
+                            Các thông tin cấp mã này không thể sửa.
+                        </div>
+                    }
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="FullName" class="form-label"></label>
+                            <input asp-for="FullName" class="form-control" />
+                            <span asp-validation-for="FullName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="University" class="form-label"></label>
+                            <input asp-for="University" class="form-control" />
+                            <span asp-validation-for="University" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Address" class="form-label"></label>
+                        <input asp-for="Address" class="form-control" />
+                        <span asp-validation-for="Address" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="DepartmentCode" class="form-label"></label>
+                        <select asp-for="DepartmentCode" asp-items="ViewBag.DepartmentCode" class="form-select">
+                            <option value="">-- Chọn Khoa --</option>
+                        </select>
+                        <span asp-validation-for="DepartmentCode" class="text-danger"></span>
+                    </div>
+                    @if (isCreate)
+                    {
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="AdmissionYear" class="form-label"></label>
+                                <input asp-for="AdmissionYear" class="form-control" />
+                                <span asp-validation-for="AdmissionYear" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="TrainingSystemCode" class="form-label"></label>
+                                <input asp-for="TrainingSystemCode" class="form-control" maxlength="2" />
+                                <span asp-validation-for="TrainingSystemCode" class="text-danger"></span>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label asp-for="MajorCode" class="form-label"></label>
+                                <input asp-for="MajorCode" class="form-control" maxlength="2" />
+                                <span asp-validation-for="MajorCode" class="text-danger"></span>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(isCreate && !hasDepartments)">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

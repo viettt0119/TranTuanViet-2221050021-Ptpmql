@@ -1,0 +1,52 @@
+@model DemoMVC.Models.EmployeeModel
+@{
+    var title = (string)ViewData["ModalTitle"]!;
+    var formActionUrl = (string)ViewData["FormActionUrl"]!;
+    var isCreate = (bool)ViewData["IsCreate"]!;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="employeeModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="@formActionUrl" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="employeeModalTitle">@title</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    @if (isCreate)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="EmpId" class="form-label">Mã nhân viên</label>
+                            <input asp-for="EmpId" class="form-control" />
+                            <span asp-validation-for="EmpId" class="text-danger"></span>
+                        </div>
+                    }
+                    else
+                    {
+                        <input asp-for="EmpId" type="hidden" />
+                        <div class="mb-3">
+                            <label class="form-label">Mã nhân viên</label>
+                            <input value="@Model.EmpId" class="form-control" disabled />
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label">Họ tên</label>
+                        <input asp-for="FullName" class="form-control" />
+                        <span asp-validation-for="FullName" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="HireDate" class="form-label">Ngày tuyển dụng</label>
+                        <input asp-for="HireDate" type="datetime-local" class="form-control" />
+                        <span asp-validation-for="HireDate" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

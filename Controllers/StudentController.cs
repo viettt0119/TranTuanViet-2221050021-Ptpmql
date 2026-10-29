@@ -30,14 +30,17 @@ public class StudentController : Controller
         var student = await _context.Students.Include(s => s.Department)
             .FirstOrDefaultAsync(s => s.Id == id);
         if (student == null) return NotFound();
-        return View(student);
+        return PartialView("_DetailsModal", student);
     }
 
     [HttpGet]
     public async Task<IActionResult> Create()
     {
         await LoadDepartmentsAsync();
-        return View(new StudentModel());
+        ViewData["ModalTitle"] = "Thêm sinh viên";
+        ViewData["FormActionUrl"] = Url.Action(nameof(Create));
+        ViewData["IsCreate"] = true;
+        return PartialView("_FormModal", new StudentModel());
     }
 
     [HttpPost]
@@ -54,8 +57,7 @@ public class StudentController : Controller
             try
             {
                 await CreateStudentWithCodeAsync(student);
-                TempData["Success"] = $"Đã thêm sinh viên {student.StudentCode}.";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = true, message = $"Đã thêm sinh viên {student.StudentCode}." });
             }
             catch (InvalidOperationException ex) { ModelState.AddModelError("", ex.Message); }
             catch (DbUpdateException)
@@ -68,8 +70,7 @@ public class StudentController : Controller
             }
         }
         // Form lỗi vẫn phải nạp lại danh sách Khoa.
-        await LoadDepartmentsAsync(student.DepartmentCode);
-        return View(student);
+        return await FormModalAsync(student, nameof(Create), "Thêm sinh viên", true);
     }
 
     [HttpGet]
@@ -79,7 +80,10 @@ public class StudentController : Controller
         var student = await _context.Students.FindAsync(id);
         if (student == null) return NotFound();
         await LoadDepartmentsAsync(student.DepartmentCode);
-        return View(student);
+        ViewData["ModalTitle"] = "Sửa sinh viên";
+        ViewData["FormActionUrl"] = Url.Action(nameof(Edit), new { id });
+        ViewData["IsCreate"] = false;
+        return PartialView("_FormModal", student);
     }
 
     [HttpPost]
@@ -98,14 +102,12 @@ public class StudentController : Controller
             {
                 // Mã, năm nhập học, hệ và ngành đã cấp không thay đổi.
                 await _context.SaveChangesAsync();
-                TempData["Success"] = "Đã cập nhật sinh viên.";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = true, message = "Đã cập nhật sinh viên." });
             }
             catch (DbUpdateConcurrencyException) { return NotFound(); }
             catch (DbUpdateException) { ModelState.AddModelError("", "Không thể lưu thay đổi. Vui lòng thử lại."); }
         }
-        await LoadDepartmentsAsync(student.DepartmentCode);
-        return View(student);
+        return await FormModalAsync(student, nameof(Edit), "Sửa sinh viên", false, new { id });
     }
 
     [HttpGet]
@@ -115,7 +117,8 @@ public class StudentController : Controller
         var student = await _context.Students.Include(s => s.Department)
             .FirstOrDefaultAsync(s => s.Id == id);
         if (student == null) return NotFound();
-        return View(student);
+        ViewData["FormActionUrl"] = Url.Action(nameof(Delete), new { id });
+        return PartialView("_DeleteModal", student);
     }
 
     [HttpPost, ActionName("Delete")]
@@ -129,15 +132,36 @@ public class StudentController : Controller
         try
         {
             await _context.SaveChangesAsync();
-            TempData["Success"] = "Đã xóa sinh viên. Số thứ tự đã cấp không được dùng lại.";
-            return RedirectToAction(nameof(Index));
+            return Json(new { success = true, message = "Đã xóa sinh viên. Số thứ tự đã cấp không được dùng lại." });
         }
         catch (DbUpdateConcurrencyException) { return NotFound(); }
         catch (DbUpdateException)
         {
             ModelState.AddModelError("", "Không thể xóa sinh viên. Vui lòng thử lại.");
-            return View("Delete", student);
+            return DeleteModal(student, id);
         }
+    }
+
+    private async Task<IActionResult> FormModalAsync(
+        StudentModel student,
+        string action,
+        string title,
+        bool isCreate,
+        object? routeValues = null)
+    {
+        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        await LoadDepartmentsAsync(student.DepartmentCode);
+        ViewData["ModalTitle"] = title;
+        ViewData["FormActionUrl"] = Url.Action(action, routeValues);
+        ViewData["IsCreate"] = isCreate;
+        return PartialView("_FormModal", student);
+    }
+
+    private PartialViewResult DeleteModal(StudentModel student, int id)
+    {
+        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+        ViewData["FormActionUrl"] = Url.Action(nameof(Delete), new { id });
+        return PartialView("_DeleteModal", student);
     }
 
     private async Task LoadDepartmentsAsync(string? selectedCode = null)
