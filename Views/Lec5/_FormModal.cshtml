@@ -1,0 +1,37 @@
+@model DemoMVC.Models.Lec5Model
+@{
+    var title = (string)ViewData["PageTitle"]!;
+    var formActionUrl = (string)ViewData["FormActionUrl"]!;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="lec5UserModalTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="@formActionUrl" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="lec5UserModalTitle">@title</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="All" class="text-danger"></div>
+                    <div class="mb-3">
+                        <label asp-for="Username" class="form-label">Tên đăng nhập</label>
+                        <input asp-for="Username" class="form-control" />
+                        <span asp-validation-for="Username" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Role" class="form-label">Quyền truy cập</label>
+                        <select asp-for="Role" asp-items="@(new SelectList((IEnumerable<string>)ViewBag.RoleList))" class="form-select">
+                            <option value="">-- Chọn quyền --</option>
+                        </select>
+                        <span asp-validation-for="Role" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

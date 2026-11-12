@@ -1,0 +1,21 @@
+@model DemoMVC.Models.Lec5Model
+<div class="modal fade" tabindex="-1" aria-labelledby="lec5UserDeleteTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="Delete" asp-route-id="@Model.Id" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="lec5UserDeleteTitle">Xóa người dùng</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc muốn xóa người dùng <strong>@Model.Username</strong> không?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Xóa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

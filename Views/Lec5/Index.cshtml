@@ -14,13 +14,14 @@
             <th>STT</th>
             <th>Tên đăng nhập</th>
             <th>Quyền truy cập</th>
+            <th>Thao tác</th>
         </tr>
     </thead>
     <tbody>
         @if (Model == null || Model.Count == 0)
         {
             <tr>
-                <td colspan="3" style="text-align: center;">Chưa có người dùng nào.</td>
+                <td colspan="4" style="text-align: center;">Chưa có người dùng nào.</td>
             </tr>
         }
         else
@@ -32,6 +33,11 @@
                     <td>@stt</td>
                     <td>@user.Username</td>
                     <td>@user.Role</td>
+                    <td>
+                        <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })">Chi tiết</a> |
+                        <a asp-action="Edit" asp-route-id="@user.Id" data-modal-url="@Url.Action("Edit", new { id = user.Id })">Sửa</a> |
+                        <a asp-action="Delete" asp-route-id="@user.Id" data-modal-url="@Url.Action("Delete", new { id = user.Id })">Xóa</a>
+                    </td>
                 </tr>
                 stt++;
             }
@@ -39,14 +45,10 @@
     </tbody>
 </table>
 
- @if (TempData["AlertMessage"] != null)
-{
-    <div style="color:green;">@TempData["AlertMessage"]</div>
-}
-
 <br />
-<a href="/Lec5/Create">Thêm người dùng mới</a>
+<a asp-action="Create" data-modal-url="@Url.Action("Create")">Thêm người dùng mới</a>
 <br />
 
 <p> 
      </p>
+@await Html.PartialAsync("_CrudModalHost")
