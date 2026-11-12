@@ -28,7 +28,7 @@ public class AccountController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     [EnableRateLimiting(AuthRateLimitPolicy)]
-    public async Task<IActionResult> Register(RegisterViewModel model, CancellationToken cancellationToken)
+    public async Task<IActionResult> Register(RegisterViewModel model)
     {
         if (!ModelState.IsValid)
             return View(model);
@@ -38,6 +38,7 @@ public class AccountController(
             UserName = model.Email.Trim(),
             Email = model.Email.Trim(),
             FullName = model.FullName.Trim(),
+            EmailConfirmed = true,
             CreatedAt = DateTimeOffset.UtcNow
         };
         var createResult = await userManager.CreateAsync(user, model.Password);
@@ -57,25 +58,8 @@ public class AccountController(
             return View(model);
         }
 
-        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-        var encodedToken = AuthTokenCodec.Encode(token);
-        var confirmationLink = BuildAccountLink(nameof(ConfirmEmail), new { userId = user.Id, token = encodedToken });
-        try
-        {
-            await emailSender.SendAsync(
-                user.Email!,
-                "Xác thực địa chỉ email",
-                emailTemplates.Confirmation(user.FullName, confirmationLink),
-                cancellationToken);
-            return View("RegisterConfirmation");
-        }
-        catch (EmailDeliveryException ex)
-        {
-            logger.LogError("Confirmation email delivery failed ({ExceptionType}).", ex.GetType().Name);
-            ViewData["StatusMessage"] =
-                "Tài khoản đã được tạo nhưng email chưa gửi được. Hãy thử gửi lại email xác thực sau.";
-            return View("RegisterConfirmation");
-        }
+        ViewData["RegisteredEmail"] = user.Email;
+        return View("RegisterConfirmation");
     }
 
     [AllowAnonymous]
@@ -140,11 +124,9 @@ public class AccountController(
 
         ModelState.AddModelError(
             string.Empty,
-            result.IsNotAllowed
-                ? "Hãy xác thực email trước khi đăng nhập."
-                : result.IsLockedOut
-                    ? "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau."
-                    : "Email hoặc mật khẩu không đúng.");
+            result.IsLockedOut
+                ? "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau."
+                : "Email hoặc mật khẩu không đúng.");
         return View(model);
     }
 
@@ -208,7 +190,7 @@ public class AccountController(
             return View(model);
 
         var user = await userManager.FindByEmailAsync(model.Email.Trim());
-        if (user is not null && user.EmailConfirmed)
+        if (user is not null)
         {
             var token = await userManager.GeneratePasswordResetTokenAsync(user);
             var encodedToken = AuthTokenCodec.Encode(token);

@@ -1,19 +1,58 @@
 @model IEnumerable<DemoMVC.Models.DepartmentModel>
-@{ ViewData["Title"] = "Danh mục Khoa"; }
-<h1>Danh mục Khoa</h1>
-@if (TempData["Success"] is string message) { <div class="alert alert-success">@message</div> }
-<p>   ------ </p>
-<p><a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">Thêm Khoa</a> <a asp-controller="Student" asp-action="Index">Danh sách sinh viên</a></p>
-<table class="table table-bordered">
-    <thead><tr><th>Mã Khoa</th><th>Tên Khoa</th><th>Thao tác</th></tr></thead>
-    <tbody>
-    @foreach (var department in Model)
-    {
-        <tr>
-            <td>@department.DepartmentCode</td><td>@department.DepartmentName</td>
-            <td><a asp-action="Details" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Details", new { id = department.DepartmentCode })">Chi tiết / Sinh viên</a> | <a asp-action="Edit" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Edit", new { id = department.DepartmentCode })">Sửa</a> | <a asp-action="Delete" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Delete", new { id = department.DepartmentCode })">Xóa</a></td>
-        </tr>
-    }
-    </tbody>
-</table>
+@{
+    ViewData["Title"] = "Danh mục Khoa";
+    var searchQuery = ViewData["SearchQuery"] as string;
+}
+
+<section class="list-page">
+    <div class="page-heading">
+        <div>
+            <span class="page-eyebrow">QUẢN LÝ ĐÀO TẠO</span>
+            <h1>Danh mục khoa</h1>
+            <p class="text-muted mb-0">Quản lý các khoa và danh sách sinh viên trực thuộc.</p>
+        </div>
+        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm khoa</a>
+    </div>
+
+    <div class="list-toolbar">
+        <form asp-action="Index" method="get" class="search-form">
+            <label class="visually-hidden" for="department-search">Tìm khoa</label>
+            <input id="department-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo mã hoặc tên khoa..." />
+            <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
+            @if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+            }
+        </form>
+        <a asp-controller="Student" asp-action="Index" class="btn btn-light">Danh sách sinh viên</a>
+    </div>
+
+    <div class="table-responsive list-card">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã khoa</th><th>Tên khoa</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            @if (Model.Any())
+            {
+                foreach (var department in Model)
+                {
+                    <tr>
+                        <td><span class="code-chip">@department.DepartmentCode</span></td>
+                        <td class="fw-semibold">@department.DepartmentName</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Details" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Details", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                            <a asp-action="Edit" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Edit", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                            <a asp-action="Delete" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Delete", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="3" class="empty-state">@(string.IsNullOrWhiteSpace(searchQuery) ? "Chưa có khoa nào." : "Không tìm thấy khoa phù hợp.")</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="list-summary">Hiển thị @Model.Count() khoa</div>
+</section>
 @await Html.PartialAsync("_CrudModalHost")

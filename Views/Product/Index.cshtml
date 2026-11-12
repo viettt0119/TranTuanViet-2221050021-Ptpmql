@@ -1,63 +1,66 @@
 @model DemoMVC.Models.PagedList<DemoMVC.Models.ProductModel>
-
 @{
-    ViewData["Title"] = "Danh sách Sản phẩm";
+    ViewData["Title"] = "Danh sách sản phẩm";
+    var searchQuery = ViewData["SearchQuery"] as string;
 }
 
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Danh sách Sản phẩm</h2>
-        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">
-            + Thêm mới
-        </a>
+<section class="list-page">
+    <div class="page-heading">
+        <div>
+            <span class="page-eyebrow">QUẢN LÝ KHO</span>
+            <h1>Sản phẩm</h1>
+            <p class="text-muted mb-0">Tra cứu sản phẩm và cập nhật danh mục hàng hóa.</p>
+        </div>
+        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm sản phẩm</a>
     </div>
 
-    <div class="card shadow-sm">
-        <div class="card-body p-0">
-            <table class="table table-hover table-bordered mb-0">
-                <thead class="table-light">
+    <div class="list-toolbar">
+        <form asp-action="Index" method="get" class="search-form">
+            <label class="visually-hidden" for="product-search">Tìm sản phẩm</label>
+            <input id="product-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo tên sản phẩm..." />
+            <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
+            @if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+            }
+        </form>
+    </div>
+
+    <div class="table-responsive list-card">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr><th class="text-center">ID</th><th>Tên sản phẩm</th><th class="text-end">Giá (VNĐ)</th><th class="text-end">Thao tác</th></tr>
+            </thead>
+            <tbody>
+            @if (Model.Items.Count > 0)
+            {
+                foreach (var item in Model.Items)
+                {
                     <tr>
-                        <th class="text-center" style="width: 80px;">ID</th>
-                        <th>Tên sản phẩm</th>
-                        <th class="text-end">Giá (VNĐ)</th>
-                        <th class="text-center" style="width: 150px;">Hành động</th>
+                        <td class="text-center"><span class="code-chip">@item.Id</span></td>
+                        <td class="fw-semibold">@item.Name</td>
+                        <td class="text-end">@item.Price.ToString("N0")</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Details" asp-route-id="@item.Id" data-modal-url="@Url.Action("Details", new { id = item.Id })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                            <a asp-action="Edit" asp-route-id="@item.Id" data-modal-url="@Url.Action("Edit", new { id = item.Id })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                            <a asp-action="Delete" asp-route-id="@item.Id" data-modal-url="@Url.Action("Delete", new { id = item.Id })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Items.Count > 0)
-                    {
-                        foreach (var item in Model.Items)
-                        {
-                            <tr>
-                                <td class="text-center">@item.Id</td>
-                                <td>@item.Name</td>
-                                <!-- Format số tiền có dấu phẩy ngăn cách hàng nghìn -->
-                                <td class="text-end">@item.Price.ToString("N0")</td>
-                                <td class="text-center">
-                                    <a asp-action="Details" asp-route-id="@item.Id" data-modal-url="@Url.Action("Details", new { id = item.Id })" class="btn btn-sm btn-outline-info">Chi tiết</a>
-                                    <a asp-action="Edit" asp-route-id="@item.Id" data-modal-url="@Url.Action("Edit", new { id = item.Id })" class="btn btn-sm btn-outline-warning">Sửa</a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id" data-modal-url="@Url.Action("Delete", new { id = item.Id })" class="btn btn-sm btn-outline-danger">Xóa</a>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">
-                                Chưa có sản phẩm nào trong cơ sở dữ liệu.
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            }
+            else
+            {
+                <tr><td colspan="4" class="empty-state">@(string.IsNullOrWhiteSpace(searchQuery) ? "Chưa có sản phẩm nào." : "Không tìm thấy sản phẩm phù hợp.")</td></tr>
+            }
+            </tbody>
+        </table>
         @await Html.PartialAsync("_CrudModalHost")
     </div>
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
-        <form asp-action="Index" method="get" class="d-flex align-items-center gap-2">
-            <label for="pageSize" class="form-label mb-0">Số sản phẩm mỗi trang</label>
+    <div class="list-footer">
+        <form asp-action="Index" method="get" class="page-size-form">
+            <input type="hidden" name="q" value="@searchQuery" />
+            <label for="pageSize" class="form-label mb-0">Mỗi trang</label>
             <select id="pageSize" name="pageSize" class="form-select w-auto">
                 @foreach (var size in DemoMVC.Models.PagedList<DemoMVC.Models.ProductModel>.PageSizeOptions)
                 {
@@ -71,7 +74,7 @@
                     }
                 }
             </select>
-            <button type="submit" class="btn btn-outline-primary">Áp dụng</button>
+            <button type="submit" class="btn btn-outline-secondary">Áp dụng</button>
         </form>
 
         @if (Model.TotalPages > 0)
@@ -79,59 +82,29 @@
             var startPage = Math.Max(1, Model.PageIndex - 2);
             var endPage = Math.Min(Model.TotalPages, startPage + 4);
             startPage = Math.Max(1, endPage - 4);
-
             <nav aria-label="Phân trang sản phẩm">
                 <ul class="pagination mb-0">
                     <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                        @if (Model.HasPreviousPage)
-                        {
-                            <a class="page-link" asp-action="Index" asp-route-page="1" asp-route-pageSize="@Model.PageSize">Đầu</a>
-                        }
-                        else
-                        {
-                            <span class="page-link">Đầu</span>
-                        }
+                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasPreviousPage ? 1 : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Đầu</a>
                     </li>
                     <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                        @if (Model.HasPreviousPage)
-                        {
-                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-pageSize="@Model.PageSize">Trước</a>
-                        }
-                        else
-                        {
-                            <span class="page-link">Trước</span>
-                        }
+                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasPreviousPage ? Model.PageIndex - 1 : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Trước</a>
                     </li>
                     @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
                     {
                         <li class="page-item @(pageNumber == Model.PageIndex ? "active" : "")">
-                            <a class="page-link" asp-action="Index" asp-route-page="@pageNumber" asp-route-pageSize="@Model.PageSize" aria-current="@(pageNumber == Model.PageIndex ? "page" : null)">@pageNumber</a>
+                            <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@pageNumber" asp-route-pageSize="@Model.PageSize" aria-current="@(pageNumber == Model.PageIndex ? "page" : null)">@pageNumber</a>
                         </li>
                     }
                     <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                        @if (Model.HasNextPage)
-                        {
-                            <a class="page-link" asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-pageSize="@Model.PageSize">Sau</a>
-                        }
-                        else
-                        {
-                            <span class="page-link">Sau</span>
-                        }
+                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasNextPage ? Model.PageIndex + 1 : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Sau</a>
                     </li>
                     <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                        @if (Model.HasNextPage)
-                        {
-                            <a class="page-link" asp-action="Index" asp-route-page="@Model.TotalPages" asp-route-pageSize="@Model.PageSize">Cuối</a>
-                        }
-                        else
-                        {
-                            <span class="page-link">Cuối</span>
-                        }
+                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasNextPage ? Model.TotalPages : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Cuối</a>
                     </li>
                 </ul>
             </nav>
-
-            <span class="text-muted">Trang @Model.PageIndex / @Model.TotalPages (@Model.TotalRecords sản phẩm)</span>
         }
+        <span class="list-summary">@Model.TotalRecords sản phẩm</span>
     </div>
-</div>
+</section>

@@ -26,10 +26,11 @@
 - Trang vượt phạm vi được đưa về trang cuối; trang không hợp lệ hoặc `pageSize` không hỗ trợ được chuẩn hóa về giá trị mặc định.
 - Chạy kiểm thử phân trang bằng `dotnet test Tests\DemoMVC.Tests\DemoMVC.Tests.csproj`.
 - CRUD Sản phẩm, Sinh viên, Khoa, Nhân viên và User trong Lec5 được thao tác trong Bootstrap modal qua AJAX; lỗi kiểm tra dữ liệu hiển thị ngay trong modal.
+- Danh sách Sinh viên, Khoa, Sản phẩm và Nhân viên hỗ trợ tìm kiếm phía máy chủ theo từ khóa.
 - Sinh viên vẫn được cấp mã tự động; không thể xóa Khoa đang có sinh viên.
 - Dữ liệu User trong Lec5 vẫn lưu trong bộ nhớ của ứng dụng như cách triển khai ban đầu.
-- Identity dùng Cookie authentication, yêu cầu xác thực email, khóa đăng nhập sau 5 lần sai trong 15 phút và áp dụng rate limit cho các endpoint auth.
-- Tài khoản Admin và cấu hình SMTP bắt buộc được cấp qua User Secrets hoặc biến môi trường; không điền secret vào `appsettings.json`.
+- Identity dùng Cookie authentication; đăng ký không bắt buộc xác thực email và sau khi tạo tài khoản người dùng có thể đăng nhập ngay. Đăng nhập bị khóa sau 5 lần sai trong 15 phút và các endpoint auth có rate limit.
+- Tài khoản Admin và cấu hình SMTP (dùng cho email đặt lại mật khẩu, không dùng khi đăng ký) được cấp qua User Secrets hoặc biến môi trường; không điền secret vào `appsettings.json`.
 - Chạy test: `dotnet test Tests\DemoMVC.Tests\DemoMVC.Tests.csproj`.
 - Migration `AddAspNetCoreIdentity` được bổ sung vào source; cập nhật DB bằng `dotnet ef database update`. Ứng dụng cũng tự áp dụng migration lúc khởi động.
 - Thiết lập secrets mẫu trong PowerShell (thay các giá trị placeholder tại máy chạy ứng dụng):

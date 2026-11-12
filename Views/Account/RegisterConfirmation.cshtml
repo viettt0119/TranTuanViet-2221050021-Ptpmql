@@ -1,6 +1,15 @@
 @{
-    ViewData["Title"] = "Xác nhận đăng ký";
+    ViewData["Title"] = "Đăng ký thành công";
 }
-<h1>Kiểm tra email</h1>
-<p>@(ViewData["StatusMessage"] ?? "Nếu thông tin hợp lệ, email xác thực sẽ được gửi tới địa chỉ đã đăng ký.")</p>
-<p>Nếu chưa nhận được email, <a asp-action="ResendConfirmation">gửi lại email xác thực</a>.</p>
+<div class="auth-page">
+    <section class="auth-card auth-success">
+        <div class="auth-success-icon" aria-hidden="true">✓</div>
+        <span class="auth-eyebrow">Đăng ký hoàn tất</span>
+        <h1>Tài khoản đã sẵn sàng</h1>
+        <p>
+            Tài khoản <strong>@ViewData["RegisteredEmail"]</strong> đã được tạo.
+            Bạn không cần xác thực email và có thể đăng nhập ngay.
+        </p>
+        <a asp-action="Login" class="btn btn-primary btn-lg w-100">Đi tới đăng nhập</a>
+    </section>
+</div>

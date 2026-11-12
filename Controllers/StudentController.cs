@@ -17,11 +17,22 @@ public class StudentController : Controller
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q)
     {
-        // Include lấy thêm tên Khoa từ bảng liên kết.
-        var students = await _context.Students.Include(s => s.Department)
-            .OrderBy(s => s.StudentCode).ToListAsync();
+        var studentsQuery = _context.Students.Include(s => s.Department).AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var search = q.Trim().ToLowerInvariant();
+            studentsQuery = studentsQuery.Where(s =>
+                s.StudentCode.ToLower().Contains(search) ||
+                s.FullName.ToLower().Contains(search) ||
+                s.DepartmentCode.ToLower().Contains(search) ||
+                s.Department!.DepartmentName.ToLower().Contains(search) ||
+                s.University.ToLower().Contains(search));
+        }
+
+        var students = await studentsQuery.OrderBy(s => s.StudentCode).ToListAsync();
+        ViewData["SearchQuery"] = q?.Trim();
         return View(students);
     }
 

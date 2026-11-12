@@ -3,33 +3,40 @@
     ViewData["Title"] = "Đăng ký";
 }
 
-<h1>Đăng ký tài khoản</h1>
-<div class="row">
-    <div class="col-md-6">
+<div class="auth-page">
+    <section class="auth-card">
+        <div class="auth-intro">
+            <span class="auth-eyebrow">DemoMVC</span>
+            <h1>Tạo tài khoản</h1>
+            <p>Đăng ký để bắt đầu sử dụng hệ thống. Bạn có thể đăng nhập ngay sau khi tạo tài khoản.</p>
+        </div>
         <form asp-action="Register" method="post">
             <div asp-validation-summary="All" class="text-danger"></div>
             <div class="mb-3">
                 <label asp-for="FullName" class="form-label">Họ tên</label>
-                <input asp-for="FullName" class="form-control" autocomplete="name" />
+                <input asp-for="FullName" class="form-control form-control-lg" autocomplete="name" placeholder="Nguyễn Văn A" />
                 <span asp-validation-for="FullName" class="text-danger"></span>
             </div>
             <div class="mb-3">
                 <label asp-for="Email" class="form-label">Email</label>
-                <input asp-for="Email" class="form-control" autocomplete="email" />
+                <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@example.com" />
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>
             <div class="mb-3">
                 <label asp-for="Password" class="form-label">Mật khẩu</label>
-                <input asp-for="Password" class="form-control" autocomplete="new-password" />
+                <input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" />
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
             <div class="mb-3">
                 <label asp-for="ConfirmPassword" class="form-label">Xác nhận mật khẩu</label>
-                <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" />
+                <input asp-for="ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" />
                 <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
             </div>
-            <button type="submit" class="btn btn-primary">Đăng ký</button>
+            <button type="submit" class="btn btn-primary btn-lg w-100">Tạo tài khoản</button>
         </form>
-    </div>
+        <div class="auth-links">
+            <span>Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></span>
+        </div>
+    </section>
 </div>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }
