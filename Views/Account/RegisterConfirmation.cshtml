@@ -1,0 +1,6 @@
+@{
+    ViewData["Title"] = "Xác nhận đăng ký";
+}
+<h1>Kiểm tra email</h1>
+<p>@(ViewData["StatusMessage"] ?? "Nếu thông tin hợp lệ, email xác thực sẽ được gửi tới địa chỉ đã đăng ký.")</p>
+<p>Nếu chưa nhận được email, <a asp-action="ResendConfirmation">gửi lại email xác thực</a>.</p>

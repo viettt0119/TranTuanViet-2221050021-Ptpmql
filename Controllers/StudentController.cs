@@ -16,6 +16,7 @@ public class StudentController : Controller
         _context = context;
     }
 
+    [HttpGet]
     public async Task<IActionResult> Index()
     {
         // Include lấy thêm tên Khoa từ bảng liên kết.

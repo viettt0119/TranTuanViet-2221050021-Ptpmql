@@ -10,6 +10,7 @@ public class DepartmentController : Controller
     private readonly ApplicationDbContext _context;
     public DepartmentController(ApplicationDbContext context) { _context = context; }
 
+    [HttpGet]
     public async Task<IActionResult> Index()
     {
         return View(await _context.Departments.OrderBy(d => d.DepartmentName).ToListAsync());

@@ -1,0 +1,25 @@
+@{
+    ViewData["Title"] = "Xác thực email";
+    var succeeded = ViewData["Succeeded"] as bool? == true;
+}
+<h1>Xác thực email</h1>
+@if (succeeded)
+{
+    <div class="alert alert-success">Email đã được xác thực. Bạn có thể đăng nhập.</div>
+    <a asp-action="Login" class="btn btn-primary">Đăng nhập</a>
+}
+else if (ViewData["UserId"] is string userId && ViewData["Token"] is string token)
+{
+    <p>Xác nhận địa chỉ email để kích hoạt tài khoản.</p>
+    <form asp-action="ConfirmEmailPost" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="userId" value="@userId" />
+        <input type="hidden" name="token" value="@token" />
+        <button type="submit" class="btn btn-primary">Xác nhận email</button>
+    </form>
+}
+else
+{
+    <div class="alert alert-danger">Liên kết xác thực không hợp lệ hoặc đã hết hạn. Bạn có thể yêu cầu gửi lại email xác thực.</div>
+    <a asp-action="ResendConfirmation">Gửi lại email xác thực</a>
+}

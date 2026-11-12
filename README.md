@@ -28,5 +28,23 @@
 - CRUD Sản phẩm, Sinh viên, Khoa, Nhân viên và User trong Lec5 được thao tác trong Bootstrap modal qua AJAX; lỗi kiểm tra dữ liệu hiển thị ngay trong modal.
 - Sinh viên vẫn được cấp mã tự động; không thể xóa Khoa đang có sinh viên.
 - Dữ liệu User trong Lec5 vẫn lưu trong bộ nhớ của ứng dụng như cách triển khai ban đầu.
+- Identity dùng Cookie authentication, yêu cầu xác thực email, khóa đăng nhập sau 5 lần sai trong 15 phút và áp dụng rate limit cho các endpoint auth.
+- Tài khoản Admin và cấu hình SMTP bắt buộc được cấp qua User Secrets hoặc biến môi trường; không điền secret vào `appsettings.json`.
+- Chạy test: `dotnet test Tests\DemoMVC.Tests\DemoMVC.Tests.csproj`.
+- Migration `AddAspNetCoreIdentity` được bổ sung vào source; cập nhật DB bằng `dotnet ef database update`. Ứng dụng cũng tự áp dụng migration lúc khởi động.
+- Thiết lập secrets mẫu trong PowerShell (thay các giá trị placeholder tại máy chạy ứng dụng):
+  ```powershell
+  dotnet user-secrets set "AdminSeed:Email" "admin@example.com" --project .\DemoMVC.csproj
+  dotnet user-secrets set "AdminSeed:FullName" "System Administrator" --project .\DemoMVC.csproj
+  dotnet user-secrets set "AdminSeed:Password" "<strong-admin-password>" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:Host" "<smtp-host>" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:Port" "587" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:UseStartTls" "true" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:UserName" "<smtp-username>" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:Password" "<smtp-password>" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:SenderEmail" "<verified-sender@example.com>" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:SenderName" "DemoMVC" --project .\DemoMVC.csproj
+  dotnet user-secrets set "Email:PublicBaseUrl" "https://<application-domain>" --project .\DemoMVC.csproj
+  ```
 - sinh code tự động 
 - dotnet aspnet-codegenerator controller -name EmployeeController -m EmployeeModel -dc DemoMVC.Data.ApplicationDbContext --relativeFolderPath Controllers --useDefaultLayout --referenceScriptLibraries --databaseProvider sqlite

@@ -1,0 +1,38 @@
+@model List<DemoMVC.Controllers.UserManagementController.UserRoleViewModel>
+@{
+    ViewData["Title"] = "Quản lý người dùng";
+}
+
+<h2>Phân quyền người dùng</h2>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Email</th>
+            <th>Họ tên</th>
+            <th>Vai trò</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Email</td>
+                <td>@user.FullName</td>
+                <td>
+                    @foreach (var role in user.AllRoles)
+                    {
+                        <form asp-action="@(role.IsSelected ? "RemoveRole" : "AssignRole")" method="post" class="d-inline-block mb-2">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="userId" value="@user.UserId" />
+                            <input type="hidden" name="roleId" value="@role.RoleId" />
+                            <button type="submit" class="btn btn-sm @(role.IsSelected ? "btn-success" : "btn-outline-secondary")">
+                                @role.RoleName @(role.IsSelected ? "✓" : "")
+                            </button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

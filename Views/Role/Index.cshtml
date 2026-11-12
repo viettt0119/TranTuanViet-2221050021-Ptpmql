@@ -1,0 +1,46 @@
+@model List<Microsoft.AspNetCore.Identity.IdentityRole>
+@{
+    ViewData["Title"] = "Quản lý vai trò";
+}
+
+<h2>Quản lý vai trò</h2>
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+<div class="mb-3">
+    <a asp-action="Create" class="btn btn-primary">Thêm vai trò</a>
+</div>
+
+<table class="table table-bordered table-striped">
+    <thead>
+        <tr>
+            <th>Tên vai trò</th>
+            <th>Phân quyền</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var role in Model)
+        {
+            <tr>
+                <td>@role.Name</td>
+                <td>
+                    <a asp-action="Permissions" asp-route-id="@role.Id" class="btn btn-sm btn-outline-secondary">Cập nhật quyền</a>
+                </td>
+                <td>
+                    <a asp-action="Edit" asp-route-id="@role.Id" class="btn btn-sm btn-warning">Sửa</a>
+                    @if (!string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <form asp-action="Delete" asp-route-id="@role.Id" method="post" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Xác nhận xóa vai trò này?');">Xóa</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
