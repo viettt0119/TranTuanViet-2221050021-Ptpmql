@@ -20,9 +20,19 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? q)
         {
-            return View(await _context.Employees.OrderBy(employee => employee.EmpId).ToListAsync());
+            var employees = _context.Employees.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var search = q.Trim().ToLowerInvariant();
+                employees = employees.Where(employee =>
+                    employee.EmpId.ToLower().Contains(search) ||
+                    employee.FullName.ToLower().Contains(search));
+            }
+
+            ViewData["SearchQuery"] = q?.Trim();
+            return View(await employees.OrderBy(employee => employee.EmpId).ToListAsync());
         }
 
         [HttpGet]

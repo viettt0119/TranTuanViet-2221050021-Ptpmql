@@ -1,42 +1,58 @@
 @model IEnumerable<DemoMVC.Models.EmployeeModel>
-
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Nhân viên";
+    var searchQuery = ViewData["SearchQuery"] as string;
 }
 
-<h1>Index</h1>
+<section class="list-page">
+    <div class="page-heading">
+        <div>
+            <span class="page-eyebrow">QUẢN LÝ NHÂN SỰ</span>
+            <h1>Nhân viên</h1>
+            <p class="text-muted mb-0">Tra cứu và quản lý hồ sơ nhân viên.</p>
+        </div>
+        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm nhân viên</a>
+    </div>
 
-<p>
-    <a asp-action="Create" data-modal-url="@Url.Action("Create")">Create New</a>
-</p>
-<table class="table">
-    <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.FullName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.HireDate)
-            </th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.FullName)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.HireDate)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Edit", new { id = item.EmpId })">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Details", new { id = item.EmpId })">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Delete", new { id = item.EmpId })">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
+    <div class="list-toolbar">
+        <form asp-action="Index" method="get" class="search-form">
+            <label class="visually-hidden" for="employee-search">Tìm nhân viên</label>
+            <input id="employee-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo mã hoặc họ tên..." />
+            <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
+            @if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+            }
+        </form>
+    </div>
+
+    <div class="table-responsive list-card">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Mã nhân viên</th><th>Họ tên</th><th>Ngày vào làm</th><th class="text-end">Thao tác</th></tr></thead>
+            <tbody>
+            @if (Model.Any())
+            {
+                foreach (var item in Model)
+                {
+                    <tr>
+                        <td><span class="code-chip">@item.EmpId</span></td>
+                        <td class="fw-semibold">@item.FullName</td>
+                        <td>@item.HireDate.ToString("dd/MM/yyyy")</td>
+                        <td class="text-end text-nowrap">
+                            <a asp-action="Edit" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Edit", new { id = item.EmpId })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                            <a asp-action="Details" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Details", new { id = item.EmpId })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                            <a asp-action="Delete" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Delete", new { id = item.EmpId })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="4" class="empty-state">@(string.IsNullOrWhiteSpace(searchQuery) ? "Chưa có nhân viên nào." : "Không tìm thấy nhân viên phù hợp.")</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+    <div class="list-summary">Hiển thị @Model.Count() nhân viên</div>
+</section>
 @await Html.PartialAsync("_CrudModalHost")

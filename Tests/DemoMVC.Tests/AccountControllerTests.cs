@@ -47,7 +47,7 @@ public class AccountControllerTests
                 Id = "user-1",
                 Email = "user@example.test",
                 FullName = "Known User",
-                EmailConfirmed = true
+                EmailConfirmed = false
             });
         knownFixture.UserManager
             .Setup(manager => manager.GeneratePasswordResetTokenAsync(It.IsAny<ApplicationUser>()))
@@ -108,7 +108,7 @@ public class AccountControllerTests
     }
 
     [Fact]
-    public async Task Login_disallows_unconfirmed_users_with_clear_message()
+    public async Task Login_reports_disallowed_account_without_requiring_email_confirmation()
     {
         var fixture = new ControllerFixture();
         fixture.SignInManager
@@ -125,7 +125,43 @@ public class AccountControllerTests
         Assert.IsType<ViewResult>(result);
         Assert.Contains(
             fixture.Controller.ModelState[string.Empty]!.Errors,
-            error => error.ErrorMessage.Contains("xác thực email", StringComparison.OrdinalIgnoreCase));
+            error => error.ErrorMessage.Contains("Email hoặc mật khẩu không đúng", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Register_creates_confirmed_account_without_sending_confirmation_email()
+    {
+        var fixture = new ControllerFixture();
+        fixture.UserManager
+            .Setup(manager => manager.CreateAsync(
+                It.IsAny<ApplicationUser>(),
+                "GoodPassword!123"))
+            .ReturnsAsync(IdentityResult.Success);
+        fixture.UserManager
+            .Setup(manager => manager.AddToRoleAsync(It.IsAny<ApplicationUser>(), "User"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var result = await fixture.Controller.Register(new RegisterViewModel
+        {
+            FullName = "Test User",
+            Email = "user@example.test",
+            Password = "GoodPassword!123",
+            ConfirmPassword = "GoodPassword!123"
+        });
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal("RegisterConfirmation", view.ViewName);
+        fixture.UserManager.Verify(manager => manager.CreateAsync(
+            It.Is<ApplicationUser>(user =>
+                user.Email == "user@example.test" &&
+                user.EmailConfirmed &&
+                user.FullName == "Test User"),
+            "GoodPassword!123"), Times.Once);
+        fixture.EmailSender.Verify(sender => sender.SendAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

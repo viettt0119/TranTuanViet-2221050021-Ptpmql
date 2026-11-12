@@ -11,9 +11,19 @@ public class DepartmentController : Controller
     public DepartmentController(ApplicationDbContext context) { _context = context; }
 
     [HttpGet]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string? q)
     {
-        return View(await _context.Departments.OrderBy(d => d.DepartmentName).ToListAsync());
+        var departments = _context.Departments.AsQueryable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var search = q.Trim().ToLowerInvariant();
+            departments = departments.Where(d =>
+                d.DepartmentCode.ToLower().Contains(search) ||
+                d.DepartmentName.ToLower().Contains(search));
+        }
+
+        ViewData["SearchQuery"] = q?.Trim();
+        return View(await departments.OrderBy(d => d.DepartmentName).ToListAsync());
     }
 
     [HttpGet]

@@ -15,13 +15,22 @@ namespace DemoMVC.Controllers
         _context = context; 
     }
         [HttpGet]
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
         {
+            var productsQuery = _context.Products.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(q))
+            {
+                var search = q.Trim().ToLowerInvariant();
+                productsQuery = productsQuery.Where(product =>
+                    product.Name != null && product.Name.ToLower().Contains(search));
+            }
+
             var products = await PagedList<ProductModel>.CreateAsync(
-                _context.Products.OrderBy(product => product.Id),
+                productsQuery.OrderBy(product => product.Id),
                 page,
                 pageSize,
                 HttpContext.RequestAborted);
+            ViewData["SearchQuery"] = q?.Trim();
             return View(products);
         }
         [HttpGet]
