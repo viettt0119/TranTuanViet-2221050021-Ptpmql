@@ -19,6 +19,7 @@ namespace DemoMVC.Controllers
             _context = context;
         }
 
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             return View(await _context.Employees.OrderBy(employee => employee.EmpId).ToListAsync());

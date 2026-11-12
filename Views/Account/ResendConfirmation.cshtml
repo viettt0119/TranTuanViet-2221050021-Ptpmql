@@ -1,0 +1,14 @@
+@model DemoMVC.Models.ForgotPasswordViewModel
+@{
+    ViewData["Title"] = "Gửi lại email xác thực";
+}
+<h1>Gửi lại email xác thực</h1>
+<form asp-action="ResendConfirmation" method="post" class="col-md-6">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label">Email</label>
+        <input asp-for="Email" class="form-control" autocomplete="email" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Gửi email xác thực</button>
+</form>
