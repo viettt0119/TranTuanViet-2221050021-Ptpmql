@@ -1,0 +1,15 @@
+@model DemoMVC.Models.Lec5Model
+<div class="modal fade" tabindex="-1" aria-labelledby="lec5UserDetailsTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="lec5UserDetailsTitle">Chi tiết người dùng</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <dl class="modal-body row mb-0">
+                <dt class="col-sm-4">Tên đăng nhập</dt><dd class="col-sm-8">@Model.Username</dd>
+                <dt class="col-sm-4">Quyền truy cập</dt><dd class="col-sm-8">@Model.Role</dd>
+            </dl>
+        </div>
+    </div>
+</div>

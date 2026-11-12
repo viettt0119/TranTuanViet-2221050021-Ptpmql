@@ -25,7 +25,8 @@
 - Có thể truyền `page` và `pageSize` trên query string; `pageSize` được hỗ trợ là 10, 20 hoặc 50 (mặc định 10).
 - Trang vượt phạm vi được đưa về trang cuối; trang không hợp lệ hoặc `pageSize` không hỗ trợ được chuẩn hóa về giá trị mặc định.
 - Chạy kiểm thử phân trang bằng `dotnet test Tests\DemoMVC.Tests\DemoMVC.Tests.csproj`.
-- CRUD Sản phẩm, Sinh viên, Khoa và Nhân viên được thao tác trong Bootstrap modal qua AJAX; lỗi kiểm tra dữ liệu hiển thị ngay trong modal.
+- CRUD Sản phẩm, Sinh viên, Khoa, Nhân viên và User trong Lec5 được thao tác trong Bootstrap modal qua AJAX; lỗi kiểm tra dữ liệu hiển thị ngay trong modal.
 - Sinh viên vẫn được cấp mã tự động; không thể xóa Khoa đang có sinh viên.
+- Dữ liệu User trong Lec5 vẫn lưu trong bộ nhớ của ứng dụng như cách triển khai ban đầu.
 - sinh code tự động 
 - dotnet aspnet-codegenerator controller -name EmployeeController -m EmployeeModel -dc DemoMVC.Data.ApplicationDbContext --relativeFolderPath Controllers --useDefaultLayout --referenceScriptLibraries --databaseProvider sqlite
