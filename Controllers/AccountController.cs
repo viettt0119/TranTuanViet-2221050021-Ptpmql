@@ -120,7 +120,9 @@ public class AccountController(
             lockoutOnFailure: true);
 
         if (result.Succeeded)
-            return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl) ? model.ReturnUrl! : Url.Content("~/"));
+            return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl)
+                ? model.ReturnUrl!
+                : Url.Action("Index", "Home")!);
 
         ModelState.AddModelError(
             string.Empty,

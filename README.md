@@ -30,6 +30,8 @@
 - Sinh viên vẫn được cấp mã tự động; không thể xóa Khoa đang có sinh viên.
 - Dữ liệu User trong Lec5 vẫn lưu trong bộ nhớ của ứng dụng như cách triển khai ban đầu.
 - Identity dùng Cookie authentication; đăng ký không bắt buộc xác thực email và sau khi tạo tài khoản người dùng có thể đăng nhập ngay. Đăng nhập bị khóa sau 5 lần sai trong 15 phút và các endpoint auth có rate limit.
+- Role `Admin` có toàn quyền; tài khoản đăng ký mới nhận role `User` với quyền CRUD Sinh viên, Khoa, Sản phẩm và Nhân viên, cùng quyền vào dashboard, đăng xuất và tự đổi mật khẩu. Quản lý người dùng và phân quyền chỉ dành cho Admin.
+- Dashboard là trang đích sau đăng nhập; static assets được phục vụ công khai để giao diện đăng nhập/đăng ký luôn tải đủ CSS và JavaScript.
 - Tài khoản Admin và cấu hình SMTP (dùng cho email đặt lại mật khẩu, không dùng khi đăng ký) được cấp qua User Secrets hoặc biến môi trường; không điền secret vào `appsettings.json`.
 - Chạy test: `dotnet test Tests\DemoMVC.Tests\DemoMVC.Tests.csproj`.
 - Migration `AddAspNetCoreIdentity` được bổ sung vào source; cập nhật DB bằng `dotnet ef database update`. Ứng dụng cũng tự áp dụng migration lúc khởi động.

@@ -1,8 +1,93 @@
-﻿@{
-    ViewData["Title"] = "Lecture01";
+@inject DemoMVC.Services.PermissionCatalogService PermissionCatalogService
+@{
+    ViewData["Title"] = "Tổng quan";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core - 2026-08-13</a>.</p>
-</div>
+<section class="portal-page">
+    <div class="portal-intro-grid">
+        <div class="portal-hero">
+            <span class="portal-kicker">DEMO MVC · CỔNG QUẢN LÝ</span>
+            <h1>Quản lý dữ liệu<br />gọn gàng, dễ dàng.</h1>
+            <p>Xin chào <strong>@User.Identity?.Name</strong>. Tra cứu nhanh hồ sơ hoặc chọn một khu vực để bắt đầu.</p>
+            <form asp-controller="Student" asp-action="Index" method="get" class="portal-search">
+                <label class="visually-hidden" for="portal-search">Tìm kiếm sinh viên</label>
+                <input id="portal-search" name="q" class="form-control form-control-lg" placeholder="Nhập mã hoặc họ tên sinh viên..." />
+                <button class="btn btn-light btn-lg" type="submit">Tra cứu</button>
+            </form>
+        </div>
+
+        <aside class="portal-guide" aria-labelledby="portal-guide-title">
+            <div class="portal-guide-heading">
+                <span class="portal-guide-icon" aria-hidden="true">i</span>
+                <div>
+                    <span class="portal-kicker">BẮT ĐẦU</span>
+                    <h2 id="portal-guide-title">Hướng dẫn nhanh</h2>
+                </div>
+            </div>
+            <ol>
+                <li><span>01</span><p>Chọn <strong>khu vực quản lý</strong> cần sử dụng.</p></li>
+                <li><span>02</span><p>Dùng ô tìm kiếm để lọc hồ sơ theo <strong>mã hoặc tên</strong>.</p></li>
+                <li><span>03</span><p>Mở chi tiết hoặc dùng các nút thao tác để <strong>cập nhật dữ liệu</strong>.</p></li>
+            </ol>
+        </aside>
+    </div>
+
+    <div class="portal-section-heading">
+        <div>
+            <span class="page-eyebrow">KHÔNG GIAN LÀM VIỆC</span>
+            <h2>Khu vực quản lý</h2>
+        </div>
+        <span class="portal-secure-label">Đăng nhập an toàn</span>
+    </div>
+
+    <div class="portal-module-grid">
+        @if (await PermissionCatalogService.HasAccessAsync(User, "Student.Index"))
+        {
+            <a asp-controller="Student" asp-action="Index" class="portal-module-card">
+                <span class="portal-module-icon portal-icon-blue">SV</span>
+                <span class="portal-module-copy"><strong>Sinh viên</strong><small>Tra cứu và quản lý hồ sơ sinh viên</small></span>
+                <span class="portal-module-arrow" aria-hidden="true">→</span>
+            </a>
+        }
+        @if (await PermissionCatalogService.HasAccessAsync(User, "Department.Index"))
+        {
+            <a asp-controller="Department" asp-action="Index" class="portal-module-card">
+                <span class="portal-module-icon portal-icon-purple">KH</span>
+                <span class="portal-module-copy"><strong>Khoa</strong><small>Danh mục khoa và liên kết đào tạo</small></span>
+                <span class="portal-module-arrow" aria-hidden="true">→</span>
+            </a>
+        }
+        @if (await PermissionCatalogService.HasAccessAsync(User, "Product.Index"))
+        {
+            <a asp-controller="Product" asp-action="Index" class="portal-module-card">
+                <span class="portal-module-icon portal-icon-green">SP</span>
+                <span class="portal-module-copy"><strong>Sản phẩm</strong><small>Tìm kiếm và quản lý danh mục sản phẩm</small></span>
+                <span class="portal-module-arrow" aria-hidden="true">→</span>
+            </a>
+        }
+        @if (await PermissionCatalogService.HasAccessAsync(User, "Employee.Index"))
+        {
+            <a asp-controller="Employee" asp-action="Index" class="portal-module-card">
+                <span class="portal-module-icon portal-icon-orange">NS</span>
+                <span class="portal-module-copy"><strong>Nhân viên</strong><small>Quản lý thông tin nhân sự</small></span>
+                <span class="portal-module-arrow" aria-hidden="true">→</span>
+            </a>
+        }
+        @if (await PermissionCatalogService.HasAccessAsync(User, "Role.Index"))
+        {
+            <a asp-controller="Role" asp-action="Index" class="portal-module-card">
+                <span class="portal-module-icon portal-icon-purple">PQ</span>
+                <span class="portal-module-copy"><strong>Vai trò &amp; phân quyền</strong><small>Quản lý quyền truy cập hệ thống</small></span>
+                <span class="portal-module-arrow" aria-hidden="true">→</span>
+            </a>
+        }
+        @if (await PermissionCatalogService.HasAccessAsync(User, "UserManagement.Index"))
+        {
+            <a asp-controller="UserManagement" asp-action="Index" class="portal-module-card">
+                <span class="portal-module-icon portal-icon-blue">ND</span>
+                <span class="portal-module-copy"><strong>Người dùng</strong><small>Quản lý người dùng và vai trò</small></span>
+                <span class="portal-module-arrow" aria-hidden="true">→</span>
+            </a>
+        }
+    </div>
+</section>
