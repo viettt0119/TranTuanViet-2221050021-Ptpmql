@@ -1,0 +1,11 @@
+@{
+    var statusCode = ViewData["StatusCode"] as int? ?? Context.Response.StatusCode;
+    var description = ViewData["StatusDescription"] as string;
+    ViewData["Title"] = $"Lỗi {statusCode}";
+}
+<section class="text-center py-5">
+    <h1 class="display-4">@statusCode</h1>
+    <h2>@description</h2>
+    <p class="text-muted">Trang bạn yêu cầu không tồn tại hoặc không thể truy cập.</p>
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Về trang chủ</a>
+</section>

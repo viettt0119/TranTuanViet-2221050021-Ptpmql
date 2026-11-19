@@ -81,6 +81,34 @@ public class PermissionCatalogServiceTests
         Assert.False(await service.HasAccessAsync(user, "Role.Index"));
     }
 
+    [Fact]
+    public async Task SyncAsync_discovers_role_user_and_excel_actions()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(connection)
+            .Options;
+        await using var context = new ApplicationDbContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var service = new PermissionCatalogService(context);
+        await service.SyncAsync();
+
+        Assert.Contains(await context.ApplicationPermissions.ToListAsync(),
+            permission => permission.Key == "Role.Create");
+        Assert.Contains(await context.ApplicationPermissions.ToListAsync(),
+            permission => permission.Key == "Role.Permissions");
+        Assert.Contains(await context.ApplicationPermissions.ToListAsync(),
+            permission => permission.Key == "UserManagement.AssignRole");
+        Assert.Contains(await context.ApplicationPermissions.ToListAsync(),
+            permission => permission.Key == "ExcelImport.Import");
+        Assert.Contains(await context.ApplicationPermissions.ToListAsync(),
+            permission => permission.Key == "Account.Login");
+        Assert.True((await context.ApplicationPermissions
+            .SingleAsync(permission => permission.Key == "Account.Login")).IsAnonymous);
+    }
+
     private static ApplicationPermission Permission(string key, string controller, string action) => new()
     {
         Key = key,

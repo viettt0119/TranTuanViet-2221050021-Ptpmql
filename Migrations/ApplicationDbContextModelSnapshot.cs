@@ -173,6 +173,33 @@ namespace DemoMVC.Migrations
                     b.HasKey("DepartmentCode");
 
                     b.ToTable("Departments");
+
+                    b.HasData(
+                        new
+                        {
+                            DepartmentCode = "CNTT",
+                            DepartmentName = "Công nghệ thông tin"
+                        },
+                        new
+                        {
+                            DepartmentCode = "KT",
+                            DepartmentName = "Kinh tế"
+                        },
+                        new
+                        {
+                            DepartmentCode = "XD",
+                            DepartmentName = "Xây dựng"
+                        },
+                        new
+                        {
+                            DepartmentCode = "MO",
+                            DepartmentName = "Khoa học mỏ"
+                        },
+                        new
+                        {
+                            DepartmentCode = "DC",
+                            DepartmentName = "Địa chất"
+                        });
                 });
 
             modelBuilder.Entity("DemoMVC.Models.EmployeeModel", b =>

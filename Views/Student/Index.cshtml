@@ -1,4 +1,4 @@
-@model IEnumerable<DemoMVC.Models.StudentModel>
+@model DemoMVC.Models.PagedList<DemoMVC.Models.StudentModel>
 @{
     ViewData["Title"] = "Sinh viên";
     var searchQuery = ViewData["SearchQuery"] as string;
@@ -38,9 +38,9 @@
                 <tr><th>Mã sinh viên</th><th>Họ tên</th><th>Khoa</th><th class="text-end">Thao tác</th></tr>
             </thead>
             <tbody>
-            @if (Model.Any())
+            @if (Model.Items.Count > 0)
             {
-                foreach (var student in Model)
+                foreach (var student in Model.Items)
                 {
                     <tr>
                         <td><span class="code-chip">@student.StudentCode</span></td>
@@ -61,6 +61,6 @@
             </tbody>
         </table>
     </div>
-    <div class="list-summary">Hiển thị @Model.Count() sinh viên</div>
+    @await Html.PartialAsync("_PagedListFooter", (object)Model)
 </section>
 @await Html.PartialAsync("_CrudModalHost")

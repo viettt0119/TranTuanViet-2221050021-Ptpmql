@@ -1,0 +1,33 @@
+@using System.Reflection
+@{
+    var modelType = Model.GetType();
+    var pageIndex = (int)modelType.GetProperty("PageIndex")!.GetValue(Model)!;
+    var pageSize = (int)modelType.GetProperty("PageSize")!.GetValue(Model)!;
+    var totalPages = (int)modelType.GetProperty("TotalPages")!.GetValue(Model)!;
+    var totalRecords = (int)modelType.GetProperty("TotalRecords")!.GetValue(Model)!;
+    var hasPrevious = (bool)modelType.GetProperty("HasPreviousPage")!.GetValue(Model)!;
+    var hasNext = (bool)modelType.GetProperty("HasNextPage")!.GetValue(Model)!;
+    var searchQuery = ViewData["SearchQuery"] as string;
+}
+<div class="list-footer">
+    <span class="list-summary">@totalRecords bản ghi</span>
+    @if (totalPages > 1)
+    {
+        <nav aria-label="Phân trang">
+            <ul class="pagination mb-0">
+                <li class="page-item @(hasPrevious ? "" : "disabled")">
+                    <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Math.Max(1, pageIndex - 1))" asp-route-pageSize="@pageSize">Trước</a>
+                </li>
+                @for (var pageNumber = 1; pageNumber <= totalPages; pageNumber++)
+                {
+                    <li class="page-item @(pageNumber == pageIndex ? "active" : "")">
+                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@pageNumber" asp-route-pageSize="@pageSize">@pageNumber</a>
+                    </li>
+                }
+                <li class="page-item @(hasNext ? "" : "disabled")">
+                    <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Math.Min(totalPages, pageIndex + 1))" asp-route-pageSize="@pageSize">Sau</a>
+                </li>
+            </ul>
+        </nav>
+    }
+</div>

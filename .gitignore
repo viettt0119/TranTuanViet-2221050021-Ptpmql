@@ -1,0 +1,12 @@
+bin/
+obj/
+publish/
+
+*.db-shm
+*.db-wal
+*.db-journal
+
+appsettings.Development.json
+*.user
+.vscode/
+TestResults/
