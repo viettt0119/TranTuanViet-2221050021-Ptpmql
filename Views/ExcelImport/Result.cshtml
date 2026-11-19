@@ -1,0 +1,20 @@
+@model DemoMVC.Models.ExcelImportResult
+@{
+    ViewData["Title"] = "Kết quả nhập Excel";
+}
+<section class="list-page">
+    <div class="page-heading">
+        <div><span class="page-eyebrow">KẾT QUẢ</span><h1>Đã nhập dữ liệu Excel</h1></div>
+    </div>
+    <div class="alert alert-success">
+        Thêm mới: <strong>@Model.AddedCount</strong> |
+        Cập nhật: <strong>@Model.UpdatedCount</strong> |
+        Bỏ qua: <strong>@Model.SkippedCount</strong> |
+        Lỗi: <strong>@Model.ErrorCount</strong>
+    </div>
+    @if (Model.Errors.Count > 0)
+    {
+        <ul class="alert alert-danger">@foreach (var error in Model.Errors) { <li>@error</li> }</ul>
+    }
+    <a asp-action="Index" class="btn btn-primary">Nhập file khác</a>
+</section>

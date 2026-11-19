@@ -17,15 +17,21 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var permission in Model)
+            @foreach (var controllerGroup in Model.GroupBy(x => x.PermissionKey.Split('.')[0]).OrderBy(x => x.Key))
             {
-                <tr>
-                    <td>
-                        <input type="checkbox" name="selectedPermissions" value="@permission.PermissionId" checked="@(permission.IsGranted ? "checked" : null)" />
-                    </td>
-                    <td>@permission.Name</td>
-                    <td>@permission.PermissionKey</td>
+                <tr class="table-light">
+                    <td colspan="3"><strong>@controllerGroup.Key</strong></td>
                 </tr>
+                @foreach (var permission in controllerGroup.OrderBy(x => x.PermissionKey))
+                {
+                    <tr>
+                        <td>
+                            <input type="checkbox" name="selectedPermissions" value="@permission.PermissionId" checked="@(permission.IsGranted ? "checked" : null)" />
+                        </td>
+                        <td>@permission.Name</td>
+                        <td><code>@permission.PermissionKey</code></td>
+                    </tr>
+                }
             }
         </tbody>
     </table>

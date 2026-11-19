@@ -20,7 +20,7 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Index(string? q)
+        public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
         {
             var employees = _context.Employees.AsQueryable();
             if (!string.IsNullOrWhiteSpace(q))
@@ -32,7 +32,9 @@ namespace DemoMVC.Controllers
             }
 
             ViewData["SearchQuery"] = q?.Trim();
-            return View(await employees.OrderBy(employee => employee.EmpId).ToListAsync());
+            var result = await PagedList<EmployeeModel>.CreateAsync(
+                employees.OrderBy(employee => employee.EmpId), page, pageSize);
+            return View(result);
         }
 
         [HttpGet]

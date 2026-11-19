@@ -27,9 +27,15 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(IdentityRole model)
     {
+        model.Name = model.Name?.Trim();
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Tên role là bắt buộc.");
+            return View(model);
+        }
+        if (await roleManager.RoleExistsAsync(model.Name))
+        {
+            ModelState.AddModelError(nameof(model.Name), "Tên vai trò đã tồn tại.");
             return View(model);
         }
 
@@ -58,10 +64,22 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
     {
         var role = await roleManager.FindByIdAsync(id);
         if (role is null) return NotFound();
+        if (string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["ErrorMessage"] = "Không thể đổi tên role hệ thống Admin.";
+            return RedirectToAction(nameof(Index));
+        }
 
+        model.Name = model.Name?.Trim();
         if (string.IsNullOrWhiteSpace(model.Name))
         {
             ModelState.AddModelError(nameof(model.Name), "Tên role là bắt buộc.");
+            return View(role);
+        }
+        var roleWithSameName = await roleManager.FindByNameAsync(model.Name);
+        if (roleWithSameName is not null && roleWithSameName.Id != role.Id)
+        {
+            ModelState.AddModelError(nameof(model.Name), "Tên vai trò đã tồn tại.");
             return View(role);
         }
 
@@ -107,12 +125,21 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Permissions(string id, string[] selectedPermissions)
+    public async Task<IActionResult> Permissions(string id, string[]? selectedPermissions)
     {
         var role = await roleManager.FindByIdAsync(id);
         if (role is null) return NotFound();
 
-        var permissionIds = selectedPermissions.Select(int.Parse).ToHashSet();
+        var permissionIds = new HashSet<int>();
+        foreach (var selectedPermission in selectedPermissions ?? [])
+        {
+            if (!int.TryParse(selectedPermission, out var permissionId))
+            {
+                ModelState.AddModelError(string.Empty, "Danh sách quyền không hợp lệ.");
+                return RedirectToAction(nameof(Permissions), new { id });
+            }
+            permissionIds.Add(permissionId);
+        }
         var allPermissions = await dbContext.ApplicationPermissions
             .ToListAsync();
 

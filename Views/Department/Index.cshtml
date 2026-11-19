@@ -1,4 +1,4 @@
-@model IEnumerable<DemoMVC.Models.DepartmentModel>
+@model DemoMVC.Models.PagedList<DemoMVC.Models.DepartmentModel>
 @{
     ViewData["Title"] = "Danh mục Khoa";
     var searchQuery = ViewData["SearchQuery"] as string;
@@ -31,9 +31,9 @@
         <table class="table table-hover align-middle mb-0">
             <thead><tr><th>Mã khoa</th><th>Tên khoa</th><th class="text-end">Thao tác</th></tr></thead>
             <tbody>
-            @if (Model.Any())
+            @if (Model.Items.Count > 0)
             {
-                foreach (var department in Model)
+                foreach (var department in Model.Items)
                 {
                     <tr>
                         <td><span class="code-chip">@department.DepartmentCode</span></td>
@@ -53,6 +53,6 @@
             </tbody>
         </table>
     </div>
-    <div class="list-summary">Hiển thị @Model.Count() khoa</div>
+    @await Html.PartialAsync("_PagedListFooter", (object)Model)
 </section>
 @await Html.PartialAsync("_CrudModalHost")

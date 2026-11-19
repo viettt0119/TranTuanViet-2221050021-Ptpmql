@@ -182,6 +182,7 @@ public sealed class PermissionCatalogService(ApplicationDbContext dbContext)
                 if (!hasExplicitHttpVerb && method.Name == "Dispose")
                     continue;
 
+
                 var isAnonymous = method.GetCustomAttribute<AllowAnonymousAttribute>() is not null ||
                     type.GetCustomAttribute<AllowAnonymousAttribute>() is not null;
 

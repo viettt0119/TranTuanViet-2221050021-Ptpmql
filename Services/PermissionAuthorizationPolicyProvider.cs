@@ -21,5 +21,5 @@ public sealed class PermissionAuthorizationPolicyProvider(IOptions<Authorization
 
     public Task<AuthorizationPolicy> GetDefaultPolicyAsync() => _fallback.GetDefaultPolicyAsync();
 
-    public Task<AuthorizationPolicy> GetFallbackPolicyAsync() => _fallback.GetFallbackPolicyAsync();
+    public async Task<AuthorizationPolicy?> GetFallbackPolicyAsync() => await _fallback.GetFallbackPolicyAsync();
 }

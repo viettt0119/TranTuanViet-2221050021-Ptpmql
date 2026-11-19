@@ -22,6 +22,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         base.OnModelCreating(builder);
 
+        builder.Entity<DepartmentModel>().HasData(
+            new DepartmentModel { DepartmentCode = "CNTT", DepartmentName = "Công nghệ thông tin" },
+            new DepartmentModel { DepartmentCode = "KT", DepartmentName = "Kinh tế" },
+            new DepartmentModel { DepartmentCode = "XD", DepartmentName = "Xây dựng" },
+            new DepartmentModel { DepartmentCode = "MO", DepartmentName = "Khoa học mỏ" },
+            new DepartmentModel { DepartmentCode = "DC", DepartmentName = "Địa chất" });
+
         builder.Entity<ApplicationPermission>(entity =>
         {
             entity.HasIndex(x => x.Key).IsUnique();

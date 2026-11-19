@@ -14,6 +14,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         throw new InvalidOperationException("Connection string 'DefaultConnection' not found.")));
 
 builder.Services.AddScoped<PermissionCatalogService>();
+builder.Services.AddScoped<StudentCodeGenerator>();
+builder.Services.AddScoped<ExcelImportService>();
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
 builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
@@ -96,9 +99,12 @@ builder.Services.AddRateLimiter(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("DemoMVC");
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
+    app.UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }

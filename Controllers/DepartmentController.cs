@@ -11,7 +11,7 @@ public class DepartmentController : Controller
     public DepartmentController(ApplicationDbContext context) { _context = context; }
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? q)
+    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
     {
         var departments = _context.Departments.AsQueryable();
         if (!string.IsNullOrWhiteSpace(q))
@@ -23,7 +23,9 @@ public class DepartmentController : Controller
         }
 
         ViewData["SearchQuery"] = q?.Trim();
-        return View(await departments.OrderBy(d => d.DepartmentName).ToListAsync());
+        var result = await PagedList<DepartmentModel>.CreateAsync(
+            departments.OrderBy(d => d.DepartmentName), page, pageSize);
+        return View(result);
     }
 
     [HttpGet]
