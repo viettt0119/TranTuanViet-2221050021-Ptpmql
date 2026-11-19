@@ -59,12 +59,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddOptions<IdentitySeedOptions>()
-    .Bind(builder.Configuration.GetSection(IdentitySeedOptions.SectionName))
-    .ValidateOnStart();
+    .Bind(builder.Configuration.GetSection(IdentitySeedOptions.SectionName));
 builder.Services.AddSingleton<IValidateOptions<IdentitySeedOptions>, IdentitySeedOptionsValidator>();
 builder.Services.AddOptions<EmailSettings>()
-    .Bind(builder.Configuration.GetSection(EmailSettings.SectionName))
-    .ValidateOnStart();
+    .Bind(builder.Configuration.GetSection(EmailSettings.SectionName));
 builder.Services.AddSingleton<IValidateOptions<EmailSettings>, EmailSettingsValidator>();
 
 builder.Services.AddScoped<IdentitySeeder>();
@@ -129,21 +127,43 @@ await using (var scope = app.Services.CreateAsyncScope())
     var permissionCatalog = scope.ServiceProvider.GetRequiredService<PermissionCatalogService>();
     await permissionCatalog.SyncAsync();
 
-    await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var adminRole = await roleManager.FindByNameAsync("Admin")
-        ?? throw new InvalidOperationException("The Admin role was not created by the identity seeder.");
-    var permissions = await dbContext.ApplicationPermissions.ToListAsync();
-    foreach (var permission in permissions)
+    var identitySeedOptions = app.Configuration
+        .GetSection(IdentitySeedOptions.SectionName)
+        .Get<IdentitySeedOptions>() ?? new IdentitySeedOptions();
+    var canSeedAdmin =
+        !string.IsNullOrWhiteSpace(identitySeedOptions.Email) &&
+        !string.IsNullOrWhiteSpace(identitySeedOptions.Password) &&
+        !string.IsNullOrWhiteSpace(identitySeedOptions.FullName);
+
+    if (canSeedAdmin || !app.Environment.IsDevelopment())
     {
-        if (!await dbContext.ApplicationRolePermissions.AnyAsync(x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id))
+        await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
+    }
+    else
+    {
+        foreach (var roleName in new[] { "Admin", "User" })
         {
-            dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
+            if (!await roleManager.RoleExistsAsync(roleName))
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+    }
+
+    var adminRole = await roleManager.FindByNameAsync("Admin");
+    var permissions = await dbContext.ApplicationPermissions.ToListAsync();
+    if (adminRole is not null)
+    {
+        foreach (var permission in permissions)
+        {
+            if (!await dbContext.ApplicationRolePermissions.AnyAsync(x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id))
             {
-                RoleId = adminRole.Id,
-                PermissionId = permission.Id,
-                IsGranted = true
-            });
+                dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
+                {
+                    RoleId = adminRole.Id,
+                    PermissionId = permission.Id,
+                    IsGranted = true
+                });
+            }
         }
     }
     await dbContext.SaveChangesAsync();

@@ -65,11 +65,3 @@ jobs:
         if: always()
         run: |
           curl -s --ftp-pasv -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" "ftp://${{ secrets.FTP_SERVER }}/" -Q "-DELE /wwwroot/app_offline.htm" || true
-
-      - name: Health check
-        run: |
-          if [ -n "${{ secrets.APP_HEALTH_URL }}" ]; then
-            curl --fail --retry 5 --retry-delay 10 "${{ secrets.APP_HEALTH_URL }}"
-          else
-            echo "APP_HEALTH_URL is not configured; skipped health check."
-          fi
