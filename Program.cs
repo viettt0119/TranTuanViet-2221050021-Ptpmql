@@ -136,7 +136,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         !string.IsNullOrWhiteSpace(identitySeedOptions.Password) &&
         !string.IsNullOrWhiteSpace(identitySeedOptions.FullName);
 
-    if (canSeedAdmin || !app.Environment.IsDevelopment())
+    if (canSeedAdmin)
     {
         await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
     }
