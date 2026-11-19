@@ -104,6 +104,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
@@ -122,27 +123,25 @@ await using (var scope = app.Services.CreateAsyncScope())
     var permissionCatalog = scope.ServiceProvider.GetRequiredService<PermissionCatalogService>();
     await permissionCatalog.SyncAsync();
 
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var adminRole = await roleManager.FindByNameAsync("Admin");
-    if (adminRole is not null)
-    {
-        var permissions = await dbContext.ApplicationPermissions.ToListAsync();
-        foreach (var permission in permissions)
-        {
-            if (!await dbContext.ApplicationRolePermissions.AnyAsync(x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id))
-            {
-                dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
-                {
-                    RoleId = adminRole.Id,
-                    PermissionId = permission.Id,
-                    IsGranted = true
-                });
-            }
-        }
-        await dbContext.SaveChangesAsync();
-    }
-
     await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var adminRole = await roleManager.FindByNameAsync("Admin")
+        ?? throw new InvalidOperationException("The Admin role was not created by the identity seeder.");
+    var permissions = await dbContext.ApplicationPermissions.ToListAsync();
+    foreach (var permission in permissions)
+    {
+        if (!await dbContext.ApplicationRolePermissions.AnyAsync(x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id))
+        {
+            dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
+            {
+                RoleId = adminRole.Id,
+                PermissionId = permission.Id,
+                IsGranted = true
+            });
+        }
+    }
+    await dbContext.SaveChangesAsync();
+    await permissionCatalog.EnsureDefaultUserPermissionsAsync();
 }
 
 

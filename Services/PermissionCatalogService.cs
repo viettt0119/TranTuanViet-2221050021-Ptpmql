@@ -10,6 +10,21 @@ namespace DemoMVC.Services;
 
 public sealed class PermissionCatalogService(ApplicationDbContext dbContext)
 {
+    private static readonly string[] DefaultUserControllers =
+    [
+        "Home",
+        "Student",
+        "Department",
+        "Product",
+        "Employee"
+    ];
+
+    private static readonly string[] DefaultUserPermissionKeys =
+    [
+        "Account.ChangePassword",
+        "Account.Logout"
+    ];
+
     public async Task SyncAsync(CancellationToken cancellationToken = default)
     {
         var permissions = DiscoverPermissions();
@@ -99,6 +114,41 @@ public sealed class PermissionCatalogService(ApplicationDbContext dbContext)
             .AnyAsync(x => x.PermissionId == permission.Id && x.IsGranted && roleIds.Contains(x.RoleId), CancellationToken.None);
 
         return granted;
+    }
+
+    public async Task EnsureDefaultUserPermissionsAsync(CancellationToken cancellationToken = default)
+    {
+        var userRoleId = await dbContext.Roles
+            .Where(role => role.Name == "User")
+            .Select(role => role.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (userRoleId is null)
+            throw new InvalidOperationException("The default 'User' role must be seeded before assigning permissions.");
+
+        var permissions = await dbContext.ApplicationPermissions
+            .Where(permission =>
+                DefaultUserControllers.Contains(permission.Controller) ||
+                DefaultUserPermissionKeys.Contains(permission.Key))
+            .ToListAsync(cancellationToken);
+        var existingPermissionIds = await dbContext.ApplicationRolePermissions
+            .Where(rolePermission => rolePermission.RoleId == userRoleId)
+            .Select(rolePermission => rolePermission.PermissionId)
+            .ToHashSetAsync(cancellationToken);
+
+        foreach (var permission in permissions)
+        {
+            if (existingPermissionIds.Contains(permission.Id))
+                continue;
+
+            dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
+            {
+                RoleId = userRoleId,
+                PermissionId = permission.Id,
+                IsGranted = true
+            });
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static IReadOnlyList<ApplicationPermission> DiscoverPermissions()
