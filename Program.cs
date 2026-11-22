@@ -174,6 +174,16 @@ await using (var scope = app.Services.CreateAsyncScope())
             "(on MonsterASP: Scripting > Environment variables, e.g. AdminSeed__Password) and restart the app.");
     }
 
+    var lockedAdministrators = await scope.ServiceProvider.GetRequiredService<IdentitySeeder>()
+        .LockAdministratorsUsingLeakedPasswordsAsync();
+    if (lockedAdministrators > 0)
+    {
+        app.Logger.LogCritical(
+            "Locked {Count} administrator account(s) still using the default password leaked in git history. " +
+            "Set AdminSeed:Password (and AdminSeed:ResetPassword=true) to restore access.",
+            lockedAdministrators);
+    }
+
     var adminRole = await roleManager.FindByNameAsync("Admin");
     var permissions = await dbContext.ApplicationPermissions.ToListAsync();
     if (adminRole is not null)
