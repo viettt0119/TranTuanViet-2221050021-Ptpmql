@@ -99,4 +99,88 @@ public class IdentitySeederTests
         Assert.True((await userManager.FindByIdAsync(existingAdmin.Id))!.EmailConfirmed);
         Assert.True(await userManager.IsInRoleAsync(existingAdmin, "Admin"));
     }
+
+    [Fact]
+    public async Task SeedAsync_resets_password_of_account_registered_with_admin_email_before_promotion()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(connection));
+        services.AddIdentityCore<ApplicationUser>()
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationDbContext>();
+
+        await using var provider = services.BuildServiceProvider();
+        var context = provider.GetRequiredService<ApplicationDbContext>();
+        await context.Database.EnsureCreatedAsync();
+        var userManager = provider.GetRequiredService<UserManager<ApplicationUser>>();
+        var squatter = new ApplicationUser
+        {
+            UserName = "admin@example.test",
+            Email = "admin@example.test",
+            FullName = "Somebody Else",
+            EmailConfirmed = false
+        };
+        Assert.True((await userManager.CreateAsync(squatter, "Squatter!Pass123")).Succeeded);
+
+        var seeder = new IdentitySeeder(
+            provider.GetRequiredService<RoleManager<IdentityRole>>(),
+            userManager,
+            Microsoft.Extensions.Options.Options.Create(new IdentitySeedOptions
+            {
+                Email = "admin@example.test",
+                Password = "Configured!Admin123",
+                FullName = "Configured Admin"
+            }));
+        await seeder.SeedAsync();
+
+        var admin = (await userManager.FindByIdAsync(squatter.Id))!;
+        Assert.True(await userManager.IsInRoleAsync(admin, "Admin"));
+        Assert.False(await userManager.CheckPasswordAsync(admin, "Squatter!Pass123"));
+        Assert.True(await userManager.CheckPasswordAsync(admin, "Configured!Admin123"));
+    }
+
+    [Fact]
+    public async Task SeedAsync_keeps_password_of_existing_administrator()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddDbContext<ApplicationDbContext>(options => options.UseSqlite(connection));
+        services.AddIdentityCore<ApplicationUser>()
+            .AddRoles<IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationDbContext>();
+
+        await using var provider = services.BuildServiceProvider();
+        var context = provider.GetRequiredService<ApplicationDbContext>();
+        await context.Database.EnsureCreatedAsync();
+        var userManager = provider.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
+        Assert.True((await roleManager.CreateAsync(new IdentityRole("Admin"))).Succeeded);
+        var admin = new ApplicationUser
+        {
+            UserName = "admin@example.test",
+            Email = "admin@example.test",
+            FullName = "Admin",
+            EmailConfirmed = true
+        };
+        Assert.True((await userManager.CreateAsync(admin, "Changed!ByAdmin123")).Succeeded);
+        Assert.True((await userManager.AddToRoleAsync(admin, "Admin")).Succeeded);
+
+        var seeder = new IdentitySeeder(
+            roleManager,
+            userManager,
+            Microsoft.Extensions.Options.Options.Create(new IdentitySeedOptions
+            {
+                Email = "admin@example.test",
+                Password = "Original!Seed123",
+                FullName = "Admin"
+            }));
+        await seeder.SeedAsync();
+
+        Assert.True(await userManager.CheckPasswordAsync((await userManager.FindByIdAsync(admin.Id))!, "Changed!ByAdmin123"));
+    }
 }

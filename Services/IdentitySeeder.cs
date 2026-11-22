@@ -78,6 +78,23 @@ public sealed class IdentitySeeder(
 
         if (!await userManager.IsInRoleAsync(admin, "Admin"))
         {
+            // Tài khoản trùng email admin có thể do người khác tự đăng ký trước khi production được cấu hình.
+            // Đặt lại mật khẩu theo AdminSeed để người đăng ký đó không nhận quyền Admin bằng mật khẩu của họ.
+            foreach (var validator in userManager.PasswordValidators)
+            {
+                var validation = await validator.ValidateAsync(userManager, admin, password);
+                EnsureSucceeded(validation, "AdminSeed:Password does not meet the password policy.");
+            }
+
+            if (await userManager.HasPasswordAsync(admin))
+            {
+                var removeResult = await userManager.RemovePasswordAsync(admin);
+                EnsureSucceeded(removeResult, "Could not reset the existing administrator password.");
+            }
+
+            var passwordResult = await userManager.AddPasswordAsync(admin, password);
+            EnsureSucceeded(passwordResult, "Could not set the configured administrator password.");
+
             var roleResult = await userManager.AddToRoleAsync(admin, "Admin");
             EnsureSucceeded(roleResult, "Could not assign the administrator role.");
         }
