@@ -10,7 +10,11 @@
     var searchQuery = ViewData["SearchQuery"] as string;
 }
 <div class="list-footer">
-    <span class="list-summary">@totalRecords bản ghi</span>
+    @{
+        var first = totalRecords == 0 ? 0 : (pageIndex - 1) * pageSize + 1;
+        var last = Math.Min(pageIndex * pageSize, totalRecords);
+    }
+    <span class="list-summary">Hiển thị @first–@last trên tổng @totalRecords bản ghi</span>
     @if (totalPages > 1)
     {
         <nav aria-label="Phân trang">

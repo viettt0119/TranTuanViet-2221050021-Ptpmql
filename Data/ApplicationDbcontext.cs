@@ -36,6 +36,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
             entity.Property(x => x.Controller).HasMaxLength(100);
             entity.Property(x => x.Action).HasMaxLength(100);
             entity.Property(x => x.Area).HasMaxLength(50);
+            entity.Property(x => x.Module).HasMaxLength(50);
+            entity.Property(x => x.ModuleDisplayName).HasMaxLength(50);
+            entity.Property(x => x.ActionDisplayName).HasMaxLength(50);
+            entity.Property(x => x.Group).HasMaxLength(50);
         });
 
         builder.Entity<ApplicationRolePermission>(entity =>

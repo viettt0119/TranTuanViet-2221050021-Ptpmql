@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DemoMVC.Data;
 using DemoMVC.Models;
+using DemoMVC.Services;
 
 namespace DemoMVC.Controllers
 {
@@ -20,6 +21,7 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Employee.View)]
         public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
         {
             var employees = _context.Employees.AsQueryable();
@@ -38,6 +40,7 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Employee.View)]
         public async Task<IActionResult> Details(string id)
         {
             var employeeModel = await _context.Employees
@@ -48,6 +51,7 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Employee.Create)]
         public IActionResult Create()
         {
             ViewData["ModalTitle"] = "Thêm nhân viên";
@@ -58,6 +62,7 @@ namespace DemoMVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Employee.Create)]
         public async Task<IActionResult> Create([Bind("EmpId,FullName,HireDate")] EmployeeModel employeeModel)
         {
             if (ModelState.IsValid)
@@ -77,6 +82,7 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Employee.Edit)]
         public async Task<IActionResult> Edit(string id)
         {
             var employeeModel = await _context.Employees.FindAsync(id);
@@ -90,6 +96,7 @@ namespace DemoMVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Employee.Edit)]
         public async Task<IActionResult> Edit(string id, [Bind("EmpId,FullName,HireDate")] EmployeeModel form)
         {
             if (id != form.EmpId) return BadRequest();
@@ -117,6 +124,7 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
+        [RequirePermission(Permissions.Employee.Delete)]
         public async Task<IActionResult> Delete(string id)
         {
             var employeeModel = await _context.Employees.FindAsync(id);
@@ -128,6 +136,7 @@ namespace DemoMVC.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [RequirePermission(Permissions.Employee.Delete)]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var employeeModel = await _context.Employees.FindAsync(id);

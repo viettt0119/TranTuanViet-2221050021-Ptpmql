@@ -3,15 +3,27 @@ using Microsoft.AspNetCore.Mvc;
 using DemoMVC.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.WebUtilities;
+using DemoMVC.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace DemoMVC.Controllers;
 
 public class HomeController : Controller
 {
+    private readonly ApplicationDbContext context;
+    public HomeController(ApplicationDbContext context) => this.context = context;
+
     [HttpGet]
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        return View();
+        var model = new HomeDashboardViewModel
+        {
+            StudentCount = await context.Students.CountAsync(),
+            DepartmentCount = await context.Departments.CountAsync(),
+            EmployeeCount = await context.Employees.CountAsync(),
+            ProductCount = await context.Products.CountAsync()
+        };
+        return View(model);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

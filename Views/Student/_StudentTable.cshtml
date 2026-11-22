@@ -1,0 +1,38 @@
+@model DemoMVC.Models.ViewModels.Students.StudentIndexViewModel
+@{
+    var nextDir = string.Equals(Model.Filter.Dir, "asc", StringComparison.OrdinalIgnoreCase) ? "desc" : "asc";
+}
+<div class="card table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr>
+            <th><a class="text-decoration-none" asp-action="Index" asp-route-q="@Model.Filter.Q" asp-route-departmentCode="@Model.Filter.DepartmentCode" asp-route-admissionYear="@Model.Filter.AdmissionYear" asp-route-sort="code" asp-route-dir="@(Model.Filter.Sort == "code" ? nextDir : "asc")" asp-route-pageSize="@Model.Filter.PageSize">Mã sinh viên <i class="bi @(Model.Filter.Sort == "code" ? (Model.Filter.Dir == "asc" ? "bi-arrow-up" : "bi-arrow-down") : "bi-arrow-down-up")"></i></a></th>
+            <th><a class="text-decoration-none" asp-action="Index" asp-route-q="@Model.Filter.Q" asp-route-departmentCode="@Model.Filter.DepartmentCode" asp-route-admissionYear="@Model.Filter.AdmissionYear" asp-route-sort="name" asp-route-dir="@(Model.Filter.Sort == "name" ? nextDir : "asc")" asp-route-pageSize="@Model.Filter.PageSize">Họ tên <i class="bi @(Model.Filter.Sort == "name" ? (Model.Filter.Dir == "asc" ? "bi-arrow-up" : "bi-arrow-down") : "bi-arrow-down-up")"></i></a></th>
+            <th>Khoa</th>
+            <th><a class="text-decoration-none" asp-action="Index" asp-route-q="@Model.Filter.Q" asp-route-departmentCode="@Model.Filter.DepartmentCode" asp-route-admissionYear="@Model.Filter.AdmissionYear" asp-route-sort="year" asp-route-dir="@(Model.Filter.Sort == "year" ? nextDir : "asc")" asp-route-pageSize="@Model.Filter.PageSize">Năm <i class="bi @(Model.Filter.Sort == "year" ? (Model.Filter.Dir == "asc" ? "bi-arrow-up" : "bi-arrow-down") : "bi-arrow-down-up")"></i></a></th>
+            <th class="text-end">Thao tác</th>
+        </tr></thead>
+        <tbody>
+        @if (Model.Students.Items.Count == 0)
+        {
+            <tr><td colspan="5" class="empty-state"><i class="bi bi-person-x"></i><strong>Không có dữ liệu</strong><div>@(string.IsNullOrWhiteSpace(Model.Filter.Q) ? "Chưa có sinh viên." : "Không tìm thấy kết quả phù hợp.")</div></td></tr>
+        }
+        else
+        {
+            foreach (var student in Model.Students.Items)
+            {
+                <tr>
+                    <td><span class="badge text-bg-light">@student.StudentCode</span></td>
+                    <td><strong>@student.FullName</strong>@if (!string.IsNullOrWhiteSpace(student.Email)) { <div class="small text-muted">@student.Email</div> }</td>
+                    <td><span class="badge text-bg-primary-subtle text-primary">@student.DepartmentName</span></td>
+                    <td>@student.AdmissionYear</td>
+                    <td class="text-end text-nowrap">
+                        <a asp-permission="Student.View" asp-action="Details" asp-route-id="@student.Id" data-modal-url="@Url.Action("Details", new { id = student.Id })" class="btn btn-sm btn-outline-info" title="Xem" data-bs-toggle="tooltip"><i class="bi bi-eye"></i></a>
+                        <a asp-permission="Student.Edit" asp-action="Edit" asp-route-id="@student.Id" data-modal-url="@Url.Action("Edit", new { id = student.Id })" class="btn btn-sm btn-outline-warning" title="Sửa" data-bs-toggle="tooltip"><i class="bi bi-pencil"></i></a>
+                        <a asp-permission="Student.Delete" asp-action="Delete" asp-route-id="@student.Id" data-modal-url="@Url.Action("Delete", new { id = student.Id })" class="btn btn-sm btn-outline-danger" title="Xoá" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>

@@ -1,75 +1,58 @@
 (() => {
     const host = document.getElementById("crud-modal-host");
-    const notification = document.getElementById("crud-modal-notification");
+    if (!host) return;
 
-    if (!host || !notification) {
-        return;
-    }
-
-    const showError = (message) => {
-        notification.textContent = message;
-        notification.classList.remove("alert-success");
-        notification.classList.add("alert-danger");
-        notification.classList.remove("d-none");
+    const setSubmitLoading = (form, loading) => {
+        const button = form.querySelector('[type="submit"]');
+        if (!button) return;
+        button.disabled = loading;
+        if (loading) button.dataset.originalHtml = button.innerHTML;
+        if (loading) button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+        else if (button.dataset.originalHtml) button.innerHTML = button.dataset.originalHtml;
     };
 
-    const displayModal = (html) => {
-        const installModal = () => {
-            host.innerHTML = html;
-            const modalElement = host.querySelector(".modal");
-            if (!modalElement) {
-                throw new Error("Nội dung trả về không có hộp thoại hợp lệ.");
-            }
+    const parseValidation = (root) => {
+        if (window.jQuery && window.jQuery.validator && window.jQuery.validator.unobtrusive) {
+            jQuery.validator.unobtrusive.parse(root.querySelector("form") || root);
+        }
+    };
 
-            bootstrap.Modal.getOrCreateInstance(modalElement).show();
-        };
-        const currentModal = host.querySelector(".modal.show");
-        if (!currentModal) {
-            installModal();
+    const installModal = (html) => {
+        host.innerHTML = html;
+        const modalElement = host.querySelector(".modal");
+        if (!modalElement) {
+            window.showToast("Dữ liệu trả về không có hộp thoại hợp lệ.", "danger");
             return;
         }
-
-        currentModal.addEventListener("hidden.bs.modal", installModal, { once: true });
-        bootstrap.Modal.getOrCreateInstance(currentModal).hide();
+        parseValidation(modalElement);
+        bootstrap.Modal.getOrCreateInstance(modalElement).show();
     };
 
     document.addEventListener("click", async (event) => {
         const trigger = event.target.closest("[data-modal-url]");
-        if (!trigger) {
-            return;
-        }
-
+        if (!trigger) return;
         event.preventDefault();
-        notification.classList.add("d-none");
-
         try {
             const response = await fetch(trigger.dataset.modalUrl, {
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             });
-            if (!response.ok) {
-                throw new Error(`Không thể tải dữ liệu (HTTP ${response.status}).`);
+            if (response.status === 403) {
+                const result = await response.json();
+                window.showToast(result.message || "Bạn không có quyền thực hiện chức năng này.", "danger");
+                return;
             }
-
-            displayModal(await response.text());
+            if (!response.ok) throw new Error(`Không thể tải dữ liệu (HTTP ${response.status}).`);
+            installModal(await response.text());
         } catch (error) {
-            showError(error.message || "Không thể tải dữ liệu. Vui lòng thử lại.");
+            window.showToast(error.message || "Không thể tải dữ liệu.", "danger");
         }
     });
 
     host.addEventListener("submit", async (event) => {
-        const form = event.target.closest("[data-ajax-modal-form]");
-        if (!form) {
-            return;
-        }
-
+        const form = event.target.closest("[data-ajax-modal-form], form");
+        if (!form || !host.contains(form)) return;
         event.preventDefault();
-        notification.classList.add("d-none");
-
-        const submitButton = form.querySelector('[type="submit"]');
-        if (submitButton) {
-            submitButton.disabled = true;
-        }
-
+        setSubmitLoading(form, true);
         try {
             const response = await fetch(form.action, {
                 method: form.method || "POST",
@@ -77,44 +60,57 @@
                 headers: { "X-Requested-With": "XMLHttpRequest" }
             });
             const contentType = response.headers.get("content-type") || "";
-
             if (contentType.includes("application/json")) {
                 const result = await response.json();
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || `Yêu cầu thất bại (HTTP ${response.status}).`);
-                }
-
-                notification.textContent = result.message || "Đã lưu thay đổi.";
-                notification.classList.remove("d-none", "alert-danger");
-                notification.classList.add("alert-success");
-                const modalElement = host.querySelector(".modal.show");
-                if (!modalElement) {
-                    window.location.reload();
+                if (!response.ok || result.success === false) {
+                    window.showToast(result.message || "Bạn không có quyền thực hiện chức năng này.", "danger");
+                    setSubmitLoading(form, false);
                     return;
                 }
-
-                modalElement.addEventListener("hidden.bs.modal", () => {
-                    window.setTimeout(() => window.location.reload(), 1200);
-                }, { once: true });
-                bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                const modalElement = host.querySelector(".modal.show");
+                if (modalElement) {
+                    modalElement.addEventListener("hidden.bs.modal", () => {
+                        host.innerHTML = "";
+                        refreshCrudList();
+                    }, { once: true });
+                    bootstrap.Modal.getOrCreateInstance(modalElement).hide();
+                } else {
+                    await refreshCrudList();
+                }
+                window.showToast(result.message || "Đã lưu thay đổi.", "success");
                 return;
             }
 
+            if (response.status === 403) {
+                window.showToast("Bạn không có quyền thực hiện chức năng này.", "danger");
+                setSubmitLoading(form, false);
+                return;
+            }
             const html = await response.text();
-            if (!response.ok && response.status !== 422) {
-                throw new Error(`Không thể lưu dữ liệu (HTTP ${response.status}).`);
-            }
-
-            displayModal(html);
+            installModal(html);
         } catch (error) {
-            showError(error.message || "Không thể lưu dữ liệu. Vui lòng thử lại.");
-            if (submitButton) {
-                submitButton.disabled = false;
-            }
+            window.showToast(error.message || "Không thể lưu dữ liệu.", "danger");
+            setSubmitLoading(form, false);
         }
     });
 
-    host.addEventListener("hidden.bs.modal", (event) => {
-        event.target.remove();
-    });
+    async function refreshCrudList() {
+        const list = document.querySelector("[data-crud-list]");
+        if (!list) {
+            window.location.reload();
+            return;
+        }
+        const response = await fetch(window.location.href, {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        });
+        if (!response.ok) throw new Error("Không thể tải lại danh sách.");
+        const html = await response.text();
+        const page = document.createElement("html");
+        page.innerHTML = html;
+        const nextList = page.querySelector("[data-crud-list]");
+        if (nextList) list.innerHTML = nextList.innerHTML;
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(element => {
+            bootstrap.Tooltip.getOrCreateInstance(element);
+        });
+    }
 })();

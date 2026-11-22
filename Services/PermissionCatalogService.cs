@@ -1,79 +1,104 @@
-using System.Reflection;
 using System.Security.Claims;
 using DemoMVC.Data;
 using DemoMVC.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Primitives;
 
 namespace DemoMVC.Services;
 
-public sealed class PermissionCatalogService(ApplicationDbContext dbContext)
+public sealed class PermissionCatalogService(
+    ApplicationDbContext dbContext,
+    RoleManager<IdentityRole> roleManager,
+    IMemoryCache memoryCache)
 {
-    private static readonly string[] DefaultUserControllers =
-    [
-        "Home",
-        "Student",
-        "Department",
-        "Product",
-        "Employee"
-    ];
+    private readonly object _invalidateLock = new();
+    private CancellationTokenSource _allUsersCacheTokenSource = new();
 
-    private static readonly string[] DefaultUserPermissionKeys =
-    [
-        "Account.ChangePassword",
-        "Account.Logout"
-    ];
-
-    public async Task SyncAsync(CancellationToken cancellationToken = default)
+    public async Task EnsureSystemRolesAsync(CancellationToken cancellationToken = default)
     {
-        var permissions = DiscoverPermissions();
-        var existing = await dbContext.ApplicationPermissions
-            .AsNoTracking()
-            .ToDictionaryAsync(x => x.Key, cancellationToken);
+        foreach (var roleName in new[] { "Admin", "User" })
+        {
+            if (!await roleManager.RoleExistsAsync(roleName))
+                await roleManager.CreateAsync(new IdentityRole(roleName));
+        }
+
+        var adminRole = await roleManager.FindByNameAsync("Admin")
+            ?? throw new InvalidOperationException("Không thể khởi tạo role Admin.");
+        var permissions = await dbContext.ApplicationPermissions.ToListAsync(cancellationToken);
 
         foreach (var permission in permissions)
         {
-            if (existing.TryGetValue(permission.Key, out var current))
+            var exists = await dbContext.ApplicationRolePermissions.AnyAsync(
+                x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id,
+                cancellationToken);
+            if (!exists)
             {
-                if (current.Controller != permission.Controller ||
-                    current.Action != permission.Action ||
-                    current.Area != permission.Area ||
-                    current.Description != permission.Description ||
-                    current.IsAnonymous != permission.IsAnonymous ||
-                    current.IsAdminOnly != permission.IsAdminOnly)
+                dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
                 {
-                    current.Controller = permission.Controller;
-                    current.Action = permission.Action;
-                    current.Area = permission.Area;
-                    current.Description = permission.Description;
-                    current.IsAnonymous = permission.IsAnonymous;
-                    current.IsAdminOnly = permission.IsAdminOnly;
-                    dbContext.ApplicationPermissions.Update(current);
-                }
-            }
-            else
-            {
-                dbContext.ApplicationPermissions.Add(permission);
+                    RoleId = adminRole.Id,
+                    PermissionId = permission.Id,
+                    IsGranted = true
+                });
             }
         }
 
-        var keys = permissions.Select(x => x.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var stale = await dbContext.ApplicationPermissions
-            .Where(x => !keys.Contains(x.Key))
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await EnsureDefaultUserPermissionsAsync(cancellationToken);
+    }
+
+    public async Task SyncAsync(CancellationToken cancellationToken = default)
+    {
+        var metadata = Permissions.All();
+        var existing = await dbContext.ApplicationPermissions
+            .ToDictionaryAsync(x => x.Key, cancellationToken);
+
+        foreach (var item in metadata)
+        {
+            if (existing.TryGetValue(item.Key, out var permission))
+            {
+                permission.Controller = item.Module;
+                permission.Action = item.Key[(item.Module.Length + 1)..];
+                permission.Description = $"{item.ModuleDisplayName} – {item.ActionDisplayName}";
+                permission.Module = item.Module;
+                permission.ModuleDisplayName = item.ModuleDisplayName;
+                permission.ActionDisplayName = item.ActionDisplayName;
+                permission.Group = item.Group;
+                permission.SortOrder = item.SortOrder;
+                permission.IsAnonymous = false;
+                permission.IsAdminOnly = false;
+            }
+            else
+            {
+                dbContext.ApplicationPermissions.Add(new ApplicationPermission
+                {
+                    Key = item.Key,
+                    Controller = item.Module,
+                    Action = item.Key[(item.Module.Length + 1)..],
+                    Area = string.Empty,
+                    Description = $"{item.ModuleDisplayName} – {item.ActionDisplayName}",
+                    Module = item.Module,
+                    ModuleDisplayName = item.ModuleDisplayName,
+                    ActionDisplayName = item.ActionDisplayName,
+                    Group = item.Group,
+                    SortOrder = item.SortOrder
+                });
+            }
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var validKeys = metadata.Select(x => x.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var stalePermissions = await dbContext.ApplicationPermissions
+            .Where(x => !validKeys.Contains(x.Key))
+            .Include(x => x.RolePermissions)
             .ToListAsync(cancellationToken);
 
-        foreach (var item in stale)
+        foreach (var stale in stalePermissions)
         {
-            var roleEntries = await dbContext.ApplicationRolePermissions
-                .Where(x => x.PermissionId == item.Id)
-                .ToListAsync(cancellationToken);
-            if (roleEntries.Count > 0)
-            {
-                dbContext.ApplicationRolePermissions.RemoveRange(roleEntries);
-            }
-
-            dbContext.ApplicationPermissions.Remove(item);
+            dbContext.ApplicationRolePermissions.RemoveRange(stale.RolePermissions);
+            dbContext.ApplicationPermissions.Remove(stale);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -83,66 +108,88 @@ public sealed class PermissionCatalogService(ApplicationDbContext dbContext)
     {
         if (user.Identity?.IsAuthenticated != true)
             return false;
-
-        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrWhiteSpace(userId))
-            return false;
-
-        var roleIds = await dbContext.UserRoles
-            .Where(x => x.UserId == userId)
-            .Select(x => x.RoleId)
-            .ToListAsync();
-
-        if (roleIds.Count == 0)
-            return false;
-
-        var permission = await dbContext.ApplicationPermissions
-            .FirstOrDefaultAsync(x => x.Key == permissionKey, CancellationToken.None);
-
-        if (permission is null)
-            return false;
-
-        var adminRoleId = await dbContext.Roles
-            .Where(x => x.Name == "Admin")
-            .Select(x => x.Id)
-            .FirstOrDefaultAsync();
-
-        if (!string.IsNullOrWhiteSpace(adminRoleId) && roleIds.Contains(adminRoleId))
+        if (user.IsInRole("Admin"))
             return true;
 
-        var granted = await dbContext.ApplicationRolePermissions
-            .AnyAsync(x => x.PermissionId == permission.Id && x.IsGranted && roleIds.Contains(x.RoleId), CancellationToken.None);
+        var keys = await GetGrantedKeysAsync(user);
+        return keys.Contains(permissionKey);
+    }
 
-        return granted;
+    public async Task<HashSet<string>> GetGrantedKeysAsync(ClaimsPrincipal user)
+    {
+        var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrWhiteSpace(userId))
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var cacheKey = $"permissions:{userId}";
+        if (memoryCache.TryGetValue(cacheKey, out HashSet<string>? cached) && cached is not null)
+            return cached;
+
+        var keys = await dbContext.UserRoles
+            .Where(userRole => userRole.UserId == userId)
+            .Join(dbContext.ApplicationRolePermissions,
+                userRole => userRole.RoleId,
+                rolePermission => rolePermission.RoleId,
+                (_, rolePermission) => rolePermission)
+            .Where(rolePermission => rolePermission.IsGranted)
+            .Join(dbContext.ApplicationPermissions,
+                rolePermission => rolePermission.PermissionId,
+                permission => permission.Id,
+                (_, permission) => permission.Key)
+            .ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
+
+        var allUsersToken = _allUsersCacheTokenSource.Token;
+        var options = new MemoryCacheEntryOptions()
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+            .AddExpirationToken(new CancellationChangeToken(allUsersToken));
+        memoryCache.Set(cacheKey, keys, options);
+        return keys;
+    }
+
+    public void InvalidateUser(string userId)
+    {
+        if (!string.IsNullOrWhiteSpace(userId))
+            memoryCache.Remove($"permissions:{userId}");
+    }
+
+    public void InvalidateAll()
+    {
+        lock (_invalidateLock)
+        {
+            _allUsersCacheTokenSource.Cancel();
+            _allUsersCacheTokenSource.Dispose();
+            _allUsersCacheTokenSource = new CancellationTokenSource();
+        }
     }
 
     public async Task EnsureDefaultUserPermissionsAsync(CancellationToken cancellationToken = default)
     {
-        var userRoleId = await dbContext.Roles
-            .Where(role => role.Name == "User")
-            .Select(role => role.Id)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (userRoleId is null)
-            throw new InvalidOperationException("The default 'User' role must be seeded before assigning permissions.");
+        var userRole = await roleManager.FindByNameAsync("User");
+        if (userRole is null)
+            throw new InvalidOperationException("Role User phải được khởi tạo.");
+
+        var hasAnyPermission = await dbContext.ApplicationRolePermissions
+            .AnyAsync(x => x.RoleId == userRole.Id, cancellationToken);
+        if (hasAnyPermission)
+            return;
+
+        var defaultKeys = new[]
+        {
+            Permissions.Student.View,
+            Permissions.Department.View,
+            Permissions.Employee.View,
+            Permissions.Product.View
+        };
 
         var permissions = await dbContext.ApplicationPermissions
-            .Where(permission =>
-                DefaultUserControllers.Contains(permission.Controller) ||
-                DefaultUserPermissionKeys.Contains(permission.Key))
+            .Where(x => defaultKeys.Contains(x.Key))
             .ToListAsync(cancellationToken);
-        var existingPermissionIds = await dbContext.ApplicationRolePermissions
-            .Where(rolePermission => rolePermission.RoleId == userRoleId)
-            .Select(rolePermission => rolePermission.PermissionId)
-            .ToHashSetAsync(cancellationToken);
 
         foreach (var permission in permissions)
         {
-            if (existingPermissionIds.Contains(permission.Id))
-                continue;
-
             dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
             {
-                RoleId = userRoleId,
+                RoleId = userRole.Id,
                 PermissionId = permission.Id,
                 IsGranted = true
             });
@@ -151,56 +198,5 @@ public sealed class PermissionCatalogService(ApplicationDbContext dbContext)
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static IReadOnlyList<ApplicationPermission> DiscoverPermissions()
-    {
-        var types = typeof(Program).Assembly
-            .DefinedTypes
-            .Where(type => type.IsClass && !type.IsAbstract && typeof(ControllerBase).IsAssignableFrom(type))
-            .ToList();
-
-        var results = new List<ApplicationPermission>();
-        foreach (var type in types)
-        {
-            var controllerName = type.Name.EndsWith("Controller", StringComparison.Ordinal)
-                ? type.Name[..^"Controller".Length]
-                : type.Name;
-
-            foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
-            {
-                if (method.IsSpecialName || method.GetCustomAttribute<NonActionAttribute>() is not null)
-                    continue;
-
-                var hasExplicitHttpVerb = method.GetCustomAttribute<HttpGetAttribute>() is not null ||
-                    method.GetCustomAttribute<HttpPostAttribute>() is not null ||
-                    method.GetCustomAttribute<HttpPutAttribute>() is not null ||
-                    method.GetCustomAttribute<HttpDeleteAttribute>() is not null ||
-                    method.GetCustomAttribute<HttpPatchAttribute>() is not null ||
-                    method.GetCustomAttribute<AcceptVerbsAttribute>() is not null;
-
-                // MVC treats action methods without an explicit verb as GET requests. Include
-                // those actions so the permission catalog matches the actual app routes.
-                if (!hasExplicitHttpVerb && method.Name == "Dispose")
-                    continue;
-
-
-                var isAnonymous = method.GetCustomAttribute<AllowAnonymousAttribute>() is not null ||
-                    type.GetCustomAttribute<AllowAnonymousAttribute>() is not null;
-
-                results.Add(new ApplicationPermission
-                {
-                    Key = BuildPermissionKey(controllerName, method.Name),
-                    Controller = controllerName,
-                    Action = method.Name,
-                    Area = string.Empty,
-                    Description = $"{controllerName}.{method.Name}",
-                    IsAnonymous = isAnonymous,
-                    IsAdminOnly = false
-                });
-            }
-        }
-
-        return results.DistinctBy(x => x.Key, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    public static string BuildPermissionKey(string controller, string action) => $"{controller}.{action}";
+    public static string BuildPermissionKey(string module, string action) => $"{module}.{action}";
 }

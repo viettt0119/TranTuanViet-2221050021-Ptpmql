@@ -1,200 +1,215 @@
 using DemoMVC.Data;
 using DemoMVC.Models;
+using DemoMVC.Models.ViewModels.Students;
+using DemoMVC.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using DemoMVC.Services;
+using OfficeOpenXml;
 
 namespace DemoMVC.Controllers;
 
-public class StudentController : Controller
+public class StudentController(
+    ApplicationDbContext context,
+    StudentService studentService) : Controller
 {
-    private readonly ApplicationDbContext _context;
-    private readonly StudentCodeGenerator _codeGenerator;
-
-    public StudentController(ApplicationDbContext context, StudentCodeGenerator codeGenerator)
+    [HttpGet]
+    [RequirePermission(Permissions.Student.View)]
+    public async Task<IActionResult> Index([FromQuery] StudentFilterViewModel filter)
     {
-        _context = context;
-        _codeGenerator = codeGenerator;
+        var model = await studentService.GetPagedAsync(filter, HttpContext.RequestAborted);
+        ViewData["SearchQuery"] = filter.Q?.Trim();
+
+        if (IsAjaxRequest())
+            return PartialView("_StudentTable", model);
+        return View(model);
     }
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
-    {
-        var studentsQuery = _context.Students.Include(s => s.Department).AsQueryable();
-        if (!string.IsNullOrWhiteSpace(q))
-        {
-            var search = q.Trim().ToLowerInvariant();
-            studentsQuery = studentsQuery.Where(s =>
-                s.StudentCode.ToLower().Contains(search) ||
-                s.FullName.ToLower().Contains(search) ||
-                s.DepartmentCode.ToLower().Contains(search) ||
-                s.Department!.DepartmentName.ToLower().Contains(search) ||
-                s.University.ToLower().Contains(search));
-        }
-
-        var students = await PagedList<StudentModel>.CreateAsync(
-            studentsQuery.OrderBy(s => s.StudentCode), page, pageSize);
-        ViewData["SearchQuery"] = q?.Trim();
-        return View(students);
-    }
-
+    [RequirePermission(Permissions.Student.View)]
     public async Task<IActionResult> Details(int? id)
     {
-        if (id == null) return NotFound();
-        var student = await _context.Students.Include(s => s.Department)
-            .FirstOrDefaultAsync(s => s.Id == id);
-        if (student == null) return NotFound();
+        if (id is null) return NotFound();
+        var student = await studentService.GetDetailsAsync(id.Value, HttpContext.RequestAborted);
+        if (student is null) return NotFound();
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
         return PartialView("_DetailsModal", student);
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Student.Create)]
     public async Task<IActionResult> Create()
     {
-        await LoadDepartmentsAsync();
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
+        var departments = await context.Departments.AsNoTracking()
+            .OrderBy(x => x.DepartmentName).ToListAsync(HttpContext.RequestAborted);
+        ViewBag.DepartmentCode = new SelectList(departments, "DepartmentCode", "DepartmentName");
+        ViewBag.HasDepartments = departments.Count > 0;
         ViewData["ModalTitle"] = "Thêm sinh viên";
         ViewData["FormActionUrl"] = Url.Action(nameof(Create));
         ViewData["IsCreate"] = true;
-        return PartialView("_FormModal", new StudentModel());
+        return PartialView("_FormModal", new StudentFormViewModel());
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(
-        [Bind("FullName,Address,University,DepartmentCode,AdmissionYear,TrainingSystemCode,MajorCode")]
-        StudentModel student)
+    [RequirePermission(Permissions.Student.Create)]
+    public async Task<IActionResult> Create(StudentFormViewModel form)
     {
-        // Form không nhập mã; controller sẽ tự cấp mã sau khi kiểm tra dữ liệu.
-        ModelState.Remove(nameof(StudentModel.StudentCode));
-        await ValidateDepartmentAsync(student.DepartmentCode);
-        if (ModelState.IsValid)
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
+        if (!ModelState.IsValid)
+            return await FormValidationAsync(form, true);
+
+        var result = await studentService.CreateAsync(form, HttpContext.RequestAborted);
+        if (!result.Success)
         {
-            try
-            {
-                await _codeGenerator.CreateAsync(student);
-                return Json(new { success = true, message = $"Đã thêm sinh viên {student.StudentCode}." });
-            }
-            catch (InvalidOperationException ex) { ModelState.AddModelError("", ex.Message); }
-            catch (DbUpdateException)
-            {
-                ModelState.AddModelError("", "Không thể lưu sinh viên. Kiểm tra Khoa và bộ đếm mã, rồi thử lại.");
-            }
-            catch (SqliteException)
-            {
-                ModelState.AddModelError("", "Database chưa sẵn sàng hoặc đang bận. Kiểm tra cấu trúc database và thử lại.");
-            }
+            foreach (var error in result.FieldErrors)
+                ModelState.AddModelError(error.Key, error.Value);
+            if (result.FieldErrors.Count == 0)
+                ModelState.AddModelError(string.Empty, result.Message ?? "Không thể thêm sinh viên.");
+            return await FormValidationAsync(form, true);
         }
-        // Form lỗi vẫn phải nạp lại danh sách Khoa.
-        return await FormModalAsync(student, nameof(Create), "Thêm sinh viên", true);
+        return Json(new { success = true, message = result.Message });
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Student.Edit)]
     public async Task<IActionResult> Edit(int? id)
     {
-        if (id == null) return NotFound();
-        var student = await _context.Students.FindAsync(id);
-        if (student == null) return NotFound();
-        await LoadDepartmentsAsync(student.DepartmentCode);
+        if (id is null) return NotFound();
+        var student = await studentService.GetForEditAsync(id.Value, HttpContext.RequestAborted);
+        if (student is null) return NotFound();
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
+        return await EditModalAsync(student);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Student.Edit)]
+    public async Task<IActionResult> Edit(int id, StudentFormViewModel form)
+    {
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
+        if (!ModelState.IsValid)
+            return await FormValidationAsync(form, false);
+        var result = await studentService.UpdateAsync(id, form, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            foreach (var error in result.FieldErrors)
+                ModelState.AddModelError(error.Key, error.Value);
+            if (result.FieldErrors.Count == 0)
+                ModelState.AddModelError(string.Empty, result.Message ?? "Không thể cập nhật sinh viên.");
+            return await FormValidationAsync(form, false);
+        }
+        return Json(new { success = true, message = result.Message });
+    }
+
+    [HttpGet]
+    [RequirePermission(Permissions.Student.Delete)]
+    public async Task<IActionResult> Delete(int? id)
+    {
+        if (id is null) return NotFound();
+        var student = await studentService.GetDetailsAsync(id.Value, HttpContext.RequestAborted);
+        if (student is null) return NotFound();
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
+        ViewData["FormActionUrl"] = Url.Action(nameof(DeleteConfirmed), new { id });
+        return PartialView("_DeleteModal", student);
+    }
+
+    [HttpPost]
+    [ActionName("Delete")]
+    [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Student.Delete)]
+    public async Task<IActionResult> DeleteConfirmed(int id, Guid concurrencyStamp)
+    {
+        if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
+        var result = await studentService.DeleteAsync(id, concurrencyStamp, HttpContext.RequestAborted);
+        if (!result.Success)
+        {
+            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            var student = await studentService.GetDetailsAsync(id, HttpContext.RequestAborted);
+            if (student is null) return NotFound();
+            ViewData["FormActionUrl"] = Url.Action(nameof(DeleteConfirmed), new { id });
+            ModelState.AddModelError(string.Empty, result.Message ?? "Không thể xoá sinh viên.");
+            return PartialView("_DeleteModal", student);
+        }
+        return Json(new { success = true, message = result.Message });
+    }
+
+    [HttpGet]
+    [RequirePermission(Permissions.Student.Export)]
+    public async Task<IActionResult> Export([FromQuery] StudentFilterViewModel filter)
+    {
+        var query = context.Students.AsNoTracking().Include(student => student.Department).AsQueryable();
+        if (!string.IsNullOrWhiteSpace(filter.Q))
+        {
+            var keyword = $"%{filter.Q.Trim()}%";
+            query = query.Where(student =>
+                EF.Functions.Like(student.StudentCode, keyword) ||
+                EF.Functions.Like(student.FullName, keyword) ||
+                (student.Email != null && EF.Functions.Like(student.Email, keyword)));
+        }
+        if (!string.IsNullOrWhiteSpace(filter.DepartmentCode))
+            query = query.Where(student => student.DepartmentCode == filter.DepartmentCode);
+        if (filter.AdmissionYear.HasValue)
+            query = query.Where(student => student.AdmissionYear == filter.AdmissionYear.Value);
+        var students = await query.OrderBy(student => student.StudentCode).ToListAsync(HttpContext.RequestAborted);
+
+        using var package = new ExcelPackage();
+        var sheet = package.Workbook.Worksheets.Add("SinhVien");
+        var headers = new[] { "Mã SV", "Họ tên", "Email", "Số điện thoại", "Khoa", "Năm", "Trường", "Ngày sinh" };
+        for (var column = 0; column < headers.Length; column++)
+        {
+            sheet.Cells[1, column + 1].Value = headers[column];
+            sheet.Cells[1, column + 1].Style.Font.Bold = true;
+        }
+        for (var index = 0; index < students.Count; index++)
+        {
+            var student = students[index];
+            var row = index + 2;
+            sheet.Cells[row, 1].Value = student.StudentCode;
+            sheet.Cells[row, 2].Value = student.FullName;
+            sheet.Cells[row, 3].Value = student.Email;
+            sheet.Cells[row, 4].Value = student.PhoneNumber;
+            sheet.Cells[row, 5].Value = student.Department?.DepartmentName;
+            sheet.Cells[row, 6].Value = student.AdmissionYear;
+            sheet.Cells[row, 7].Value = student.University;
+            sheet.Cells[row, 8].Value = student.DateOfBirth?.ToString("yyyy-MM-dd");
+        }
+        sheet.Cells[sheet.Dimension?.Address ?? "A1"].AutoFitColumns();
+        sheet.Cells.AutoFilter = true;
+        var bytes = package.GetAsByteArray();
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"SinhVien_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+    }
+
+    private async Task<IActionResult> EditModalAsync(StudentFormViewModel student)
+    {
+        var departments = await context.Departments.AsNoTracking()
+            .OrderBy(x => x.DepartmentName).ToListAsync(HttpContext.RequestAborted);
+        ViewBag.DepartmentCode = new SelectList(departments, "DepartmentCode", "DepartmentName", student.DepartmentCode);
+        ViewBag.HasDepartments = departments.Count > 0;
         ViewData["ModalTitle"] = "Sửa sinh viên";
-        ViewData["FormActionUrl"] = Url.Action(nameof(Edit), new { id });
+        ViewData["FormActionUrl"] = Url.Action(nameof(Edit), new { id = student.Id });
         ViewData["IsCreate"] = false;
         return PartialView("_FormModal", student);
     }
 
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Edit(int id)
-    {
-        // Lấy bản ghi thật; chỉ nhận các trường được phép sửa từ form.
-        var student = await _context.Students.FindAsync(id);
-        if (student == null) return NotFound();
-        bool updated = await TryUpdateModelAsync(student, "",
-            s => s.FullName, s => s.Address, s => s.University, s => s.DepartmentCode);
-        await ValidateDepartmentAsync(student.DepartmentCode);
-        if (updated && ModelState.IsValid)
-        {
-            try
-            {
-                // Mã, năm nhập học, hệ và ngành đã cấp không thay đổi.
-                await _context.SaveChangesAsync();
-                return Json(new { success = true, message = "Đã cập nhật sinh viên." });
-            }
-            catch (DbUpdateConcurrencyException) { return NotFound(); }
-            catch (DbUpdateException) { ModelState.AddModelError("", "Không thể lưu thay đổi. Vui lòng thử lại."); }
-        }
-        return await FormModalAsync(student, nameof(Edit), "Sửa sinh viên", false, new { id });
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Delete(int? id)
-    {
-        if (id == null) return NotFound();
-        var student = await _context.Students.Include(s => s.Department)
-            .FirstOrDefaultAsync(s => s.Id == id);
-        if (student == null) return NotFound();
-        ViewData["FormActionUrl"] = Url.Action(nameof(Delete), new { id });
-        return PartialView("_DeleteModal", student);
-    }
-
-    [HttpPost, ActionName("Delete")]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> DeleteConfirmed(int id)
-    {
-        var student = await _context.Students.Include(s => s.Department)
-            .FirstOrDefaultAsync(s => s.Id == id);
-        if (student == null) return NotFound();
-        _context.Students.Remove(student);
-        try
-        {
-            await _context.SaveChangesAsync();
-            return Json(new { success = true, message = "Đã xóa sinh viên. Số thứ tự đã cấp không được dùng lại." });
-        }
-        catch (DbUpdateConcurrencyException) { return NotFound(); }
-        catch (DbUpdateException)
-        {
-            ModelState.AddModelError("", "Không thể xóa sinh viên. Vui lòng thử lại.");
-            return DeleteModal(student, id);
-        }
-    }
-
-    private async Task<IActionResult> FormModalAsync(
-        StudentModel student,
-        string action,
-        string title,
-        bool isCreate,
-        object? routeValues = null)
+    private async Task<IActionResult> FormValidationAsync(StudentFormViewModel form, bool isCreate)
     {
         Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
-        await LoadDepartmentsAsync(student.DepartmentCode);
-        ViewData["ModalTitle"] = title;
-        ViewData["FormActionUrl"] = Url.Action(action, routeValues);
-        ViewData["IsCreate"] = isCreate;
-        return PartialView("_FormModal", student);
-    }
-
-    private PartialViewResult DeleteModal(StudentModel student, int id)
-    {
-        Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
-        ViewData["FormActionUrl"] = Url.Action(nameof(Delete), new { id });
-        return PartialView("_DeleteModal", student);
-    }
-
-    private async Task LoadDepartmentsAsync(string? selectedCode = null)
-    {
-        var departments = await _context.Set<DepartmentModel>()
-            .OrderBy(d => d.DepartmentName).ToListAsync();
-        ViewBag.DepartmentCode = new SelectList(departments,
-            "DepartmentCode", "DepartmentName", selectedCode);
+        var departments = await context.Departments.AsNoTracking()
+            .OrderBy(x => x.DepartmentName).ToListAsync(HttpContext.RequestAborted);
+        ViewBag.DepartmentCode = new SelectList(departments, "DepartmentCode", "DepartmentName", form.DepartmentCode);
         ViewBag.HasDepartments = departments.Count > 0;
+        ViewData["ModalTitle"] = isCreate ? "Thêm sinh viên" : "Sửa sinh viên";
+        ViewData["FormActionUrl"] = isCreate
+            ? Url.Action(nameof(Create))
+            : Url.Action(nameof(Edit), new { id = form.Id });
+        ViewData["IsCreate"] = isCreate;
+        return PartialView("_FormModal", form);
     }
 
-    private async Task ValidateDepartmentAsync(string departmentCode)
-    {
-        bool exists = await _context.Set<DepartmentModel>()
-            .AnyAsync(d => d.DepartmentCode == departmentCode);
-        if (!exists)
-            ModelState.AddModelError(nameof(StudentModel.DepartmentCode), "Vui lòng chọn Khoa đang tồn tại.");
-    }
-
+    private bool IsAjaxRequest() =>
+        Request.Headers.TryGetValue("X-Requested-With", out var value)
+        && value.ToString().Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 }

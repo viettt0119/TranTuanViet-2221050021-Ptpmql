@@ -4,15 +4,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DemoMVC.Services;
 
 namespace DemoMVC.Controllers;
 
 [Authorize]
 public class UserManagementController(
     UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole> roleManager) : Controller
+    RoleManager<IdentityRole> roleManager,
+    PermissionCatalogService permissionCatalog) : Controller
 {
     [HttpGet]
+    [RequirePermission(Permissions.User.View)]
     public async Task<IActionResult> Index()
     {
         var users = await userManager.Users
@@ -51,6 +54,7 @@ public class UserManagementController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.User.Edit)]
     public async Task<IActionResult> AssignRole(string userId, string roleId)
     {
         var user = await userManager.FindByIdAsync(userId);
@@ -66,11 +70,13 @@ public class UserManagementController(
                 return BadRequest(string.Join("; ", result.Errors.Select(x => x.Description)));
         }
 
+        permissionCatalog.InvalidateUser(userId);
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.User.Edit)]
     public async Task<IActionResult> RemoveRole(string userId, string roleId)
     {
         var user = await userManager.FindByIdAsync(userId);
@@ -91,6 +97,7 @@ public class UserManagementController(
         if (!result.Succeeded)
             return BadRequest(string.Join("; ", result.Errors.Select(x => x.Description)));
 
+        permissionCatalog.InvalidateUser(userId);
         return RedirectToAction(nameof(Index));
     }
 

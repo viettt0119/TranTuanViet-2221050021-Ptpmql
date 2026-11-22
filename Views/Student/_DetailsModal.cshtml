@@ -1,20 +1,22 @@
-@model DemoMVC.Models.StudentModel
+@model DemoMVC.Models.ViewModels.Students.StudentDetailsViewModel
 <div class="modal fade" tabindex="-1" aria-labelledby="studentDetailsTitle" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title fs-5" id="studentDetailsTitle">Chi tiết sinh viên</h2>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <dl class="modal-body row mb-0">
-                <dt class="col-sm-4">Mã sinh viên</dt><dd class="col-sm-8">@Model.StudentCode</dd>
-                <dt class="col-sm-4">Họ tên</dt><dd class="col-sm-8">@Model.FullName</dd>
-                <dt class="col-sm-4">Địa chỉ</dt><dd class="col-sm-8">@Model.Address</dd>
-                <dt class="col-sm-4">Trường</dt><dd class="col-sm-8">@Model.University</dd>
-                <dt class="col-sm-4">Khoa</dt><dd class="col-sm-8">@Model.Department?.DepartmentName</dd>
-                <dt class="col-sm-4">Năm nhập học</dt><dd class="col-sm-8">@Model.AdmissionYear</dd>
-                <dt class="col-sm-4">Hệ / Ngành</dt><dd class="col-sm-8">@Model.TrainingSystemCode / @Model.MajorCode</dd>
-            </dl>
-        </div>
-    </div>
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+        <div class="modal-header"><h2 class="modal-title fs-5" id="studentDetailsTitle">Chi tiết sinh viên</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <dl class="modal-body row mb-0">
+            <dt class="col-sm-4">Mã sinh viên</dt><dd class="col-sm-8">@Model.StudentCode</dd>
+            <dt class="col-sm-4">Họ tên</dt><dd class="col-sm-8">@Model.FullName</dd>
+            <dt class="col-sm-4">Ngày sinh</dt><dd class="col-sm-8">@Model.DateOfBirth?.ToString("dd/MM/yyyy")</dd>
+            <dt class="col-sm-4">Giới tính</dt><dd class="col-sm-8">@Model.Gender</dd>
+            <dt class="col-sm-4">Email</dt><dd class="col-sm-8">@Model.Email</dd>
+            <dt class="col-sm-4">Số điện thoại</dt><dd class="col-sm-8">@Model.PhoneNumber</dd>
+            <dt class="col-sm-4">Địa chỉ</dt><dd class="col-sm-8">@Model.Address</dd>
+            <dt class="col-sm-4">Trường</dt><dd class="col-sm-8">@Model.University</dd>
+            <dt class="col-sm-4">Khoa</dt><dd class="col-sm-8">@Model.DepartmentName</dd>
+            <dt class="col-sm-4">Năm nhập học</dt><dd class="col-sm-8">@Model.AdmissionYear</dd>
+            <dt class="col-sm-4">Hệ / Ngành</dt><dd class="col-sm-8">@Model.TrainingSystemCode / @Model.MajorCode</dd>
+            <dt class="col-sm-4">Ngày tạo</dt><dd class="col-sm-8">@Model.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+            <dt class="col-sm-4">Cập nhật</dt><dd class="col-sm-8">@Model.UpdatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+        </dl>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button><a asp-permission="Student.Edit" asp-action="Edit" asp-route-id="@Model.Id" data-modal-url="@Url.Action("Edit", new { id = Model.Id })" class="btn btn-warning"><i class="bi bi-pencil me-1"></i>Sửa</a></div>
+    </div></div>
 </div>

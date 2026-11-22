@@ -1,15 +1,12 @@
-using DemoMVC.Data;
+using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.EntityFrameworkCore;
 
 namespace DemoMVC.Services;
 
 public sealed class PermissionAuthorizationFilter(
-    PermissionCatalogService permissionCatalogService,
-    ApplicationDbContext dbContext) : IAsyncAuthorizationFilter
+    PermissionCatalogService permissionCatalogService) : IAsyncAuthorizationFilter
 {
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
@@ -20,34 +17,23 @@ public sealed class PermissionAuthorizationFilter(
         if (endpointMetadata.Any(item => item is IAllowAnonymous))
             return;
 
-        var controllerName = context.RouteData.Values["controller"] as string;
-        var actionName = context.RouteData.Values["action"] as string;
-        if (string.IsNullOrWhiteSpace(controllerName) || string.IsNullOrWhiteSpace(actionName))
-        {
-            var controllerAction = context.ActionDescriptor as ControllerActionDescriptor;
-            controllerName = controllerAction?.ControllerName;
-            actionName = controllerAction?.ActionName;
-        }
-
-        if (string.IsNullOrWhiteSpace(controllerName) || string.IsNullOrWhiteSpace(actionName))
-            return;
-
-        var permissionKey = PermissionCatalogService.BuildPermissionKey(controllerName, actionName);
-        var permission = await dbContext.ApplicationPermissions.FirstOrDefaultAsync(x => x.Key == permissionKey);
-
-        if (permission is not null && permission.IsAnonymous)
-            return;
-
         if (context.HttpContext.User.Identity?.IsAuthenticated != true)
         {
             context.Result = new ChallengeResult();
             return;
         }
 
+        var controllerAction = context.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor;
+        var methodPermission = controllerAction?.MethodInfo.GetCustomAttribute<RequirePermissionAttribute>();
+        var classPermission = controllerAction?.ControllerTypeInfo.GetCustomAttribute<RequirePermissionAttribute>();
+        var permission = methodPermission ?? classPermission;
+        if (permission is null)
+            return;
+
         if (context.HttpContext.User.IsInRole("Admin"))
             return;
 
-        if (!await permissionCatalogService.HasAccessAsync(context.HttpContext.User, permissionKey))
+        if (!await permissionCatalogService.HasAccessAsync(context.HttpContext.User, permission.Key))
         {
             if (IsAjaxRequest(context.HttpContext.Request))
             {
@@ -62,7 +48,7 @@ public sealed class PermissionAuthorizationFilter(
         }
     }
 
-    private static bool IsAjaxRequest(HttpRequest request)
+    public static bool IsAjaxRequest(HttpRequest request)
     {
         if (request.Headers.TryGetValue("X-Requested-With", out var value))
             return value.ToString().Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
