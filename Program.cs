@@ -110,6 +110,9 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+app.Logger.LogInformation(
+    "Data Protection keys: {KeyLocation}",
+    dataProtectionKeysPath ?? "default per-user key ring (configure DataProtection:KeysPath on shared hosting)");
 
 // Configure the HTTP request pipeline.
 OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("DemoMVC");
