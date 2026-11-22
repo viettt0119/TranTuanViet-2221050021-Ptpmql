@@ -12,10 +12,12 @@ public sealed class ExcelImportController(
     IMemoryCache cache) : Controller
 {
     [HttpGet]
+    [RequirePermission(Permissions.ExcelImport.View)]
     public IActionResult Index() => View(new ExcelImportResult());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.ExcelImport.Import)]
     public async Task<IActionResult> Import(IFormFile? file, string entity = "department", bool overwrite = false)
     {
         if (file is null || file.Length == 0)
@@ -49,6 +51,7 @@ public sealed class ExcelImportController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.ExcelImport.Import)]
     public async Task<IActionResult> Confirm(string previewToken, ExcelImportMode mode)
     {
         if (!cache.TryGetValue(previewToken, out ExcelImportPreview? preview) || preview is null)
@@ -73,6 +76,7 @@ public sealed class ExcelImportController(
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.ExcelImport.View)]
     public IActionResult DownloadTemplate(string entity = "department")
     {
         using var package = new ExcelPackage();

@@ -4,13 +4,18 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DemoMVC.Services;
 
 namespace DemoMVC.Controllers;
 
 [Authorize]
-public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDbContext dbContext) : Controller
+public class RoleController(
+    RoleManager<IdentityRole> roleManager,
+    ApplicationDbContext dbContext,
+    PermissionCatalogService permissionCatalog) : Controller
 {
     [HttpGet]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.View)]
     public async Task<IActionResult> Index()
     {
         var roles = await roleManager.Roles
@@ -21,10 +26,12 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
     }
 
     [HttpGet]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Create)]
     public IActionResult Create() => View(new IdentityRole());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Create)]
     public async Task<IActionResult> Create(IdentityRole model)
     {
         model.Name = model.Name?.Trim();
@@ -51,6 +58,7 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
     }
 
     [HttpGet]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Edit)]
     public async Task<IActionResult> Edit(string id)
     {
         var role = await roleManager.FindByIdAsync(id);
@@ -60,6 +68,7 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Edit)]
     public async Task<IActionResult> Edit(string id, IdentityRole model)
     {
         var role = await roleManager.FindByIdAsync(id);
@@ -96,6 +105,7 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
     }
 
     [HttpGet]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Edit)]
     public async Task<IActionResult> Permissions(string id)
     {
         var role = await roleManager.FindByIdAsync(id);
@@ -116,6 +126,9 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
             PermissionId = permission.Id,
             PermissionKey = permission.Key,
             Name = permission.Description,
+            ModuleDisplayName = permission.ModuleDisplayName,
+            Group = permission.Group,
+            SortOrder = permission.SortOrder,
             IsGranted = granted.Contains(permission.Id)
         }).ToList();
 
@@ -125,6 +138,7 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Edit)]
     public async Task<IActionResult> Permissions(string id, string[]? selectedPermissions)
     {
         var role = await roleManager.FindByIdAsync(id);
@@ -171,11 +185,13 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
         }
 
         await dbContext.SaveChangesAsync();
+        permissionCatalog.InvalidateAll();
         return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(DemoMVC.Services.Permissions.Role.Delete)]
     public async Task<IActionResult> Delete(string id)
     {
         var role = await roleManager.FindByIdAsync(id);
@@ -207,6 +223,9 @@ public class RoleController(RoleManager<IdentityRole> roleManager, ApplicationDb
         public int PermissionId { get; set; }
         public string PermissionKey { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
+        public string ModuleDisplayName { get; set; } = string.Empty;
+        public string Group { get; set; } = string.Empty;
+        public int SortOrder { get; set; }
         public bool IsGranted { get; set; }
     }
 }

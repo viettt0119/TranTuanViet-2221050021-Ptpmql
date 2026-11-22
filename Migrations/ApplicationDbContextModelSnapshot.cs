@@ -28,6 +28,11 @@ namespace DemoMVC.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ActionDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Area")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -42,6 +47,11 @@ namespace DemoMVC.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Group")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("IsAdminOnly")
                         .HasColumnType("INTEGER");
 
@@ -52,6 +62,19 @@ namespace DemoMVC.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("Module")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ModuleDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -274,9 +297,23 @@ namespace DemoMVC.Migrations
                     b.Property<int>("AdmissionYear")
                         .HasColumnType("INTEGER");
 
+                    b.Property<Guid>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DepartmentCode")
                         .IsRequired()
                         .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FullName")
@@ -284,8 +321,15 @@ namespace DemoMVC.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("Gender")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MajorCode")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("StudentCode")
@@ -301,9 +345,17 @@ namespace DemoMVC.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("AdmissionYear");
+
                     b.HasIndex("DepartmentCode");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("StudentCode")
                         .IsUnique();

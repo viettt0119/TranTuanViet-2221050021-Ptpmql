@@ -14,6 +14,16 @@ public sealed class ApplicationPermission
 
     public string Description { get; set; } = string.Empty;
 
+    public string Module { get; set; } = string.Empty;
+
+    public string ModuleDisplayName { get; set; } = string.Empty;
+
+    public string ActionDisplayName { get; set; } = string.Empty;
+
+    public string Group { get; set; } = string.Empty;
+
+    public int SortOrder { get; set; }
+
     public bool IsAnonymous { get; set; }
 
     public bool IsAdminOnly { get; set; }

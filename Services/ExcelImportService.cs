@@ -200,6 +200,18 @@ public sealed class ExcelImportService(ApplicationDbContext context)
                 if (values.GetValueOrDefault("TrainingSystemCode") is not { Length: 2 } ||
                     values.GetValueOrDefault("MajorCode") is not { Length: 2 })
                     throw new InvalidOperationException("Mã hệ và mã ngành phải gồm 2 chữ số.");
+                if (values.TryGetValue("Email", out var email) &&
+                    !string.IsNullOrWhiteSpace(email) &&
+                    !System.Net.Mail.MailAddress.TryCreate(email, out _))
+                    throw new InvalidOperationException("Email không hợp lệ.");
+                if (values.TryGetValue("PhoneNumber", out var phone) &&
+                    !string.IsNullOrWhiteSpace(phone) &&
+                    (phone.Length != 10 || !phone.StartsWith('0')))
+                    throw new InvalidOperationException("Số điện thoại gồm 10 chữ số và bắt đầu bằng 0.");
+                if (values.TryGetValue("DateOfBirth", out var dateOfBirth) &&
+                    !string.IsNullOrWhiteSpace(dateOfBirth) &&
+                    !DateOnly.TryParse(dateOfBirth, out _))
+                    throw new InvalidOperationException("Ngày sinh không hợp lệ.");
                 break;
         }
     }
@@ -319,6 +331,14 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             existing.Address = values["Address"].Trim();
             existing.University = values["University"].Trim();
             existing.DepartmentCode = departmentCode;
+            existing.Email = NormalizeImportOptional(values, "Email");
+            existing.PhoneNumber = NormalizeImportOptional(values, "PhoneNumber");
+            if (values.TryGetValue("DateOfBirth", out var existingDobText) &&
+                DateOnly.TryParse(existingDobText, out var existingDob))
+                existing.DateOfBirth = existingDob;
+            if (values.TryGetValue("Gender", out var existingGenderText) &&
+                Enum.TryParse<StudentGender>(existingGenderText, ignoreCase: true, out var existingGender))
+                existing.Gender = existingGender;
             return 2;
         }
 
@@ -331,8 +351,16 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             AdmissionYear = int.Parse(values["AdmissionYear"]),
             TrainingSystemCode = values["TrainingSystemCode"].Trim(),
             MajorCode = values["MajorCode"].Trim(),
-            StudentCode = code
+            StudentCode = code,
+            Email = NormalizeImportOptional(values, "Email"),
+            PhoneNumber = NormalizeImportOptional(values, "PhoneNumber")
         };
+        if (values.TryGetValue("DateOfBirth", out var dateOfBirthText) &&
+            DateOnly.TryParse(dateOfBirthText, out var dateOfBirth))
+            student.DateOfBirth = dateOfBirth;
+        if (values.TryGetValue("Gender", out var genderText) &&
+            Enum.TryParse<StudentGender>(genderText, ignoreCase: true, out var gender))
+            student.Gender = gender;
         if (string.IsNullOrWhiteSpace(student.StudentCode))
             await AssignNextStudentCodeAsync(student, cancellationToken);
         context.Students.Add(student);
@@ -360,4 +388,9 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             .SingleAsync(cancellationToken);
         student.StudentCode = $"{student.AdmissionYear % 100:D2}{student.TrainingSystemCode}{student.MajorCode}{number:D4}";
     }
+
+    private static string? NormalizeImportOptional(Dictionary<string, string> values, string key) =>
+        values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+            ? value.Trim()
+            : null;
 }

@@ -2,6 +2,7 @@ using DemoMVC.Data;
 using DemoMVC.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DemoMVC.Services;
 
 namespace DemoMVC.Controllers;
 
@@ -11,6 +12,7 @@ public class DepartmentController : Controller
     public DepartmentController(ApplicationDbContext context) { _context = context; }
 
     [HttpGet]
+    [RequirePermission(Permissions.Department.View)]
     public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
     {
         var departments = _context.Departments.AsQueryable();
@@ -29,6 +31,7 @@ public class DepartmentController : Controller
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Department.Create)]
     public IActionResult Create()
     {
         ViewData["ModalTitle"] = "Thêm Khoa";
@@ -39,6 +42,7 @@ public class DepartmentController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Department.Create)]
     public async Task<IActionResult> Create([Bind("DepartmentCode,DepartmentName")] DepartmentModel department)
     {
         if (await _context.Departments.AnyAsync(d => d.DepartmentCode == department.DepartmentCode))
@@ -60,6 +64,7 @@ public class DepartmentController : Controller
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Department.Edit)]
     public async Task<IActionResult> Edit(string id)
     {
         var department = await _context.Departments.FindAsync(id);
@@ -72,6 +77,7 @@ public class DepartmentController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Department.Edit)]
     public async Task<IActionResult> Edit(string id, [Bind("DepartmentCode,DepartmentName")] DepartmentModel form)
     {
         if (id != form.DepartmentCode) return BadRequest();
@@ -98,6 +104,7 @@ public class DepartmentController : Controller
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Department.View)]
     public async Task<IActionResult> Details(string id)
     {
         var department = await _context.Departments.Include(d => d.Students)
@@ -107,6 +114,7 @@ public class DepartmentController : Controller
     }
 
     [HttpGet]
+    [RequirePermission(Permissions.Department.Delete)]
     public async Task<IActionResult> Delete(string id)
     {
         var department = await _context.Departments.FindAsync(id);
@@ -117,6 +125,7 @@ public class DepartmentController : Controller
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permissions.Department.Delete)]
     public async Task<IActionResult> DeleteConfirmed(string id)
     {
         var department = await _context.Departments.FindAsync(id);

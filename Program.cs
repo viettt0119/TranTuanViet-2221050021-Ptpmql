@@ -16,10 +16,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddScoped<PermissionCatalogService>();
 builder.Services.AddScoped<StudentCodeGenerator>();
+builder.Services.AddScoped<StudentService>();
 builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddMemoryCache();
-builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -137,7 +136,7 @@ app.MapGet("/healthz", () => Results.Text("Healthy")).AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Student}/{action=Index}/{id?}")
+    pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 await using (var scope = app.Services.CreateAsyncScope())
 {
@@ -155,11 +154,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         !string.IsNullOrWhiteSpace(identitySeedOptions.Password) &&
         !string.IsNullOrWhiteSpace(identitySeedOptions.FullName);
 
-    foreach (var roleName in new[] { "Admin", "User" })
-    {
-        if (!await roleManager.RoleExistsAsync(roleName))
-            await roleManager.CreateAsync(new IdentityRole(roleName));
-    }
+    await permissionCatalog.EnsureSystemRolesAsync();
 
     if (canSeedAdmin)
     {
@@ -192,25 +187,6 @@ await using (var scope = app.Services.CreateAsyncScope())
             lockedAdministrators);
     }
 
-    var adminRole = await roleManager.FindByNameAsync("Admin");
-    var permissions = await dbContext.ApplicationPermissions.ToListAsync();
-    if (adminRole is not null)
-    {
-        foreach (var permission in permissions)
-        {
-            if (!await dbContext.ApplicationRolePermissions.AnyAsync(x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id))
-            {
-                dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
-                {
-                    RoleId = adminRole.Id,
-                    PermissionId = permission.Id,
-                    IsGranted = true
-                });
-            }
-        }
-    }
-    await dbContext.SaveChangesAsync();
-    await permissionCatalog.EnsureDefaultUserPermissionsAsync();
 }
 
 

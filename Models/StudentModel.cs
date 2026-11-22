@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 namespace DemoMVC.Models;
 
 [Index(nameof(StudentCode), IsUnique = true)]
+[Index(nameof(DepartmentCode))]
+[Index(nameof(AdmissionYear))]
+[Index(nameof(Email), IsUnique = true)]
 public class StudentModel
 {
     public int Id { get; set; }
@@ -45,4 +48,33 @@ public class StudentModel
     [Display(Name = "Mã ngành")]
     [Required, RegularExpression(@"^[0-9]{2}$", ErrorMessage = "Mã ngành gồm đúng 2 chữ số")]
     public string MajorCode { get; set; } = "05";
+
+    [Display(Name = "Ngày sinh")]
+    [DataType(DataType.Date)]
+    public DateOnly? DateOfBirth { get; set; }
+
+    [Display(Name = "Giới tính")]
+    public StudentGender? Gender { get; set; }
+
+    [Display(Name = "Email")]
+    [EmailAddress(ErrorMessage = "Email không đúng định dạng"), StringLength(254)]
+    public string? Email { get; set; }
+
+    [Display(Name = "Số điện thoại")]
+    [RegularExpression(@"^0[0-9]{9}$", ErrorMessage = "Số điện thoại gồm 10 chữ số và bắt đầu bằng 0")]
+    [StringLength(10)]
+    public string? PhoneNumber { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    [ConcurrencyCheck]
+    public Guid ConcurrencyStamp { get; set; } = Guid.NewGuid();
+}
+
+public enum StudentGender
+{
+    Nam,
+    Nữ,
+    Khác
 }

@@ -17,7 +17,7 @@
             </tr>
         </thead>
         <tbody>
-            @foreach (var controllerGroup in Model.GroupBy(x => x.PermissionKey.Split('.')[0]).OrderBy(x => x.Key))
+            @foreach (var controllerGroup in Model.GroupBy(x => x.ModuleDisplayName).OrderBy(x => x.First().SortOrder))
             {
                 <tr class="table-light">
                     <td colspan="3"><strong>@controllerGroup.Key</strong></td>
