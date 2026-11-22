@@ -5,10 +5,16 @@
     <UserSecretsId>DemoMVC-identity-dev-secrets-21c0b633</UserSecretsId>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Không đưa mã nguồn, bin/obj của project test vào build/publish của web app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);Tests\**;publish\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Tests\**\*.cs" />
+    <!-- File cấu hình công cụ, không cần trên server. -->
+    <Content Update="global.json;libman.json" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="EPPlus" Version="8.7.1" />
     <PackageReference Include="MailKit" Version="5.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
