@@ -8,7 +8,7 @@
         <div class="auth-intro">
             <span class="auth-eyebrow">DemoMVC</span>
             <h1>Tạo tài khoản</h1>
-            <p>Đăng ký để bắt đầu sử dụng hệ thống. Bạn có thể đăng nhập ngay sau khi tạo tài khoản.</p>
+            <p>Đăng ký để bắt đầu sử dụng hệ thống. Sau khi tạo tài khoản, hãy mở email (ví dụ Gmail) và bấm liên kết xác thực để kích hoạt.</p>
         </div>
         <form asp-action="Register" method="post">
             <div asp-validation-summary="All" class="text-danger"></div>
@@ -25,6 +25,7 @@
             <div class="mb-3">
                 <label asp-for="Password" class="form-label">Mật khẩu</label>
                 <input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" />
+                <div class="form-text">Tối thiểu 12 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</div>
                 <span asp-validation-for="Password" class="text-danger"></span>
             </div>
             <div class="mb-3">

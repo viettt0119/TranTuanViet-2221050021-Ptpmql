@@ -2,13 +2,25 @@
 @{
     ViewData["Title"] = "Gửi lại email xác thực";
 }
-<h1>Gửi lại email xác thực</h1>
-<form asp-action="ResendConfirmation" method="post" class="col-md-6">
-    <div asp-validation-summary="All" class="text-danger"></div>
-    <div class="mb-3">
-        <label asp-for="Email" class="form-label">Email</label>
-        <input asp-for="Email" class="form-control" autocomplete="email" />
-        <span asp-validation-for="Email" class="text-danger"></span>
-    </div>
-    <button type="submit" class="btn btn-primary">Gửi email xác thực</button>
-</form>
+<div class="auth-page">
+    <section class="auth-card">
+        <div class="auth-intro">
+            <span class="auth-eyebrow">XÁC THỰC TÀI KHOẢN</span>
+            <h1>Gửi lại email xác thực</h1>
+            <p>Nhập email đã dùng để đăng ký. Nếu tài khoản chưa được xác thực, hệ thống sẽ gửi liên kết mới.</p>
+        </div>
+        <form asp-action="ResendConfirmation" method="post">
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@gmail.com" />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100">Gửi email xác thực</button>
+        </form>
+        <div class="auth-links">
+            <a asp-action="Login">Quay lại đăng nhập</a>
+        </div>
+    </section>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

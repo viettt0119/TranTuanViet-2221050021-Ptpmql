@@ -11,7 +11,6 @@ public sealed class EmailSettingsValidator : IValidateOptions<EmailSettings>
         var host = options.Host?.Trim();
         var userName = options.UserName?.Trim();
         var password = options.Password?.Trim();
-        var senderEmail = options.SenderEmail?.Trim();
         var senderName = options.SenderName?.Trim();
         var publicBaseUrl = options.PublicBaseUrl?.Trim();
 
@@ -23,21 +22,22 @@ public sealed class EmailSettingsValidator : IValidateOptions<EmailSettings>
             errors.Add("Email:UserName is required.");
         if (string.IsNullOrWhiteSpace(password))
             errors.Add("Email:Password is required.");
-        if (!IsValidEmail(senderEmail))
-            errors.Add("Email:SenderEmail must be a valid email address.");
+        if (!IsValidEmail(options.EffectiveSenderEmail))
+            errors.Add("Email:SenderEmail (or Email:UserName when SenderEmail is empty) must be a valid email address.");
         if (string.IsNullOrWhiteSpace(senderName))
             errors.Add("Email:SenderName is required.");
-        if (!Uri.TryCreate(publicBaseUrl, UriKind.Absolute, out var baseUri) ||
-            baseUri.Scheme != Uri.UriSchemeHttps ||
-            !string.IsNullOrEmpty(baseUri.UserInfo) ||
-            !string.IsNullOrEmpty(baseUri.Query) ||
-            !string.IsNullOrEmpty(baseUri.Fragment))
-        {
-            errors.Add("Email:PublicBaseUrl must be an absolute HTTPS URL without credentials, query, or fragment.");
-        }
+        if (!string.IsNullOrEmpty(publicBaseUrl) && !IsSafePublicBaseUrl(publicBaseUrl))
+            errors.Add("Email:PublicBaseUrl must be an absolute HTTP(S) URL without credentials, query, or fragment.");
 
         return errors.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(errors);
     }
+
+    public static bool IsSafePublicBaseUrl(string? publicBaseUrl) =>
+        Uri.TryCreate(publicBaseUrl?.Trim(), UriKind.Absolute, out var baseUri) &&
+        (baseUri.Scheme == Uri.UriSchemeHttps || baseUri.Scheme == Uri.UriSchemeHttp) &&
+        string.IsNullOrEmpty(baseUri.UserInfo) &&
+        string.IsNullOrEmpty(baseUri.Query) &&
+        string.IsNullOrEmpty(baseUri.Fragment);
 
     private static bool IsValidEmail(string? email)
     {

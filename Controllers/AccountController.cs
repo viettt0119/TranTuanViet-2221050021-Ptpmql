@@ -14,11 +14,14 @@ public class AccountController(
     IEmailSender emailSender,
     AuthEmailTemplateRenderer emailTemplates,
     IOptions<EmailSettings> emailOptions,
+    IHostEnvironment environment,
     ILogger<AccountController> logger) : Controller
 {
     private const string AuthRateLimitPolicy = "AuthEndpoints";
     private const string ForgotPasswordMessage =
         "Nếu tài khoản phù hợp tồn tại, hướng dẫn sẽ được gửi tới email đã đăng ký.";
+    private const string ResendConfirmationMessage =
+        "Nếu tài khoản tồn tại và chưa xác thực, email xác thực mới sẽ được gửi tới địa chỉ đã đăng ký. Hãy kiểm tra cả thư mục Spam/Quảng cáo.";
 
     [AllowAnonymous]
     [HttpGet]
@@ -28,7 +31,9 @@ public class AccountController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     [EnableRateLimiting(AuthRateLimitPolicy)]
-    public async Task<IActionResult> Register(RegisterViewModel model)
+    public async Task<IActionResult> Register(
+        RegisterViewModel model,
+        CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
             return View(model);
@@ -38,7 +43,8 @@ public class AccountController(
             UserName = model.Email.Trim(),
             Email = model.Email.Trim(),
             FullName = model.FullName.Trim(),
-            EmailConfirmed = true,
+            // Tài khoản chỉ đăng nhập được sau khi bấm liên kết xác thực gửi tới email người đăng ký.
+            EmailConfirmed = false,
             CreatedAt = DateTimeOffset.UtcNow
         };
         var createResult = await userManager.CreateAsync(user, model.Password);
@@ -58,7 +64,12 @@ public class AccountController(
             return View(model);
         }
 
+        var delivery = await TrySendConfirmationEmailAsync(user, cancellationToken);
         ViewData["RegisteredEmail"] = user.Email;
+        ViewData["EmailSent"] = delivery.Sent;
+        if (!delivery.Sent && environment.IsDevelopment())
+            ViewData["DevelopmentConfirmationLink"] = delivery.Link;
+
         return View("RegisterConfirmation");
     }
 
@@ -67,7 +78,7 @@ public class AccountController(
     [EnableRateLimiting(AuthRateLimitPolicy)]
     public IActionResult ConfirmEmail(string? userId, string? token)
     {
-        if (string.IsNullOrWhiteSpace(userId) || !AuthTokenCodec.TryDecode(token, out var decodedToken))
+        if (string.IsNullOrWhiteSpace(userId) || !AuthTokenCodec.TryDecode(token, out _))
         {
             ViewData["Succeeded"] = false;
             return View("ConfirmEmailResult");
@@ -124,6 +135,25 @@ public class AccountController(
                 ? model.ReturnUrl!
                 : Url.Action("Index", "Home")!);
 
+        if (result.IsNotAllowed)
+        {
+            var unconfirmedResult = await CheckUnconfirmedAccountAsync(model.Email.Trim(), model.Password);
+            if (unconfirmedResult == UnconfirmedLoginResult.PasswordValid)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Tài khoản chưa xác thực email. Hãy mở hộp thư (kể cả thư mục Spam/Quảng cáo) và bấm liên kết xác thực, hoặc gửi lại email xác thực.");
+                ViewData["ShowResendConfirmation"] = true;
+                return View(model);
+            }
+
+            if (unconfirmedResult == UnconfirmedLoginResult.LockedOut)
+            {
+                ModelState.AddModelError(string.Empty, "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.");
+                return View(model);
+            }
+        }
+
         ModelState.AddModelError(
             string.Empty,
             result.IsLockedOut
@@ -147,7 +177,8 @@ public class AccountController(
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult ResendConfirmation() => View(new ForgotPasswordViewModel());
+    public IActionResult ResendConfirmation(string? email = null) =>
+        View(new ForgotPasswordViewModel { Email = email?.Trim() ?? string.Empty });
 
     [AllowAnonymous]
     [HttpPost]
@@ -162,18 +193,9 @@ public class AccountController(
 
         var user = await userManager.FindByEmailAsync(model.Email.Trim());
         if (user is not null && !user.EmailConfirmed)
-        {
-            try
-            {
-                await SendConfirmationEmailAsync(user, cancellationToken);
-            }
-            catch (EmailDeliveryException ex)
-            {
-                logger.LogError("Confirmation email resend failed ({ExceptionType}).", ex.GetType().Name);
-            }
-        }
+            await TrySendConfirmationEmailAsync(user, cancellationToken);
 
-        return View("EmailRequestConfirmation", ForgotPasswordMessage);
+        return View("EmailRequestConfirmation", ResendConfirmationMessage);
     }
 
     [AllowAnonymous]
@@ -213,7 +235,7 @@ public class AccountController(
             }
             catch (EmailDeliveryException ex)
             {
-                logger.LogError("Password reset email delivery failed ({ExceptionType}).", ex.GetType().Name);
+                LogDeliveryFailure("Password reset", ex);
             }
         }
 
@@ -261,6 +283,13 @@ public class AccountController(
             return View(model);
         }
 
+        // Người dùng nhận link qua email nên địa chỉ email đã được chứng minh là của họ.
+        if (!user.EmailConfirmed)
+        {
+            user.EmailConfirmed = true;
+            await userManager.UpdateAsync(user);
+        }
+
         return View("ResetPasswordConfirmation");
     }
 
@@ -290,6 +319,8 @@ public class AccountController(
             return View(model);
         }
 
+        await signInManager.RefreshSignInAsync(user);
+
         try
         {
             await emailSender.SendAsync(
@@ -301,41 +332,110 @@ public class AccountController(
         }
         catch (EmailDeliveryException ex)
         {
-            logger.LogError("Password changed notification delivery failed ({ExceptionType}).", ex.GetType().Name);
+            LogDeliveryFailure("Password changed notification", ex);
             ViewData["StatusMessage"] = "Mật khẩu đã đổi, nhưng email thông báo chưa gửi được.";
         }
 
         return View("ChangePasswordConfirmation");
     }
 
-    private async Task SendConfirmationEmailAsync(ApplicationUser user, CancellationToken cancellationToken)
+    private async Task<(bool Sent, string? Link)> TrySendConfirmationEmailAsync(
+        ApplicationUser user,
+        CancellationToken cancellationToken)
     {
-        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
-        var confirmationLink = BuildAccountLink(nameof(ConfirmEmail), new
+        string? confirmationLink = null;
+        try
         {
-            userId = user.Id,
-            token = AuthTokenCodec.Encode(token)
-        });
-        await emailSender.SendAsync(
-            user.Email!,
-            "Xác thực địa chỉ email",
-            emailTemplates.Confirmation(user.FullName, confirmationLink),
-            cancellationToken);
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            confirmationLink = BuildAccountLink(nameof(ConfirmEmail), new
+            {
+                userId = user.Id,
+                token = AuthTokenCodec.Encode(token)
+            });
+            await emailSender.SendAsync(
+                user.Email!,
+                "Xác thực địa chỉ email",
+                emailTemplates.Confirmation(user.FullName, confirmationLink),
+                cancellationToken);
+            return (true, confirmationLink);
+        }
+        catch (EmailDeliveryException ex)
+        {
+            LogDeliveryFailure("Confirmation", ex);
+            return (false, confirmationLink);
+        }
+    }
+
+    private async Task<UnconfirmedLoginResult> CheckUnconfirmedAccountAsync(string email, string password)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        if (user is null || await userManager.IsEmailConfirmedAsync(user))
+            return UnconfirmedLoginResult.NotApplicable;
+        if (await userManager.IsLockedOutAsync(user))
+            return UnconfirmedLoginResult.LockedOut;
+        if (await userManager.CheckPasswordAsync(user, password))
+            return UnconfirmedLoginResult.PasswordValid;
+
+        // SignInManager không kiểm tra mật khẩu khi email chưa xác thực; tự ghi nhận lần sai để giữ cơ chế khóa tài khoản.
+        await userManager.AccessFailedAsync(user);
+        return UnconfirmedLoginResult.NotApplicable;
     }
 
     private string BuildAccountLink(string action, object values)
     {
+        var baseUri = TryGetConfiguredPublicBaseUri();
+        if (baseUri is null)
+        {
+            // Chưa cấu hình Email:PublicBaseUrl: dùng scheme + domain của request hiện tại.
+            var absoluteUrl = Url.Action(action, "Account", values, Request.Scheme, Request.Host.Value);
+            if (string.IsNullOrWhiteSpace(absoluteUrl))
+                throw new InvalidOperationException("Could not generate an account link.");
+            return absoluteUrl;
+        }
+
         var path = Url.Action(action, "Account", values);
         if (string.IsNullOrWhiteSpace(path) || !path.StartsWith("/", StringComparison.Ordinal))
             throw new InvalidOperationException("Could not generate an account link.");
 
-        var baseUri = new Uri(emailOptions.Value.PublicBaseUrl.TrimEnd('/') + "/", UriKind.Absolute);
         return new Uri(baseUri, path.TrimStart('/')).AbsoluteUri;
     }
+
+    private Uri? TryGetConfiguredPublicBaseUri()
+    {
+        string? publicBaseUrl;
+        try
+        {
+            publicBaseUrl = emailOptions.Value.PublicBaseUrl;
+        }
+        catch (OptionsValidationException)
+        {
+            // Cấu hình SMTP chưa đủ thì việc gửi sẽ báo lỗi riêng; ở đây chỉ cần tạo được liên kết.
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(publicBaseUrl) || !EmailSettingsValidator.IsSafePublicBaseUrl(publicBaseUrl))
+            return null;
+
+        return new Uri(publicBaseUrl.Trim().TrimEnd('/') + "/", UriKind.Absolute);
+    }
+
+    private void LogDeliveryFailure(string emailKind, EmailDeliveryException exception) =>
+        logger.LogError(
+            "{EmailKind} email delivery failed: {Reason} ({InnerExceptionType}).",
+            emailKind,
+            exception.Message,
+            exception.InnerException?.GetType().Name ?? exception.GetType().Name);
 
     private void AddIdentityErrors(IdentityResult result)
     {
         foreach (var error in result.Errors)
             ModelState.AddModelError(string.Empty, error.Description);
+    }
+
+    private enum UnconfirmedLoginResult
+    {
+        NotApplicable,
+        PasswordValid,
+        LockedOut
     }
 }

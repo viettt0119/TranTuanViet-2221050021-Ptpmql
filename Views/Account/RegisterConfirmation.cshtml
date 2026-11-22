@@ -1,15 +1,42 @@
 @{
     ViewData["Title"] = "Đăng ký thành công";
+    var registeredEmail = ViewData["RegisteredEmail"] as string;
+    var emailSent = ViewData["EmailSent"] as bool? == true;
+    var developmentLink = ViewData["DevelopmentConfirmationLink"] as string;
 }
 <div class="auth-page">
     <section class="auth-card auth-success">
-        <div class="auth-success-icon" aria-hidden="true">✓</div>
-        <span class="auth-eyebrow">Đăng ký hoàn tất</span>
-        <h1>Tài khoản đã sẵn sàng</h1>
-        <p>
-            Tài khoản <strong>@ViewData["RegisteredEmail"]</strong> đã được tạo.
-            Bạn không cần xác thực email và có thể đăng nhập ngay.
-        </p>
+        @if (emailSent)
+        {
+            <div class="auth-success-icon" aria-hidden="true">✉</div>
+            <span class="auth-eyebrow">Đăng ký hoàn tất</span>
+            <h1>Kiểm tra hộp thư của bạn</h1>
+            <p>
+                Liên kết xác thực đã được gửi tới <strong>@registeredEmail</strong>.
+                Hãy mở email và bấm <strong>Xác thực email</strong> để kích hoạt tài khoản.
+                Liên kết có hiệu lực trong 24 giờ.
+            </p>
+            <p class="small">Không thấy email? Hãy kiểm tra thư mục <strong>Spam</strong> hoặc <strong>Quảng cáo</strong>, hoặc yêu cầu gửi lại.</p>
+        }
+        else
+        {
+            <div class="auth-success-icon auth-warning-icon" aria-hidden="true">!</div>
+            <span class="auth-eyebrow">Tài khoản đã được tạo</span>
+            <h1>Chưa gửi được email xác thực</h1>
+            <p>
+                Tài khoản <strong>@registeredEmail</strong> đã được tạo nhưng hệ thống chưa gửi được email xác thực.
+                Vui lòng thử gửi lại sau ít phút hoặc liên hệ quản trị viên.
+            </p>
+            @if (!string.IsNullOrWhiteSpace(developmentLink))
+            {
+                <div class="alert alert-warning text-start small">
+                    <strong>Chỉ hiển thị ở môi trường Development:</strong> SMTP chưa cấu hình hoặc gửi lỗi.
+                    Dùng liên kết sau để xác thực khi thử nghiệm:
+                    <a href="@developmentLink" class="text-break">@developmentLink</a>
+                </div>
+            }
+        }
+        <a asp-action="ResendConfirmation" asp-route-email="@registeredEmail" class="btn btn-outline-primary w-100 mb-2">Gửi lại email xác thực</a>
         <a asp-action="Login" class="btn btn-primary btn-lg w-100">Đi tới đăng nhập</a>
     </section>
 </div>
