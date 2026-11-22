@@ -39,6 +39,7 @@ builder.Services
         options.Tokens.EmailConfirmationTokenProvider = "EmailConfirmation";
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
     .AddDefaultTokenProviders()
     .AddTokenProvider<EmailConfirmationTokenProvider<ApplicationUser>>("EmailConfirmation");
 
@@ -56,6 +57,10 @@ var dataProtection = builder.Services.AddDataProtection().SetApplicationName("De
 var dataProtectionKeysPath = DataProtectionKeyPath.Resolve(builder.Configuration, builder.Environment);
 if (dataProtectionKeysPath is not null)
     dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+
+// Kiểm tra lại cookie mỗi phút: gán/gỡ role, khóa tài khoản, đổi mật khẩu có hiệu lực gần như ngay lập tức.
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+    options.ValidationInterval = TimeSpan.FromMinutes(1));
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
