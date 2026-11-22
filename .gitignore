@@ -2,11 +2,15 @@ bin/
 obj/
 publish/
 
+# SQLite database (contains local accounts and password hashes)
+*.db
 *.db-shm
 *.db-wal
 *.db-journal
 
 appsettings.Development.json
+appsettings.Production.json
 *.user
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 TestResults/
