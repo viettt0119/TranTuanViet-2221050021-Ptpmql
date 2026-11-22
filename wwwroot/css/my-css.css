@@ -301,6 +301,11 @@ body {
     display: block;
 }
 
+.auth-success-icon.auth-warning-icon {
+    background: #fff4e5;
+    color: #b54708;
+}
+
 .auth-success p {
     margin: 0.75rem 0 1.5rem;
 }

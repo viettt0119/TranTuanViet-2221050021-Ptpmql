@@ -33,7 +33,8 @@ builder.Services
         options.Lockout.AllowedForNewUsers = true;
         options.Lockout.MaxFailedAccessAttempts = 5;
         options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-        options.SignIn.RequireConfirmedEmail = false;
+        // Người dùng tự đăng ký phải bấm liên kết xác thực gửi tới email trước khi đăng nhập.
+        options.SignIn.RequireConfirmedEmail = true;
         options.Tokens.EmailConfirmationTokenProvider = "EmailConfirmation";
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -41,11 +42,11 @@ builder.Services
     .AddTokenProvider<EmailConfirmationTokenProvider<ApplicationUser>>("EmailConfirmation");
 
 builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
-    options.TokenLifespan = TimeSpan.FromHours(1));
+    options.TokenLifespan = AuthEmailTemplateRenderer.PasswordResetLinkLifetime);
 builder.Services.Configure<EmailConfirmationTokenProviderOptions>(options =>
 {
     options.Name = "EmailConfirmationTokenProvider";
-    options.TokenLifespan = TimeSpan.FromHours(24);
+    options.TokenLifespan = AuthEmailTemplateRenderer.ConfirmationLinkLifetime;
 });
 builder.Services.ConfigureApplicationCookie(options =>
 {

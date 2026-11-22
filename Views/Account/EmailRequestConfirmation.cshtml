@@ -2,5 +2,12 @@
 @{
     ViewData["Title"] = "Kiểm tra email";
 }
-<h1>Kiểm tra email</h1>
-<p>@Model</p>
+<div class="auth-page">
+    <section class="auth-card auth-success">
+        <div class="auth-success-icon" aria-hidden="true">✉</div>
+        <span class="auth-eyebrow">ĐÃ GHI NHẬN YÊU CẦU</span>
+        <h1>Kiểm tra email</h1>
+        <p>@Model</p>
+        <a asp-action="Login" class="btn btn-primary btn-lg w-100">Quay lại đăng nhập</a>
+    </section>
+</div>

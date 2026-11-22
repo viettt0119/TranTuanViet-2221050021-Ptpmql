@@ -12,6 +12,12 @@
         </div>
         <form asp-action="Login" method="post">
             <div asp-validation-summary="All" class="text-danger"></div>
+            @if (ViewData["ShowResendConfirmation"] as bool? == true)
+            {
+                <div class="mb-3">
+                    <a asp-action="ResendConfirmation" asp-route-email="@Model.Email" class="btn btn-outline-primary w-100">Gửi lại email xác thực</a>
+                </div>
+            }
             <input asp-for="ReturnUrl" type="hidden" />
             <div class="mb-3">
                 <label asp-for="Email" class="form-label">Email</label>
@@ -32,6 +38,7 @@
         <div class="auth-links">
             <a asp-action="ForgotPassword">Quên mật khẩu?</a>
             <span>Chưa có tài khoản? <a asp-action="Register">Đăng ký</a></span>
+            <a asp-action="ResendConfirmation">Chưa nhận được email xác thực?</a>
         </div>
     </section>
 </div>

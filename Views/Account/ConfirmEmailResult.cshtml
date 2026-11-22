@@ -2,24 +2,35 @@
     ViewData["Title"] = "Xác thực email";
     var succeeded = ViewData["Succeeded"] as bool? == true;
 }
-<h1>Xác thực email</h1>
-@if (succeeded)
-{
-    <div class="alert alert-success">Email đã được xác thực. Bạn có thể đăng nhập.</div>
-    <a asp-action="Login" class="btn btn-primary">Đăng nhập</a>
-}
-else if (ViewData["UserId"] is string userId && ViewData["Token"] is string token)
-{
-    <p>Xác nhận địa chỉ email để kích hoạt tài khoản.</p>
-    <form asp-action="ConfirmEmailPost" method="post">
-        @Html.AntiForgeryToken()
-        <input type="hidden" name="userId" value="@userId" />
-        <input type="hidden" name="token" value="@token" />
-        <button type="submit" class="btn btn-primary">Xác nhận email</button>
-    </form>
-}
-else
-{
-    <div class="alert alert-danger">Liên kết xác thực không hợp lệ hoặc đã hết hạn. Bạn có thể yêu cầu gửi lại email xác thực.</div>
-    <a asp-action="ResendConfirmation">Gửi lại email xác thực</a>
-}
+<div class="auth-page">
+    <section class="auth-card auth-success">
+        @if (succeeded)
+        {
+            <div class="auth-success-icon" aria-hidden="true">✓</div>
+            <span class="auth-eyebrow">XÁC THỰC THÀNH CÔNG</span>
+            <h1>Email đã được xác thực</h1>
+            <p>Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập ngay.</p>
+            <a asp-action="Login" class="btn btn-primary btn-lg w-100">Đăng nhập</a>
+        }
+        else if (ViewData["UserId"] is string userId && ViewData["Token"] is string token)
+        {
+            <div class="auth-success-icon" aria-hidden="true">✉</div>
+            <span class="auth-eyebrow">XÁC THỰC TÀI KHOẢN</span>
+            <h1>Xác nhận địa chỉ email</h1>
+            <p>Bấm nút bên dưới để hoàn tất xác thực và kích hoạt tài khoản.</p>
+            <form asp-action="ConfirmEmailPost" method="post">
+                <input type="hidden" name="userId" value="@userId" />
+                <input type="hidden" name="token" value="@token" />
+                <button type="submit" class="btn btn-primary btn-lg w-100">Xác nhận email</button>
+            </form>
+        }
+        else
+        {
+            <div class="auth-success-icon auth-warning-icon" aria-hidden="true">!</div>
+            <span class="auth-eyebrow">KHÔNG THỂ XÁC THỰC</span>
+            <h1>Liên kết không hợp lệ</h1>
+            <p>Liên kết xác thực không hợp lệ hoặc đã hết hạn (24 giờ). Bạn có thể yêu cầu gửi lại email xác thực.</p>
+            <a asp-action="ResendConfirmation" class="btn btn-primary btn-lg w-100">Gửi lại email xác thực</a>
+        }
+    </section>
+</div>

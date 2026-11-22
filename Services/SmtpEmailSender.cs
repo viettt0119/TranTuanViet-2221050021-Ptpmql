@@ -16,7 +16,7 @@ public sealed class SmtpEmailSender(
         string htmlMessage,
         CancellationToken cancellationToken = default)
     {
-        var settings = emailOptions.Value;
+        var settings = GetValidatedSettings();
         Exception? lastTransientError = null;
 
         for (var attempt = 1; attempt <= MaxAttempts; attempt++)
@@ -33,7 +33,7 @@ public sealed class SmtpEmailSender(
                     "Transient SMTP failure on attempt {Attempt} of {MaxAttempts} ({ExceptionType}).",
                     attempt,
                     MaxAttempts,
-                    ex.GetType().Name);
+                    ex.InnerException?.GetType().Name ?? ex.GetType().Name);
                 await Task.Delay(TimeSpan.FromMilliseconds(250 * attempt), cancellationToken);
             }
             catch (TransientEmailException ex)
@@ -45,5 +45,21 @@ public sealed class SmtpEmailSender(
         throw new EmailDeliveryException(
             "The email provider could not deliver the message after the configured retry attempts.",
             lastTransientError ?? new InvalidOperationException("The SMTP retry loop ended unexpectedly."));
+    }
+
+    private EmailSettings GetValidatedSettings()
+    {
+        try
+        {
+            return emailOptions.Value;
+        }
+        catch (OptionsValidationException ex)
+        {
+            // Thiếu cấu hình SMTP không được làm sập request: báo lỗi gửi email để controller xử lý thân thiện.
+            logger.LogError(
+                "SMTP settings are incomplete: {Failures}",
+                string.Join(" ", ex.Failures));
+            throw new EmailDeliveryException("SMTP settings are incomplete.", ex);
+        }
     }
 }
