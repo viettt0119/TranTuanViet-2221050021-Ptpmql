@@ -14,12 +14,6 @@ public class HomeController : Controller
         return View();
     }
 
-    [AllowAnonymous]
-    public IActionResult Privacy()
-    {
-        return View();
-    }
-
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     [AllowAnonymous]
     public IActionResult Error()
@@ -27,8 +21,9 @@ public class HomeController : Controller
         return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 
+    // Không giới hạn GET: UseStatusCodePagesWithReExecute giữ nguyên phương thức gốc (vd. POST bị 429).
     [AllowAnonymous]
-    [HttpGet("Home/StatusCode/{statusCode:int}")]
+    [Route("Home/StatusCode/{statusCode:int}")]
     public IActionResult StatusCodePage(int statusCode)
     {
         Response.StatusCode = statusCode;
