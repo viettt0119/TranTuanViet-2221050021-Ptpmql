@@ -1,11 +1,21 @@
 @{
     var statusCode = ViewData["StatusCode"] as int? ?? Context.Response.StatusCode;
-    var description = ViewData["StatusDescription"] as string;
+    var (heading, message) = statusCode switch
+    {
+        400 => ("Yêu cầu không hợp lệ", "Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra và thử lại."),
+        401 => ("Chưa đăng nhập", "Bạn cần đăng nhập để tiếp tục."),
+        403 => ("Không có quyền truy cập", "Tài khoản của bạn không được phép thực hiện chức năng này."),
+        404 => ("Không tìm thấy trang", "Trang bạn yêu cầu không tồn tại hoặc đã bị di chuyển."),
+        405 => ("Phương thức không được hỗ trợ", "Thao tác này không được hỗ trợ trên trang hiện tại."),
+        429 => ("Quá nhiều yêu cầu", "Bạn thao tác quá nhanh. Vui lòng chờ một phút rồi thử lại."),
+        >= 500 => ("Lỗi máy chủ", "Hệ thống gặp sự cố. Vui lòng thử lại sau."),
+        _ => (ViewData["StatusDescription"] as string ?? "Có lỗi xảy ra", "Không thể xử lý yêu cầu.")
+    };
     ViewData["Title"] = $"Lỗi {statusCode}";
 }
 <section class="text-center py-5">
     <h1 class="display-4">@statusCode</h1>
-    <h2>@description</h2>
-    <p class="text-muted">Trang bạn yêu cầu không tồn tại hoặc không thể truy cập.</p>
+    <h2>@heading</h2>
+    <p class="text-muted">@message</p>
     <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Về trang chủ</a>
 </section>
