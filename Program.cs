@@ -2,6 +2,7 @@ using DemoMVC.Data;
 using DemoMVC.Models;
 using DemoMVC.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -48,13 +49,21 @@ builder.Services.Configure<EmailConfirmationTokenProviderOptions>(options =>
     options.Name = "EmailConfirmationTokenProvider";
     options.TokenLifespan = AuthEmailTemplateRenderer.ConfirmationLinkLifetime;
 });
+
+// Shared hosting (MonsterASP/IIS) không lưu được key mặc định: key mất sau mỗi lần recycle làm
+// cookie đăng nhập, anti-forgery và liên kết xác thực email/đặt lại mật khẩu bị vô hiệu.
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("DemoMVC");
+var dataProtectionKeysPath = DataProtectionKeyPath.Resolve(builder.Configuration, builder.Environment);
+if (dataProtectionKeysPath is not null)
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
     options.AccessDeniedPath = "/Account/AccessDenied";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    // SameAsRequest: cookie có cờ Secure khi chạy HTTPS, nhưng vẫn đăng nhập được nếu hosting miễn phí chưa bật HTTPS.
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
     options.SlidingExpiration = true;
 });
@@ -116,6 +125,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+app.MapGet("/healthz", () => Results.Text("Healthy")).AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",
@@ -137,17 +147,31 @@ await using (var scope = app.Services.CreateAsyncScope())
         !string.IsNullOrWhiteSpace(identitySeedOptions.Password) &&
         !string.IsNullOrWhiteSpace(identitySeedOptions.FullName);
 
+    foreach (var roleName in new[] { "Admin", "User" })
+    {
+        if (!await roleManager.RoleExistsAsync(roleName))
+            await roleManager.CreateAsync(new IdentityRole(roleName));
+    }
+
     if (canSeedAdmin)
     {
-        await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
+        try
+        {
+            await scope.ServiceProvider.GetRequiredService<IdentitySeeder>().SeedAsync();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or OptionsValidationException)
+        {
+            // Không làm sập website (lỗi 500.30 trên IIS) chỉ vì cấu hình admin sai; ghi log để sửa.
+            app.Logger.LogCritical(
+                "Could not seed the administrator account: {Reason}",
+                ex is OptionsValidationException validation ? string.Join(" ", validation.Failures) : ex.Message);
+        }
     }
     else
     {
-        foreach (var roleName in new[] { "Admin", "User" })
-        {
-            if (!await roleManager.RoleExistsAsync(roleName))
-                await roleManager.CreateAsync(new IdentityRole(roleName));
-        }
+        app.Logger.LogWarning(
+            "Administrator account was not seeded. Configure AdminSeed:Email, AdminSeed:Password and AdminSeed:FullName " +
+            "(on MonsterASP: Scripting > Environment variables, e.g. AdminSeed__Password) and restart the app.");
     }
 
     var adminRole = await roleManager.FindByNameAsync("Admin");
