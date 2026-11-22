@@ -5,9 +5,17 @@ on:
     branches:
       - main
 
+# Không chạy hai lần deploy chồng nhau (app_offline.htm của lần này bị lần kia xoá giữa chừng).
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      # Ví dụ: http://lecture0119.runasp.net/healthz — để trống thì bỏ qua bước kiểm tra.
+      APP_HEALTH_URL: ${{ secrets.APP_HEALTH_URL }}
 
     steps:
       - name: Checkout code
@@ -65,3 +73,18 @@ jobs:
         if: always()
         run: |
           curl -s --ftp-pasv -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" "ftp://${{ secrets.FTP_SERVER }}/" -Q "-DELE /wwwroot/app_offline.htm" || true
+
+      # 6. KIỂM TRA: gọi /healthz (app tự migrate DB và seed tài khoản khi khởi động lần đầu)
+      - name: 🩺 Health check
+        if: env.APP_HEALTH_URL != ''
+        run: |
+          for attempt in $(seq 1 10); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$APP_HEALTH_URL" || true)
+            echo "Attempt $attempt: HTTP $status"
+            if [ "$status" = "200" ]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Website không phản hồi HTTP 200 tại APP_HEALTH_URL sau khi deploy."
+          exit 1
