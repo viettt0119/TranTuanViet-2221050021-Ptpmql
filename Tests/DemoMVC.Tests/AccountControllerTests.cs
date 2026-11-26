@@ -388,6 +388,172 @@ public class AccountControllerTests
             It.IsAny<ApplicationUser>(), It.IsAny<DateTimeOffset?>()), Times.Never);
     }
 
+    [Fact]
+    public async Task Register_student_gets_user_role_and_is_approved_immediately()
+    {
+        var fixture = new ControllerFixture();
+        fixture.SetupSuccessfulRegistration();
+        ApplicationUser? created = null;
+        fixture.UserManager
+            .Setup(manager => manager.CreateAsync(It.IsAny<ApplicationUser>(), "GoodPassword!123"))
+            .Callback<ApplicationUser, string>((user, _) => created = user)
+            .ReturnsAsync(IdentityResult.Success);
+
+        var model = ControllerFixture.ValidRegistration();
+        model.MemberCode = " 2521050001 ";
+        var result = await fixture.Controller.Register(model);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.False(Assert.IsType<bool>(view.ViewData["PendingApproval"]));
+        Assert.NotNull(created);
+        Assert.Equal(AccountType.Student, created!.AccountType);
+        Assert.Equal("2521050001", created.MemberCode);
+        Assert.True(created.IsApproved);
+        fixture.UserManager.Verify(manager => manager.AddToRoleAsync(created, SystemRoles.User), Times.Once);
+    }
+
+    [Fact]
+    public async Task Register_staff_waits_for_approval_and_gets_no_role_yet()
+    {
+        var fixture = new ControllerFixture();
+        ApplicationUser? created = null;
+        fixture.UserManager
+            .Setup(manager => manager.CreateAsync(It.IsAny<ApplicationUser>(), "GoodPassword!123"))
+            .Callback<ApplicationUser, string>((user, _) => created = user)
+            .ReturnsAsync(IdentityResult.Success);
+
+        var model = ControllerFixture.ValidRegistration();
+        model.AccountType = AccountType.Staff;
+        model.MemberCode = "gv0123";
+        var result = await fixture.Controller.Register(model);
+
+        var view = Assert.IsType<ViewResult>(result);
+        Assert.Equal("RegisterConfirmation", view.ViewName);
+        Assert.True(Assert.IsType<bool>(view.ViewData["PendingApproval"]));
+        Assert.Equal(AccountType.Staff, created!.AccountType);
+        Assert.Equal("GV0123", created.MemberCode);
+        Assert.False(created.IsApproved);
+        fixture.UserManager.Verify(manager => manager.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Register_shows_duplicate_member_code_on_the_code_field()
+    {
+        var fixture = new ControllerFixture();
+        fixture.UserManager
+            .Setup(manager => manager.CreateAsync(It.IsAny<ApplicationUser>(), "GoodPassword!123"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError
+            {
+                Code = MemberCodeUserValidator.DuplicateCode,
+                Description = "Mã sinh viên 2521050001 đã được dùng cho tài khoản khác."
+            }));
+
+        var result = await fixture.Controller.Register(ControllerFixture.ValidRegistration());
+
+        Assert.IsType<ViewResult>(result);
+        Assert.Single(fixture.Controller.ModelState[nameof(RegisterViewModel.MemberCode)]!.Errors);
+    }
+
+    [Theory]
+    [InlineData(AccountType.Staff, AccountType.Student, true, "tư cách Giảng viên / Cán bộ")]
+    [InlineData(AccountType.Student, AccountType.Staff, true, "tư cách Sinh viên")]
+    [InlineData(AccountType.Staff, AccountType.Staff, false, "chờ Quản trị viên phê duyệt")]
+    public async Task Login_with_wrong_account_type_or_pending_approval_is_refused_without_signing_in(
+        AccountType registeredAs, AccountType chosen, bool approved, string expectedMessage)
+    {
+        var fixture = new ControllerFixture();
+        var account = new ApplicationUser
+        {
+            Id = "user-1",
+            Email = "user@example.test",
+            FullName = "User",
+            EmailConfirmed = true,
+            AccountType = registeredAs,
+            IsApproved = approved
+        };
+        fixture.UserManager.Setup(manager => manager.FindByEmailAsync("user@example.test")).ReturnsAsync(account);
+        fixture.SignInManager
+            .Setup(manager => manager.CheckPasswordSignInAsync(account, "GoodPassword!123", true))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+
+        var result = await fixture.Controller.Login(new LoginViewModel
+        {
+            AccountType = chosen,
+            Email = "user@example.test",
+            Password = "GoodPassword!123"
+        });
+
+        Assert.IsType<ViewResult>(result);
+        Assert.Contains(
+            fixture.Controller.ModelState[string.Empty]!.Errors,
+            error => error.ErrorMessage.Contains(expectedMessage, StringComparison.Ordinal));
+        fixture.SignInManager.Verify(manager => manager.PasswordSignInAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+        fixture.SignInManager.Verify(manager => manager.SignInAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Login_with_wrong_account_type_and_wrong_password_stays_generic()
+    {
+        // Không để lộ tư cách của email cho người không biết mật khẩu.
+        var fixture = new ControllerFixture();
+        var account = new ApplicationUser
+        {
+            Id = "user-1",
+            Email = "user@example.test",
+            FullName = "User",
+            EmailConfirmed = true,
+            AccountType = AccountType.Staff
+        };
+        fixture.UserManager.Setup(manager => manager.FindByEmailAsync("user@example.test")).ReturnsAsync(account);
+        fixture.SignInManager
+            .Setup(manager => manager.CheckPasswordSignInAsync(account, "WrongPassword!123", true))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+
+        await fixture.Controller.Login(new LoginViewModel
+        {
+            AccountType = AccountType.Student,
+            Email = "user@example.test",
+            Password = "WrongPassword!123"
+        });
+
+        var errors = fixture.Controller.ModelState[string.Empty]!.Errors.Select(x => x.ErrorMessage).ToList();
+        Assert.Equal(["Email hoặc mật khẩu không đúng."], errors);
+    }
+
+    [Fact]
+    public async Task Login_with_matching_account_type_signs_in_normally()
+    {
+        var fixture = new ControllerFixture();
+        fixture.UrlHelper
+            .Setup(helper => helper.Action(It.Is<UrlActionContext>(context =>
+                context.Controller == "Home" && context.Action == "Dashboard")))
+            .Returns("/Home/Dashboard");
+        var account = new ApplicationUser
+        {
+            Id = "user-1",
+            Email = "gv@example.test",
+            FullName = "GV",
+            EmailConfirmed = true,
+            AccountType = AccountType.Staff,
+            IsApproved = true
+        };
+        fixture.UserManager.Setup(manager => manager.FindByEmailAsync("gv@example.test")).ReturnsAsync(account);
+        fixture.SignInManager
+            .Setup(manager => manager.PasswordSignInAsync("gv@example.test", "GoodPassword!123", false, true))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+
+        var result = await fixture.Controller.Login(new LoginViewModel
+        {
+            AccountType = AccountType.Staff,
+            Email = "gv@example.test",
+            Password = "GoodPassword!123"
+        });
+
+        Assert.Equal("/Home/Dashboard", Assert.IsType<LocalRedirectResult>(result).Url);
+    }
+
     private sealed class ControllerFixture
     {
         public const string GenericForgotPasswordMessage =
@@ -447,6 +613,7 @@ public class AccountControllerTests
         public static RegisterViewModel ValidRegistration() => new()
         {
             FullName = "Test User",
+            MemberCode = "2521050001",
             Email = "student@gmail.com",
             Password = "GoodPassword!123",
             ConfirmPassword = "GoodPassword!123"

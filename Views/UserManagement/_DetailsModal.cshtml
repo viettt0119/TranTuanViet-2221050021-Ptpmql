@@ -16,6 +16,21 @@
                     <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.FullName) ? "—" : Model.FullName)</dd>
                     <dt class="col-sm-4">Email</dt>
                     <dd class="col-sm-8">@Model.Email</dd>
+                    <dt class="col-sm-4">Tư cách</dt>
+                    <dd class="col-sm-8">@Model.AccountType.DisplayName()</dd>
+                    <dt class="col-sm-4">@Model.AccountType.CodeLabel()</dt>
+                    <dd class="col-sm-8">@(string.IsNullOrWhiteSpace(Model.MemberCode) ? "—" : Model.MemberCode)</dd>
+                    <dt class="col-sm-4">Phê duyệt</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.IsApproved)
+                        {
+                            <span class="badge text-bg-success">Đã duyệt</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-danger">Chờ Quản trị viên phê duyệt</span>
+                        }
+                    </dd>
                     <dt class="col-sm-4">Xác thực email</dt>
                     <dd class="col-sm-8">
                         @if (Model.EmailConfirmed)
@@ -34,6 +49,13 @@
                 </dl>
             </div>
             <div class="modal-footer">
+                @if (!Model.IsApproved)
+                {
+                    <form action="@Url.Action("Approve", new { id = Model.Id })" method="post" data-ajax-modal-form asp-permission="UserManagement.Approve">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-warning"><i class="bi bi-check2-circle me-1"></i>Phê duyệt</button>
+                    </form>
+                }
                 @if (!Model.EmailConfirmed)
                 {
                     <form action="@Url.Action("ConfirmEmail", new { id = Model.Id })" method="post" data-ajax-modal-form class="me-auto" asp-permission="UserManagement.ConfirmEmail">

@@ -102,8 +102,8 @@ public class RoleController(
     {
         var role = await roleManager.FindByIdAsync(id);
         if (role is null) return NotFound();
-        if (IsAdminRole(role))
-            return Forbidden("Không thể đổi tên vai trò hệ thống Admin.");
+        if (SystemRoles.IsSystemRole(role.Name))
+            return Forbidden($"Không thể đổi tên vai trò hệ thống {role.Name}.");
 
         return FormModal(new RoleFormViewModel { Id = role.Id, Name = role.Name ?? string.Empty },
             isCreate: false, statusCode: StatusCodes.Status200OK);
@@ -115,8 +115,8 @@ public class RoleController(
     {
         var role = await roleManager.FindByIdAsync(id);
         if (role is null) return NotFound();
-        if (IsAdminRole(role))
-            return Forbidden("Không thể đổi tên vai trò hệ thống Admin.");
+        if (SystemRoles.IsSystemRole(role.Name))
+            return Forbidden($"Không thể đổi tên vai trò hệ thống {role.Name}.");
         if (await IsProtectedFromNonAdminAsync(role))
             return Forbidden("Bạn không thể sửa vai trò mà chính mình đang có.");
 
@@ -127,8 +127,8 @@ public class RoleController(
             var sameName = await roleManager.FindByNameAsync(form.Name);
             if (sameName is not null && sameName.Id != role.Id)
                 ModelState.AddModelError(nameof(form.Name), "Tên vai trò đã tồn tại.");
-            if (string.Equals(form.Name, AdminRole, StringComparison.OrdinalIgnoreCase))
-                ModelState.AddModelError(nameof(form.Name), "Tên Admin được dành cho vai trò hệ thống.");
+            if (SystemRoles.IsSystemRole(form.Name))
+                ModelState.AddModelError(nameof(form.Name), $"Tên {form.Name} được dành cho vai trò hệ thống.");
         }
         if (!ModelState.IsValid)
             return FormModal(form, isCreate: false);
@@ -150,8 +150,8 @@ public class RoleController(
     {
         var role = await roleManager.FindByIdAsync(id);
         if (role is null) return NotFound();
-        if (IsAdminRole(role))
-            return Forbidden("Không thể xoá vai trò hệ thống Admin.");
+        if (SystemRoles.IsSystemRole(role.Name))
+            return Forbidden($"Không thể xoá vai trò hệ thống {role.Name}.");
 
         ViewData["UserCount"] = await dbContext.UserRoles.CountAsync(x => x.RoleId == role.Id);
         return PartialView("_DeleteModal", role);
@@ -163,8 +163,8 @@ public class RoleController(
     {
         var role = await roleManager.FindByIdAsync(id);
         if (role is null) return NotFound();
-        if (IsAdminRole(role))
-            return Forbidden("Không thể xoá vai trò hệ thống Admin.");
+        if (SystemRoles.IsSystemRole(role.Name))
+            return Forbidden($"Không thể xoá vai trò hệ thống {role.Name}.");
         if (await IsProtectedFromNonAdminAsync(role))
             return Forbidden("Bạn không thể xoá vai trò mà chính mình đang có.");
 

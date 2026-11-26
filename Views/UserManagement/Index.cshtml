@@ -5,8 +5,17 @@
     var roleFilter = ViewData["RoleFilter"] as string;
     var allRoles = ViewData["AllRoles"] as List<Microsoft.AspNetCore.Identity.IdentityRole> ?? [];
     var rolesByUser = ViewData["RolesByUser"] as Dictionary<string, List<string>> ?? [];
-    ViewData["PagingRouteValues"] = new Dictionary<string, string?> { ["role"] = roleFilter };
-    var hasFilter = !string.IsNullOrWhiteSpace(searchQuery) || !string.IsNullOrWhiteSpace(roleFilter);
+    var statusFilter = ViewData["StatusFilter"] as string;
+    var typeFilter = ViewData["TypeFilter"] as DemoMVC.Models.AccountType?;
+    var pendingCount = ViewData["PendingCount"] as int? ?? 0;
+    ViewData["PagingRouteValues"] = new Dictionary<string, string?>
+    {
+        ["role"] = roleFilter,
+        ["status"] = statusFilter,
+        ["type"] = typeFilter?.ToString()
+    };
+    var hasFilter = !string.IsNullOrWhiteSpace(searchQuery) || !string.IsNullOrWhiteSpace(roleFilter) ||
+        statusFilter is not null || typeFilter is not null;
 }
 
 <section class="list-page">
@@ -16,12 +25,29 @@
             <h1>Người dùng</h1>
             <p class="text-muted mb-0">Gán vai trò cho người dùng; quyền của người dùng là tổng quyền của các vai trò.</p>
         </div>
+        @if (pendingCount > 0)
+        {
+            <a asp-action="Index" asp-route-status="@DemoMVC.Controllers.UserManagementController.PendingStatus" class="btn btn-warning">
+                <i class="bi bi-hourglass-split me-1"></i>@pendingCount tài khoản chờ duyệt
+            </a>
+        }
     </div>
 
     <div class="list-toolbar">
         <form asp-action="Index" method="get" class="search-form">
             <label class="visually-hidden" for="user-search">Tìm người dùng</label>
-            <input id="user-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo email hoặc họ tên..." />
+            <input id="user-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo email, họ tên, mã SV / mã cán bộ..." />
+            <label class="visually-hidden" for="user-type">Lọc theo tư cách</label>
+            <select id="user-type" name="type" class="form-select w-auto">
+                <option value="">Mọi tư cách</option>
+                <option value="Student" selected="@(typeFilter == DemoMVC.Models.AccountType.Student)">Sinh viên</option>
+                <option value="Staff" selected="@(typeFilter == DemoMVC.Models.AccountType.Staff)">Giảng viên / Cán bộ</option>
+            </select>
+            <label class="visually-hidden" for="user-status">Lọc theo trạng thái duyệt</label>
+            <select id="user-status" name="status" class="form-select w-auto">
+                <option value="">Mọi trạng thái</option>
+                <option value="@DemoMVC.Controllers.UserManagementController.PendingStatus" selected="@(statusFilter is not null)">Chờ duyệt</option>
+            </select>
             <label class="visually-hidden" for="user-role">Lọc theo vai trò</label>
             <select id="user-role" name="role" class="form-select w-auto">
                 <option value="">Tất cả vai trò</option>
@@ -42,12 +68,12 @@
         <div class="table-responsive list-card">
             <table class="table table-hover align-middle mb-0">
                 <thead>
-                    <tr><th>Email</th><th>Họ tên</th><th>Email xác thực</th><th>Vai trò</th><th class="text-end">Thao tác</th></tr>
+                    <tr><th>Email</th><th>Họ tên</th><th>Tư cách / Mã</th><th>Trạng thái</th><th>Vai trò</th><th class="text-end">Thao tác</th></tr>
                 </thead>
                 <tbody>
                     @if (Model.Items.Count == 0)
                     {
-                        <tr><td colspan="5" class="empty-state">@(hasFilter ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng nào.")</td></tr>
+                        <tr><td colspan="6" class="empty-state">@(hasFilter ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng nào.")</td></tr>
                     }
                     @foreach (var user in Model.Items)
                     {
@@ -56,6 +82,13 @@
                             <td class="fw-semibold">@user.Email</td>
                             <td>@user.FullName</td>
                             <td>
+                                <span class="badge @(user.AccountType == DemoMVC.Models.AccountType.Staff ? "text-bg-warning" : "text-bg-primary")">@user.AccountType.DisplayName()</span>
+                                @if (!string.IsNullOrWhiteSpace(user.MemberCode))
+                                {
+                                    <span class="code-chip small ms-1">@user.MemberCode</span>
+                                }
+                            </td>
+                            <td>
                                 @if (user.EmailConfirmed)
                                 {
                                     <span class="badge text-bg-success">Đã xác thực</span>
@@ -63,6 +96,10 @@
                                 else
                                 {
                                     <span class="badge text-bg-warning">Chưa xác thực</span>
+                                }
+                                @if (!user.IsApproved)
+                                {
+                                    <span class="badge text-bg-danger">Chờ duyệt</span>
                                 }
                             </td>
                             <td>
@@ -74,6 +111,10 @@
                             </td>
                             <td class="text-end text-nowrap">
                                 <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-outline-info" asp-permission="UserManagement.Details">Chi tiết</a>
+                                @if (!user.IsApproved)
+                                {
+                                    <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-warning" asp-permission="UserManagement.Approve">Duyệt</a>
+                                }
                                 <a asp-action="Roles" asp-route-id="@user.Id" data-modal-url="@Url.Action("Roles", new { id = user.Id })" class="btn btn-sm btn-outline-primary" asp-permission="UserManagement.Roles">Vai trò</a>
                             </td>
                         </tr>

@@ -40,18 +40,20 @@
                     }
                     @foreach (var role in Model.Items)
                     {
-                        var isAdmin = string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase);
+                        var isAdmin = string.Equals(role.Name, DemoMVC.Services.SystemRoles.Admin, StringComparison.OrdinalIgnoreCase);
+                        // Admin, User, GiangVien: không đổi tên / xoá được (ứng dụng dựa vào tên); vẫn phân quyền được trừ Admin.
+                        var isSystem = DemoMVC.Services.SystemRoles.IsSystemRole(role.Name);
                         <tr>
                             <td class="fw-semibold">
                                 @role.Name
-                                @if (isAdmin) { <span class="badge text-bg-dark ms-1">Hệ thống</span> }
+                                @if (isSystem) { <span class="badge text-bg-dark ms-1">Hệ thống</span> }
                             </td>
                             <td>@role.UserCount</td>
                             <td>@(isAdmin ? "Toàn bộ" : $"{role.GrantedCount}/{totalPermissions}")</td>
                             <td class="text-end text-nowrap">
                                 <a asp-action="Details" asp-route-id="@role.Id" data-modal-url="@Url.Action("Details", new { id = role.Id })" class="btn btn-sm btn-outline-info" asp-permission="Role.Details">Chi tiết</a>
                                 <a asp-action="Permissions" asp-route-id="@role.Id" data-modal-url="@Url.Action("Permissions", new { id = role.Id })" class="btn btn-sm btn-outline-primary" asp-permission="Role.Permissions">Phân quyền</a>
-                                @if (!isAdmin)
+                                @if (!isSystem)
                                 {
                                     <a asp-action="Edit" asp-route-id="@role.Id" data-modal-url="@Url.Action("Edit", new { id = role.Id })" class="btn btn-sm btn-outline-warning" asp-permission="Role.Edit">Sửa</a>
                                     <a asp-action="Delete" asp-route-id="@role.Id" data-modal-url="@Url.Action("Delete", new { id = role.Id })" class="btn btn-sm btn-outline-danger" asp-permission="Role.Delete">Xóa</a>

@@ -16,10 +16,12 @@ public class UserManagementController(
     ApplicationDbContext dbContext,
     PermissionCatalogService permissionCatalog) : Controller
 {
-    private const string AdminRole = "Admin";
+    private const string AdminRole = SystemRoles.Admin;
+    public const string PendingStatus = "pending";
 
     [HttpGet]
-    public async Task<IActionResult> Index(string? q, string? role, int page = 1, int pageSize = 10)
+    public async Task<IActionResult> Index(
+        string? q, string? role, string? status, AccountType? type, int page = 1, int pageSize = 10)
     {
         var users = userManager.Users.AsQueryable();
         var search = q?.Trim();
@@ -29,8 +31,19 @@ public class UserManagementController(
             var lower = search.ToLowerInvariant();
             users = users.Where(user =>
                 user.NormalizedEmail!.Contains(normalized) ||
-                user.FullName.ToLower().Contains(lower));
+                user.FullName.ToLower().Contains(lower) ||
+                (user.MemberCode != null && user.MemberCode.Contains(normalized)));
         }
+
+        if (type is not null && Enum.IsDefined(type.Value))
+            users = users.Where(user => user.AccountType == type);
+        else
+            type = null;
+        // "pending": giảng viên / cán bộ đang chờ phê duyệt.
+        if (string.Equals(status, PendingStatus, StringComparison.OrdinalIgnoreCase))
+            users = users.Where(user => !user.IsApproved);
+        else
+            status = null;
 
         var roleFilter = string.IsNullOrWhiteSpace(role) ? null : await roleManager.FindByIdAsync(role);
         if (roleFilter is not null)
@@ -51,6 +64,9 @@ public class UserManagementController(
 
         ViewData["SearchQuery"] = search;
         ViewData["RoleFilter"] = roleFilter?.Id;
+        ViewData["StatusFilter"] = status;
+        ViewData["TypeFilter"] = type;
+        ViewData["PendingCount"] = await userManager.Users.CountAsync(user => !user.IsApproved);
         ViewData["AllRoles"] = await roleManager.Roles.OrderBy(x => x.Name).ToListAsync();
         ViewData["RolesByUser"] = rolesByUser;
         return View(paged);
@@ -157,6 +173,45 @@ public class UserManagementController(
             return Forbidden(string.Join(" ", result.Errors.Select(x => x.Description)));
 
         return Json(new { success = true, message = $"Đã xác thực email {user.Email}." });
+    }
+
+    /// <summary>
+    /// Phê duyệt tài khoản Giảng viên / Cán bộ tự đăng ký: cho phép đăng nhập và gán role GiangVien.
+    /// </summary>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [PermissionAction("Phê duyệt giảng viên")]
+    public async Task<IActionResult> Approve(string id)
+    {
+        var user = await userManager.FindByIdAsync(id);
+        if (user is null) return NotFound();
+        if (user.AccountType != AccountType.Staff)
+            return Forbidden("Chỉ tài khoản Giảng viên / Cán bộ mới cần phê duyệt.");
+        if (user.IsApproved)
+            return Json(new { success = true, message = $"{user.Email} đã được phê duyệt từ trước." });
+
+        if (!await roleManager.RoleExistsAsync(SystemRoles.Lecturer))
+        {
+            var createRole = await roleManager.CreateAsync(new IdentityRole(SystemRoles.Lecturer));
+            if (!createRole.Succeeded)
+                return Forbidden(string.Join(" ", createRole.Errors.Select(x => x.Description)));
+        }
+
+        user.IsApproved = true;
+        var result = await userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return Forbidden(string.Join(" ", result.Errors.Select(x => x.Description)));
+
+        if (!await userManager.IsInRoleAsync(user, SystemRoles.Lecturer))
+        {
+            var roleResult = await userManager.AddToRoleAsync(user, SystemRoles.Lecturer);
+            if (!roleResult.Succeeded)
+                return Forbidden(string.Join(" ", roleResult.Errors.Select(x => x.Description)));
+        }
+
+        permissionCatalog.InvalidateUser(user.Id);
+        var note = user.EmailConfirmed ? string.Empty : " Người dùng vẫn cần xác thực email trước khi đăng nhập.";
+        return Json(new { success = true, message = $"Đã phê duyệt {user.Email} và gán vai trò {SystemRoles.Lecturer}.{note}" });
     }
 
     private async Task<UserRolesViewModel> BuildRolesModelAsync(ApplicationUser user, ISet<string>? selectedOverride = null)
