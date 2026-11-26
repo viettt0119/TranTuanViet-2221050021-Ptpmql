@@ -14,8 +14,7 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
-      # Ví dụ: http://lecture0119.runasp.net/healthz — để trống thì bỏ qua bước kiểm tra.
-      APP_HEALTH_URL: ${{ secrets.APP_HEALTH_URL }}
+      APP_HEALTH_URL: ${{ secrets.APP_HEALTH_URL || 'http://lecture0119.runasp.net/healthz' }}
 
     steps:
       - name: Checkout code
@@ -43,18 +42,48 @@ jobs:
       - name: Publish project
         run: dotnet publish ./DemoMVC.csproj -c Release -o ./publish --no-restore
 
-      # 3. TẮT SERVER: Tạo và upload app_offline.htm bằng curl (Không làm hỏng file sync state)
-      - name: ⛔ Stop Server (Upload app_offline.htm)
+      - name: Verify published app starts
+        working-directory: ./publish
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+          ASPNETCORE_URLS: http://127.0.0.1:5187
+        run: |
+          startup_log="$(mktemp)"
+          export ConnectionStrings__DefaultConnection="Data Source=$RUNNER_TEMP/publish-smoke.db"
+          dotnet DemoMVC.dll > "$startup_log" 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true; rm -f "$startup_log"' EXIT
+
+          for attempt in $(seq 1 30); do
+            if [ "$(curl --silent --fail --max-time 2 http://127.0.0.1:5187/healthz)" = "Healthy" ]; then
+              exit 0
+            fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          cat "$startup_log"
+          echo "::error::Bản publish không khởi động được."
+          exit 1
+
+      - name: Put site in maintenance mode
+        id: maintenance
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           echo "<html><body><h1>Updating...</h1></body></html>" > app_offline.htm
-          curl -s --ftp-pasv -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -T app_offline.htm "ftp://${{ secrets.FTP_SERVER }}/wwwroot/app_offline.htm"
-      # Thêm bước chờ máy chủ giải thoát các tập tin khoá 
+          curl --silent --show-error --connect-timeout 15 --max-time 45 \
+            --user "$FTP_USERNAME:$FTP_PASSWORD" --upload-file app_offline.htm \
+            "ftp://$FTP_SERVER/wwwroot/app_offline.htm"
 
-      - name: ⏳ Wait for server to release file locks
+      - name: Wait for the server to release file locks
         run: sleep 15
 
-      # 4. DEPLOY CODE: Chỉ gọi FTP Action 1 lần duy nhất ở đây
-      - name: 🚀 Deploy App
+      - name: Deploy app
+        id: deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -68,23 +97,31 @@ jobs:
           exclude: |
             **/app_offline.htm
 
-      # 5. BẬT SERVER: Xóa file app_offline.htm bằng curl
-      - name: ▶️ Start Server (Delete app_offline.htm)
-        if: always()
+      - name: Bring site online
+        if: always() && steps.maintenance.outcome != 'skipped'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
-          curl -s --ftp-pasv -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" "ftp://${{ secrets.FTP_SERVER }}/" -Q "-DELE /wwwroot/app_offline.htm" || true
+          curl --silent --show-error --connect-timeout 15 --max-time 45 \
+            --user "$FTP_USERNAME:$FTP_PASSWORD" --quote "DELE /wwwroot/app_offline.htm" \
+            --output /dev/null "ftp://$FTP_SERVER/"
 
-      # 6. KIỂM TRA: gọi /healthz (app tự migrate DB và seed tài khoản khi khởi động lần đầu)
-      - name: 🩺 Health check
-        if: env.APP_HEALTH_URL != ''
+      - name: Verify production health
+        if: "!cancelled() && steps.deploy.outcome == 'success'"
         run: |
+          health_body="$(mktemp)"
+          trap 'rm -f "$health_body"' EXIT
           for attempt in $(seq 1 10); do
-            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$APP_HEALTH_URL" || true)
+            status="$(curl --silent --show-error --location --max-redirs 5 \
+              --output "$health_body" --write-out '%{http_code}' \
+              --connect-timeout 10 --max-time 20 "$APP_HEALTH_URL")" || status="000"
             echo "Attempt $attempt: HTTP $status"
-            if [ "$status" = "200" ]; then
+            if [ "$status" = "200" ] && [ "$(cat "$health_body")" = "Healthy" ]; then
               exit 0
             fi
             sleep 10
           done
-          echo "::error::Website không phản hồi HTTP 200 tại APP_HEALTH_URL sau khi deploy."
+          echo "::error::Website không trả về HTTP 200 và Healthy tại /healthz sau khi deploy."
           exit 1
