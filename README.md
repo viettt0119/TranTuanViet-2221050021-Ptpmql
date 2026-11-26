@@ -39,10 +39,10 @@ dotnet build
 dotnet run
 ```
 
-Mặc định ứng dụng sử dụng HTTPS. Mở URL hiển thị trong terminal, thường là:
+Mở URL hiển thị trong terminal. Theo `Properties/launchSettings.json`:
 
-- `https://localhost:5001`
-- `http://localhost:5000`
+- `dotnet run`: `http://localhost:5123`
+- `dotnet run --launch-profile https`: `https://localhost:7044`
 
 ## Cấu hình database
 
@@ -74,7 +74,7 @@ dotnet ef migrations has-pending-model-changes
 
 ## Cấu hình tài khoản Admin
 
-Không lưu mật khẩu thật trong `appsettings.json`. Thiết lập bằng User Secrets:
+Không lưu mật khẩu thật trong `appsettings.json` hay `appsettings.Development.json` (cả hai file đều được git theo dõi). Thiết lập bằng User Secrets:
 
 ```powershell
 dotnet user-secrets set "AdminSeed:Email" "admin@example.com" --project .\DemoMVC.csproj
@@ -99,20 +99,14 @@ Mật khẩu phải đáp ứng chính sách Identity:
 - Có ký tự đặc biệt
 - Có ít nhất 4 ký tự không trùng nhau
 
-## Cấu hình SMTP
+Cách hoạt động khi ứng dụng khởi động:
 
-Cấu hình email bằng User Secrets:
+- Thiếu `AdminSeed:Email`, `AdminSeed:Password` hoặc `AdminSeed:FullName` (mặc định `System Administrator`) thì chỉ ghi cảnh báo và bỏ qua.
+- Chạy nhiều lần không tạo trùng. Admin được tạo với email đã xác thực.
+- Nếu email đã thuộc một tài khoản chưa phải Admin, tài khoản đó được đặt lại mật khẩu theo cấu hình và gán role `Admin`.
+- Mật khẩu của admin đã tồn tại được giữ nguyên, trừ khi bật `AdminSeed:ResetPassword=true`.
 
-```powershell
-dotnet user-secrets set "Email:Host" "<smtp-host>" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:Port" "587" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:UseStartTls" "true" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:UserName" "<smtp-username>" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:Password" "<smtp-password>" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:SenderEmail" "<verified-sender@example.com>" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:SenderName" "DemoMVC" --project .\DemoMVC.csproj
-dotnet user-secrets set "Email:PublicBaseUrl" "https://localhost:5001" --project .\DemoMVC.csproj
-```
+## Cấu hình gửi email (Gmail SMTP)
 
 SMTP được dùng cho:
 
@@ -120,7 +114,45 @@ SMTP được dùng cho:
 - Gửi liên kết quên/đặt lại mật khẩu
 - Gửi thông báo sau khi đổi mật khẩu
 
-Địa chỉ `PublicBaseUrl` phải trỏ tới domain công khai khi deploy.
+### Tạo App Password
+
+1. Bật xác minh 2 bước cho tài khoản Google dùng để gửi thư (Tài khoản Google > Bảo mật).
+2. Mở <https://myaccount.google.com/apppasswords>, đặt tên ứng dụng (ví dụ `DemoMVC`) rồi tạo.
+3. Sao chép mã 16 ký tự (Google chỉ hiện một lần). Đây không phải mật khẩu Gmail.
+
+### Cấu hình local
+
+Chạy script và nhập theo hướng dẫn (App Password không bị lưu vào lịch sử lệnh):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\set-gmail-user-secrets.ps1
+```
+
+Hoặc đặt từng giá trị:
+
+```powershell
+dotnet user-secrets set "Email:UserName" "<dia-chi-gmail>" --project .\DemoMVC.csproj
+dotnet user-secrets set "Email:Password" "<app-password-16-ky-tu>" --project .\DemoMVC.csproj
+```
+
+Giá trị mặc định trong `appsettings.json`: `Email:Host=smtp.gmail.com`, `Email:Port=587`, `Email:UseStartTls=true`, `Email:SenderName=DemoMVC`. Để trống `Email:SenderEmail` thì dùng `Email:UserName`. Ở local nên để trống `Email:PublicBaseUrl` để liên kết trong thư theo đúng địa chỉ đang chạy.
+
+## Biến môi trường trên hosting
+
+Trên MonsterASP.NET, khai báo tại **Scripting > Environment variables** rồi khởi động lại ứng dụng.
+
+| Biến | Cần khai báo | Ghi chú |
+|---|---|---|
+| `AdminSeed__Email` | Có | Email tài khoản quản trị |
+| `AdminSeed__Password` | Có | Theo chính sách mật khẩu ở trên |
+| `AdminSeed__FullName` | Không | Mặc định `System Administrator` |
+| `AdminSeed__ResetPassword` | Khi cần | Đặt `true` để đặt lại mật khẩu admin, xong thì xoá |
+| `Email__UserName` | Có | Địa chỉ Gmail gửi thư |
+| `Email__Password` | Có | App Password 16 ký tự |
+| `Email__PublicBaseUrl` | Có | Địa chỉ công khai của website. Để trống thì liên kết lấy theo header Host (có thể bị giả mạo) và ứng dụng ghi cảnh báo |
+| `Email__SenderEmail`, `Email__SenderName` | Không | Địa chỉ và tên người gửi |
+| `Email__Host`, `Email__Port`, `Email__UseStartTls` | Không | Chỉ khi không dùng Gmail |
+| `DataProtection__KeysPath` | Không | Mặc định dùng thư mục `private` cạnh `wwwroot` nếu có |
 
 ## Chạy unit test
 
@@ -270,9 +302,11 @@ Ví dụ:
 - User mới nhận role `User`.
 - Tài khoản bị khóa sau 5 lần đăng nhập sai trong 15 phút.
 - Endpoint xác thực dùng rate limiting.
-- `RequireConfirmedEmail=false` theo cấu hình hiện tại: tài khoản mới có thể đăng nhập ngay.
-- Luồng xác thực email và gửi lại email xác thực vẫn có sẵn.
-- Luồng quên mật khẩu, đặt lại mật khẩu và đổi mật khẩu hoạt động qua email.
+- `RequireConfirmedEmail=true`: người tự đăng ký phải mở liên kết trong email (hiệu lực 24 giờ) và bấm xác nhận rồi mới đăng nhập được.
+- Chưa nhận được thư thì dùng **Gửi lại email xác thực**; quản trị viên cũng có thể xác thực thủ công ở trang Người dùng.
+- Liên kết đặt lại mật khẩu hiệu lực 1 giờ và chỉ dùng được một lần. Đặt lại thành công thì email được coi là đã xác thực và khóa tạm do nhập sai được gỡ (khóa dài hạn giữ nguyên).
+- Trang quên mật khẩu hiện cùng một thông báo dù email có tồn tại hay không.
+- Đổi mật khẩu xong, hệ thống gửi email thông báo.
 
 ### Khởi tạo tài khoản mặc định
 
