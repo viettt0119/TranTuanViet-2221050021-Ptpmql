@@ -133,7 +133,7 @@ public class AccountController(
         if (result.Succeeded)
             return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl)
                 ? model.ReturnUrl!
-                : Url.Action("Index", "Home")!);
+                : Url.Action("Dashboard", "Home")!);
 
         if (result.IsNotAllowed)
         {

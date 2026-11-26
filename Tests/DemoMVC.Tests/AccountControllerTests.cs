@@ -323,6 +323,27 @@ public class AccountControllerTests
             error => error.ErrorMessage.Contains("bị khóa", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task Login_without_return_url_redirects_to_dashboard()
+    {
+        var fixture = new ControllerFixture();
+        fixture.UrlHelper
+            .Setup(helper => helper.Action(It.Is<UrlActionContext>(context =>
+                context.Controller == "Home" && context.Action == "Dashboard")))
+            .Returns("/Home/Dashboard");
+        fixture.SignInManager
+            .Setup(manager => manager.PasswordSignInAsync("user@example.test", "GoodPassword!123", false, true))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+
+        var result = await fixture.Controller.Login(new LoginViewModel
+        {
+            Email = "user@example.test",
+            Password = "GoodPassword!123"
+        });
+
+        Assert.Equal("/Home/Dashboard", Assert.IsType<LocalRedirectResult>(result).Url);
+    }
+
     private sealed class ControllerFixture
     {
         public const string GenericForgotPasswordMessage =
@@ -331,6 +352,7 @@ public class AccountControllerTests
         public Mock<UserManager<ApplicationUser>> UserManager { get; }
         public Mock<SignInManager<ApplicationUser>> SignInManager { get; }
         public Mock<IEmailSender> EmailSender { get; } = new();
+        public Mock<IUrlHelper> UrlHelper { get; } = new();
         public AccountController Controller { get; }
 
         public ControllerFixture(string environmentName = "Production")
@@ -368,10 +390,9 @@ public class AccountControllerTests
                 Mock.Of<IHostEnvironment>(environment => environment.EnvironmentName == environmentName),
                 NullLogger<AccountController>.Instance);
 
-            var urlHelper = new Mock<IUrlHelper>();
-            urlHelper.Setup(helper => helper.Action(It.IsAny<UrlActionContext>()))
+            UrlHelper.Setup(helper => helper.Action(It.IsAny<UrlActionContext>()))
                 .Returns("/Account/ResetPassword?userId=user-1&token=encoded");
-            Controller.Url = urlHelper.Object;
+            Controller.Url = UrlHelper.Object;
             Controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext(),
