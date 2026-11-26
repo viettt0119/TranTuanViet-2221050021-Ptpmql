@@ -12,6 +12,8 @@
   <ItemGroup>
     <!-- File cấu hình công cụ, không cần trên server. -->
     <Content Update="global.json;libman.json" CopyToPublishDirectory="Never" />
+    <!-- File cấu hình chứa bí mật không được nằm trong wwwroot của bản publish: mọi người đều tải được. -->
+    <Content Update="wwwroot\appsettings*.json" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
   <ItemGroup>
