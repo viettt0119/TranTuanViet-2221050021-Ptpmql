@@ -267,11 +267,12 @@ public class AccountController(
     [EnableRateLimiting(AuthRateLimitPolicy)]
     public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
     {
-        if (!ModelState.IsValid || !AuthTokenCodec.TryDecode(model.Token, out var decodedToken))
+        if (!ModelState.IsValid)
             return View(model);
 
         var user = await userManager.FindByIdAsync(model.UserId);
-        if (user is null || !string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))
+        if (!AuthTokenCodec.TryDecode(model.Token, out var decodedToken) ||
+            user is null || !string.Equals(user.Email, model.Email, StringComparison.OrdinalIgnoreCase))
         {
             ModelState.AddModelError(string.Empty, "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
             return View(model);
@@ -288,8 +289,10 @@ public class AccountController(
         if (!user.EmailConfirmed)
         {
             user.EmailConfirmed = true;
-            await userManager.UpdateAsync(user);
+            LogIfFailed(await userManager.UpdateAsync(user), "confirm the email");
         }
+
+        await ClearTemporaryLockoutAsync(user);
 
         return View("ResetPasswordConfirmation");
     }
@@ -382,6 +385,33 @@ public class AccountController(
         // SignInManager không kiểm tra mật khẩu khi email chưa xác thực; tự ghi nhận lần sai để giữ cơ chế khóa tài khoản.
         await userManager.AccessFailedAsync(user);
         return UnconfirmedLoginResult.NotApplicable;
+    }
+
+    // Đặt lại mật khẩu xong thì gỡ khóa tạm do nhập sai. Khóa dài hơn thời gian khóa mặc định
+    // là do quản trị đặt nên giữ nguyên, tránh người bị chặn tự mở khóa qua email.
+    private async Task ClearTemporaryLockoutAsync(ApplicationUser user)
+    {
+        if (await userManager.IsLockedOutAsync(user))
+        {
+            if (user.LockoutEnd > DateTimeOffset.UtcNow.Add(userManager.Options.Lockout.DefaultLockoutTimeSpan))
+                return;
+
+            LogIfFailed(await userManager.SetLockoutEndDateAsync(user, null), "unlock the account");
+        }
+
+        LogIfFailed(await userManager.ResetAccessFailedCountAsync(user), "reset failed sign-in attempts");
+    }
+
+    // Mật khẩu đã đổi xong nên không báo lỗi cho người dùng; chỉ ghi log để quản trị xử lý.
+    private void LogIfFailed(IdentityResult result, string operation)
+    {
+        if (!result.Succeeded)
+        {
+            logger.LogError(
+                "Password was reset but could not {Operation}: {Errors}",
+                operation,
+                string.Join("; ", result.Errors.Select(error => error.Code)));
+        }
     }
 
     private string BuildAccountLink(string action, object values)

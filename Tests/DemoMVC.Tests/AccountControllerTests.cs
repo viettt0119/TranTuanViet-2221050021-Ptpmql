@@ -344,6 +344,50 @@ public class AccountControllerTests
         Assert.Equal("/Home/Dashboard", Assert.IsType<LocalRedirectResult>(result).Url);
     }
 
+    [Fact]
+    public async Task ResetPassword_with_undecodable_token_explains_that_link_is_invalid()
+    {
+        var fixture = new ControllerFixture();
+        fixture.SetupPasswordReset(DateTimeOffset.UtcNow.AddMinutes(3));
+
+        var result = await fixture.Controller.ResetPassword(ControllerFixture.ValidPasswordReset("!!"));
+
+        Assert.IsType<ViewResult>(result);
+        Assert.False(fixture.Controller.ModelState.IsValid);
+        Assert.Contains(
+            fixture.Controller.ModelState[string.Empty]!.Errors,
+            error => error.ErrorMessage.Contains("không hợp lệ hoặc đã hết hạn", StringComparison.OrdinalIgnoreCase));
+        fixture.UserManager.Verify(manager => manager.ResetPasswordAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ResetPassword_confirms_email_and_clears_temporary_lockout()
+    {
+        var fixture = new ControllerFixture();
+        var user = fixture.SetupPasswordReset(DateTimeOffset.UtcNow.AddMinutes(3));
+
+        var result = await fixture.Controller.ResetPassword(ControllerFixture.ValidPasswordReset());
+
+        Assert.Equal("ResetPasswordConfirmation", Assert.IsType<ViewResult>(result).ViewName);
+        Assert.True(user.EmailConfirmed);
+        fixture.UserManager.Verify(manager => manager.SetLockoutEndDateAsync(user, null), Times.Once);
+        fixture.UserManager.Verify(manager => manager.ResetAccessFailedCountAsync(user), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResetPassword_keeps_long_lockout_set_by_administrator()
+    {
+        var fixture = new ControllerFixture();
+        fixture.SetupPasswordReset(DateTimeOffset.MaxValue);
+
+        var result = await fixture.Controller.ResetPassword(ControllerFixture.ValidPasswordReset());
+
+        Assert.Equal("ResetPasswordConfirmation", Assert.IsType<ViewResult>(result).ViewName);
+        fixture.UserManager.Verify(manager => manager.SetLockoutEndDateAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<DateTimeOffset?>()), Times.Never);
+    }
+
     private sealed class ControllerFixture
     {
         public const string GenericForgotPasswordMessage =
@@ -416,6 +460,36 @@ public class AccountControllerTests
             UserManager
                 .Setup(manager => manager.AddToRoleAsync(It.IsAny<ApplicationUser>(), "User"))
                 .ReturnsAsync(IdentityResult.Success);
+        }
+
+        public static ResetPasswordViewModel ValidPasswordReset(string? token = null) => new()
+        {
+            UserId = "user-1",
+            Email = "user@example.test",
+            Token = token ?? AuthTokenCodec.Encode("reset-token"),
+            Password = "NewPassword!123",
+            ConfirmPassword = "NewPassword!123"
+        };
+
+        public ApplicationUser SetupPasswordReset(DateTimeOffset lockoutEnd)
+        {
+            var user = new ApplicationUser
+            {
+                Id = "user-1",
+                Email = "user@example.test",
+                FullName = "User",
+                LockoutEnabled = true,
+                LockoutEnd = lockoutEnd
+            };
+            UserManager.Setup(manager => manager.FindByIdAsync("user-1")).ReturnsAsync(user);
+            UserManager
+                .Setup(manager => manager.ResetPasswordAsync(user, "reset-token", "NewPassword!123"))
+                .ReturnsAsync(IdentityResult.Success);
+            UserManager.Setup(manager => manager.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+            UserManager.Setup(manager => manager.IsLockedOutAsync(user)).ReturnsAsync(true);
+            UserManager.Setup(manager => manager.SetLockoutEndDateAsync(user, null)).ReturnsAsync(IdentityResult.Success);
+            UserManager.Setup(manager => manager.ResetAccessFailedCountAsync(user)).ReturnsAsync(IdentityResult.Success);
+            return user;
         }
 
         public string? Message(IActionResult actionResult)
