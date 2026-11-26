@@ -4,10 +4,11 @@ namespace DemoMVC.Models;
 
 public sealed class LoginViewModel
 {
-    [Required, EmailAddress]
+    [Required(ErrorMessage = "Vui lòng nhập email.")]
+    [EmailAddress(ErrorMessage = "Email không đúng định dạng.")]
     public string Email { get; set; } = string.Empty;
 
-    [Required, DataType(DataType.Password)]
+    [Required(ErrorMessage = "Vui lòng nhập mật khẩu."), DataType(DataType.Password)]
     public string Password { get; set; } = string.Empty;
 
     public bool RememberMe { get; set; }
