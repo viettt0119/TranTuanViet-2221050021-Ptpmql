@@ -17,6 +17,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<PermissionCatalogService>();
 builder.Services.AddScoped<StudentCodeGenerator>();
 builder.Services.AddScoped<StudentService>();
+builder.Services.AddScoped<DemoDataSeeder>();
 builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddMemoryCache();
 
@@ -155,6 +156,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.MigrateAsync();
+    await scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync();
     var permissionCatalog = scope.ServiceProvider.GetRequiredService<PermissionCatalogService>();
     await permissionCatalog.SyncAsync();
 
