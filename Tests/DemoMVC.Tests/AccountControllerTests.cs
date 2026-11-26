@@ -392,6 +392,9 @@ public class AccountControllerTests
     public async Task Register_student_gets_user_role_and_is_approved_immediately()
     {
         var fixture = new ControllerFixture();
+        fixture.UserManager
+            .Setup(manager => manager.GenerateEmailConfirmationTokenAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync("confirmation-token");
         fixture.SetupSuccessfulRegistration();
         ApplicationUser? created = null;
         fixture.UserManager
@@ -416,6 +419,9 @@ public class AccountControllerTests
     public async Task Register_staff_waits_for_approval_and_gets_no_role_yet()
     {
         var fixture = new ControllerFixture();
+        fixture.UserManager
+            .Setup(manager => manager.GenerateEmailConfirmationTokenAsync(It.IsAny<ApplicationUser>()))
+            .ReturnsAsync("confirmation-token");
         ApplicationUser? created = null;
         fixture.UserManager
             .Setup(manager => manager.CreateAsync(It.IsAny<ApplicationUser>(), "GoodPassword!123"))

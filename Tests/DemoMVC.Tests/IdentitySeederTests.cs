@@ -49,11 +49,13 @@ public class IdentitySeederTests
         await seeder.SeedAsync();
         await seeder.SeedAsync();
 
-        Assert.Equal(2, await context.Roles.CountAsync());
+        Assert.Equal(SystemRoles.All.Count, await context.Roles.CountAsync()); // Admin, User, GiangVien
         Assert.Equal(1, await context.Users.CountAsync());
         var admin = await provider.GetRequiredService<UserManager<ApplicationUser>>()
             .FindByEmailAsync("admin@example.test");
         Assert.NotNull(admin);
+        Assert.Equal(AccountType.Staff, admin!.AccountType); // Admin đăng nhập bằng tư cách "Giảng viên / Quản trị".
+        Assert.True(admin.IsApproved);
         Assert.True(admin.EmailConfirmed);
         Assert.True(await provider.GetRequiredService<UserManager<ApplicationUser>>().IsInRoleAsync(admin, "Admin"));
         Assert.False(await provider.GetRequiredService<UserManager<ApplicationUser>>().IsInRoleAsync(admin, "User"));

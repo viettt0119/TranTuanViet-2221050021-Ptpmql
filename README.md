@@ -112,3 +112,26 @@ Ví dụ:
 - Migration được lưu trong thư mục `Migrations`.
 - Entity nghiệp vụ: Sinh viên, Khoa, Nhân viên, Sản phẩm.
 - Startup tự migrate database khi ứng dụng chạy.
+
+## Hoàn thiện dự án: bài học chỉ Admin, đăng nhập theo tư cách
+
+Prompt kiểm tra và hoàn thiện toàn bộ dự án: [.github/prompts/hoan-thien-du-an.prompt.md](.github/prompts/hoan-thien-du-an.prompt.md).
+
+### Xem lại bài học (chỉ Admin)
+- Các bài thực hành Lec 1 – Lec 6 (`LessonController`, `Lesson4Controller`, `Lec5Controller`) gắn `[AdminOnly]`:
+  chỉ role **Admin** vào được, kể cả khi gõ URL trực tiếp hay gọi Ajax. Các action này **không** nằm trên ma trận phân quyền
+  nên không thể cấp cho role khác; quyền `Lesson.*`, `Lesson4.*`, `Lec5.*` cũ tự bị xoá khỏi CSDL khi khởi động.
+- Trang **Xem lại bài học** (`/Lesson`): danh sách bài giảng + bài thực hành, tìm kiếm theo tên/chủ đề, lọc theo buổi, phân trang.
+  Mục "Bài học" trên sidebar chỉ hiện với Admin.
+
+### Đăng nhập / đăng ký theo tư cách
+| Tư cách | Mã khi đăng ký | Sau khi đăng ký |
+|---|---|---|
+| Sinh viên | Mã sinh viên: 10 chữ số, bắt đầu bằng 2 (VD `2521050001`) | Xác thực email → đăng nhập, role `User` |
+| Giảng viên / Cán bộ | Mã cán bộ: 2–4 chữ cái + 2–6 chữ số (VD `GV0123`) | Xác thực email **và** chờ Admin phê duyệt → role `GiangVien` |
+
+- Khi đăng nhập phải chọn đúng tư cách; tài khoản Admin dùng tư cách **Giảng viên / Quản trị**.
+- Mã SV / mã cán bộ là duy nhất.
+- Admin phê duyệt tại **Người dùng** → lọc "Chờ duyệt" → **Duyệt** (quyền riêng `UserManagement.Approve`).
+- Vai trò hệ thống `Admin`, `User`, `GiangVien` không đổi tên / xoá được; quyền của `User` và `GiangVien` vẫn chỉnh trên ma trận.
+- Migration `AddAccountTypeAndApproval`: tài khoản cũ được coi là đã duyệt, tài khoản Admin cũ chuyển sang tư cách Giảng viên / Quản trị.
