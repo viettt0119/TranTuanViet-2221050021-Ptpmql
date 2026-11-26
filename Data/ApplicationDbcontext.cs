@@ -18,6 +18,14 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ApplicationPermission> ApplicationPermissions { get; set; }
     public DbSet<ApplicationRolePermission> ApplicationRolePermissions { get; set; }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        base.OnConfiguring(optionsBuilder);
+        // Tìm kiếm không phân biệt hoa/thường cho tiếng Việt (SQLite lower() chỉ xử lý ASCII).
+        // Interceptor tự bỏ qua kết nối không phải SQLite.
+        optionsBuilder.AddInterceptors(SqliteUnicodeFunctionsInterceptor.Instance);
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
