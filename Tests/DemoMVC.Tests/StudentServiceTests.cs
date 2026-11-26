@@ -107,6 +107,79 @@ public class StudentServiceTests
         Assert.Contains("thay đổi", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Theory]
+    [InlineData("own@example.test")]
+    [InlineData("  OWN@Example.TEST ")]
+    public async Task GetOwnProfileAsync_returns_the_record_with_the_confirmed_account_email(string accountEmail)
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        await SeedProfilesAsync(fixture, "Own@example.test", "other@example.test");
+
+        var profile = await fixture.Service.GetOwnProfileAsync(Account(accountEmail));
+
+        Assert.NotNull(profile);
+        Assert.Equal("2821050001", profile.StudentCode);
+        Assert.Equal("Khoa kiểm thử", profile.DepartmentName);
+    }
+
+    [Fact]
+    public async Task GetOwnProfileAsync_does_not_trust_the_self_declared_student_code()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        await SeedProfilesAsync(fixture, "own@example.test", "other@example.test");
+        var account = Account("stranger@example.test");
+        account.MemberCode = "2821050001";
+
+        Assert.Null(await fixture.Service.GetOwnProfileAsync(account));
+    }
+
+    [Theory]
+    [InlineData(false, AccountType.Student)]
+    [InlineData(true, AccountType.Staff)]
+    public async Task GetOwnProfileAsync_requires_a_confirmed_student_account(bool emailConfirmed, AccountType type)
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        await SeedProfilesAsync(fixture, "own@example.test", "other@example.test");
+        var account = Account("own@example.test");
+        account.EmailConfirmed = emailConfirmed;
+        account.AccountType = type;
+
+        Assert.Null(await fixture.Service.GetOwnProfileAsync(account));
+    }
+
+    [Fact]
+    public async Task GetOwnProfileAsync_links_nothing_when_two_records_share_the_email()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        // Chỉ mục duy nhất của SQLite phân biệt hoa/thường nên hai hồ sơ này cùng tồn tại được.
+        await SeedProfilesAsync(fixture, "own@example.test", "OWN@example.test");
+
+        Assert.Null(await fixture.Service.GetOwnProfileAsync(Account("own@example.test")));
+    }
+
+    private static ApplicationUser Account(string email) => new()
+    {
+        Email = email,
+        FullName = "Sinh vien",
+        AccountType = AccountType.Student,
+        EmailConfirmed = true
+    };
+
+    private static async Task SeedProfilesAsync(StudentFixture fixture, string firstEmail, string secondEmail)
+    {
+        fixture.Context.Departments.Add(new DepartmentModel
+        {
+            DepartmentCode = "TEST",
+            DepartmentName = "Khoa kiểm thử"
+        });
+        var first = Student("2821050001", "Nguyen Van A", "TEST", 2026);
+        first.Email = firstEmail;
+        var second = Student("2821050002", "Tran Thi B", "TEST", 2026);
+        second.Email = secondEmail;
+        fixture.Context.Students.AddRange(first, second);
+        await fixture.Context.SaveChangesAsync();
+    }
+
     private static StudentModel Student(string code, string name, string departmentCode, int year) => new()
     {
         StudentCode = code,

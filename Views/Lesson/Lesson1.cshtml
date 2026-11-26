@@ -260,9 +260,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 </section>
 
 <!-- 5. VÍ DỤ MINH HỌA CODE MẪU -->
@@ -290,18 +287,17 @@
             <div class="code-block shadow">
                 <div class="text-secondary small mb-2">// File: Views/Product/Index.cshtml</div>
                 <pre class="m-0"><code class="text-light"><span class="text-info">@@model</span> IEnumerable&lt;Product&gt;
-                    &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"row g-3"</span>&gt;
-                    <span class="text-info">@@foreach</span> (var item <span class="text-info">in</span> Model)
-                    {
-                        &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"col-md-4"</span>&gt;
-                            &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"card h-100 p-3 shadow-sm"</span>&gt;
-                                &lt;<span class="text-warning">h5</span> <span class="text-success">class</span>=<span class="text-danger">"fw-bold"</span>&gt;<span class="text-info">@@item.Name</span>&lt;/<span class="text-warning">h5</span>&gt;
-                                &lt;<span class="text-warning">span</span> <span class="text-success">class</span>=<span class="text-danger">"badge bg-primary"</span>&gt;<span class="text-info">@@item.Price.ToString("N0") VNĐ</span>&lt;/<span class="text-warning">span</span>&gt;
-                            &lt;/<span class="text-warning">div</span>&gt;
-                        &lt;/<span class="text-warning">div</span>&gt;
-                    }
-                    &lt;/<span class="text-warning">div</span>&gt;</code>
-                </pre>
+&lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"row g-3"</span>&gt;
+<span class="text-info">@@foreach</span> (var item <span class="text-info">in</span> Model)
+{
+    &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"col-md-4"</span>&gt;
+        &lt;<span class="text-warning">div</span> <span class="text-success">class</span>=<span class="text-danger">"card h-100 p-3 shadow-sm"</span>&gt;
+            &lt;<span class="text-warning">h5</span> <span class="text-success">class</span>=<span class="text-danger">"fw-bold"</span>&gt;<span class="text-info">@@item.Name</span>&lt;/<span class="text-warning">h5</span>&gt;
+            &lt;<span class="text-warning">span</span> <span class="text-success">class</span>=<span class="text-danger">"badge bg-primary"</span>&gt;<span class="text-info">@@item.Price.ToString("N0") VNĐ</span>&lt;/<span class="text-warning">span</span>&gt;
+        &lt;/<span class="text-warning">div</span>&gt;
+    &lt;/<span class="text-warning">div</span>&gt;
+}
+&lt;/<span class="text-warning">div</span>&gt;</code></pre>
             </div>
         </div>
     </div>

@@ -116,6 +116,14 @@ body {
 .empty-state { text-align: center; color: var(--app-muted); padding: 48px 16px; }
 .empty-state i { display: block; font-size: 2.5rem; margin-bottom: 8px; }
 
+/* Thanh trên cùng: email và breadcrumb dài được rút gọn trên một dòng, không đè lên nội dung hay làm cuộn ngang trang. */
+.min-w-0, .topbar nav { min-width: 0; }
+.user-menu-toggle { display: inline-flex; align-items: center; max-width: min(320px, 50vw); }
+.topbar .breadcrumb { flex-wrap: nowrap; white-space: nowrap; }
+.topbar .breadcrumb-item { overflow: hidden; text-overflow: ellipsis; }
+.topbar .breadcrumb-item.active { min-width: 0; }
+.sidebar-backdrop { display: none; }
+
 .landing-page {
     background: #f5f7fb;
     color: #1d2939;
@@ -202,6 +210,14 @@ body {
         box-shadow: var(--app-shadow);
     }
     .app-sidebar.show { transform: translateX(0); }
+    /* Lớp phủ phía sau menu: menu che nút mở nên cần chạm ra ngoài để đóng. */
+    .app-sidebar.show ~ .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, .45);
+        z-index: 1025;
+    }
     .app-main,
     .app-main.sidebar-collapsed { margin-left: 0; }
     .topbar { padding: 0 16px; }
@@ -230,6 +246,9 @@ body {
         gap: 0.35rem;
         padding-inline: 1rem;
     }
+
+    /* Màn hình hẹp chỉ giữ liên kết quay lại; tên trang đã có trong nội dung. */
+    .topbar .breadcrumb-item.active:not(:first-child) { display: none; }
 }
 
 /* Trang "Xem lại bài học" (chỉ Admin) */

@@ -1,0 +1,77 @@
+@model DemoMVC.Models.AccountProfileViewModel
+@{
+    ViewData["Title"] = "Tài khoản của tôi";
+    string Show(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+}
+<div class="mb-4">
+    <span class="page-eyebrow">CỔNG QUẢN LÝ</span>
+    <h1>Tài khoản của tôi</h1>
+    <p class="text-muted mb-0 text-break">Bạn đang đăng nhập bằng @Model.Email</p>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-5">
+        <section class="card p-3 p-md-4 h-100" aria-labelledby="account-info-title">
+            <h2 id="account-info-title" class="fs-5 mb-3">Thông tin tài khoản</h2>
+            <dl class="row mb-3 text-break">
+                <dt class="col-sm-4">Email</dt>
+                <dd class="col-sm-8">@Model.Email</dd>
+                <dt class="col-sm-4">Họ tên</dt>
+                <dd class="col-sm-8">@Show(Model.FullName)</dd>
+                <dt class="col-sm-4">Tư cách</dt>
+                <dd class="col-sm-8">@Model.AccountType.DisplayName()</dd>
+                <dt class="col-sm-4">@Model.AccountType.CodeLabel()</dt>
+                <dd class="col-sm-8">@Show(Model.MemberCode)</dd>
+            </dl>
+            <div>
+                <a asp-controller="Account" asp-action="ChangePassword" class="btn btn-outline-primary"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a>
+            </div>
+        </section>
+    </div>
+
+    @if (Model.Student is { } student)
+    {
+        <div class="col-xl-7">
+            <section class="card p-3 p-md-4 h-100" aria-labelledby="student-profile-title">
+                <h2 id="student-profile-title" class="fs-5 mb-3">Hồ sơ sinh viên</h2>
+                <dl class="row mb-0 text-break">
+                    <dt class="col-sm-4">Mã sinh viên</dt>
+                    <dd class="col-sm-8">@student.StudentCode</dd>
+                    <dt class="col-sm-4">Họ tên</dt>
+                    <dd class="col-sm-8">@student.FullName</dd>
+                    <dt class="col-sm-4">Ngày sinh</dt>
+                    <dd class="col-sm-8">@Show(student.DateOfBirth?.ToString("dd/MM/yyyy"))</dd>
+                    <dt class="col-sm-4">Giới tính</dt>
+                    <dd class="col-sm-8">@Show(student.Gender?.ToString())</dd>
+                    <dt class="col-sm-4">Email</dt>
+                    <dd class="col-sm-8">@Show(student.Email)</dd>
+                    <dt class="col-sm-4">Số điện thoại</dt>
+                    <dd class="col-sm-8">@Show(student.PhoneNumber)</dd>
+                    <dt class="col-sm-4">Địa chỉ</dt>
+                    <dd class="col-sm-8">@Show(student.Address)</dd>
+                    <dt class="col-sm-4">Trường</dt>
+                    <dd class="col-sm-8">@Show(student.University)</dd>
+                    <dt class="col-sm-4">Khoa</dt>
+                    <dd class="col-sm-8">@Show(student.DepartmentName)</dd>
+                    <dt class="col-sm-4">Năm nhập học</dt>
+                    <dd class="col-sm-8">@student.AdmissionYear</dd>
+                    <dt class="col-sm-4">Hệ / Ngành</dt>
+                    <dd class="col-sm-8">@student.TrainingSystemCode / @student.MajorCode</dd>
+                </dl>
+            </section>
+        </div>
+    }
+    else if (Model.AccountType == AccountType.Student)
+    {
+        <div class="col-xl-7">
+            <section class="card p-3 p-md-4 h-100" aria-labelledby="student-profile-title">
+                <h2 id="student-profile-title" class="fs-5 mb-3">Hồ sơ sinh viên</h2>
+                <div class="alert alert-info mb-3" role="status">Tài khoản của bạn chưa liên kết với hồ sơ sinh viên</div>
+                <p class="text-muted mb-0">
+                    Hồ sơ được liên kết khi email trên hồ sơ sinh viên trùng với email bạn dùng để đăng nhập.
+                    Hãy liên hệ đơn vị quản lý hệ thống để kiểm tra và cập nhật email trên hồ sơ của bạn.
+                </p>
+            </section>
+        </div>
+    }
+</div>

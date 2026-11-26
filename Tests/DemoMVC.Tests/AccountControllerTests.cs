@@ -323,25 +323,32 @@ public class AccountControllerTests
             error => error.ErrorMessage.Contains("bị khóa", StringComparison.OrdinalIgnoreCase));
     }
 
-    [Fact]
-    public async Task Login_without_return_url_redirects_to_dashboard()
+    [Theory]
+    [InlineData(false, null, "/Account/Profile")]
+    [InlineData(false, "/", "/Account/Profile")]
+    [InlineData(false, "/Student", "/Student")]
+    [InlineData(false, "https://outside.example/", "/Account/Profile")]
+    [InlineData(true, null, "/Home/Dashboard")]
+    [InlineData(true, "/", "/Home/Dashboard")]
+    [InlineData(true, "~/", "/Home/Dashboard")]
+    [InlineData(true, "/Home", "/Home/Dashboard")]
+    [InlineData(true, "/home/index/?from=landing", "/Home/Dashboard")]
+    [InlineData(true, "/Role", "/Role")]
+    public async Task Login_redirects_by_role_unless_a_specific_page_was_requested(
+        bool isAdmin, string? returnUrl, string expectedUrl)
     {
         var fixture = new ControllerFixture();
-        fixture.UrlHelper
-            .Setup(helper => helper.Action(It.Is<UrlActionContext>(context =>
-                context.Controller == "Home" && context.Action == "Dashboard")))
-            .Returns("/Home/Dashboard");
-        fixture.SignInManager
-            .Setup(manager => manager.PasswordSignInAsync("user@example.test", "GoodPassword!123", false, true))
-            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+        var account = fixture.SetupSuccessfulLogin(AccountType.Student, isAdmin);
 
         var result = await fixture.Controller.Login(new LoginViewModel
         {
-            Email = "user@example.test",
-            Password = "GoodPassword!123"
+            AccountType = account.AccountType,
+            Email = account.Email!,
+            Password = "GoodPassword!123",
+            ReturnUrl = returnUrl
         });
 
-        Assert.Equal("/Home/Dashboard", Assert.IsType<LocalRedirectResult>(result).Url);
+        Assert.Equal(expectedUrl, Assert.IsType<LocalRedirectResult>(result).Url);
     }
 
     [Fact]
@@ -532,32 +539,16 @@ public class AccountControllerTests
     public async Task Login_with_matching_account_type_signs_in_normally()
     {
         var fixture = new ControllerFixture();
-        fixture.UrlHelper
-            .Setup(helper => helper.Action(It.Is<UrlActionContext>(context =>
-                context.Controller == "Home" && context.Action == "Dashboard")))
-            .Returns("/Home/Dashboard");
-        var account = new ApplicationUser
-        {
-            Id = "user-1",
-            Email = "gv@example.test",
-            FullName = "GV",
-            EmailConfirmed = true,
-            AccountType = AccountType.Staff,
-            IsApproved = true
-        };
-        fixture.UserManager.Setup(manager => manager.FindByEmailAsync("gv@example.test")).ReturnsAsync(account);
-        fixture.SignInManager
-            .Setup(manager => manager.PasswordSignInAsync("gv@example.test", "GoodPassword!123", false, true))
-            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+        var account = fixture.SetupSuccessfulLogin(AccountType.Staff, isAdmin: false);
 
         var result = await fixture.Controller.Login(new LoginViewModel
         {
             AccountType = AccountType.Staff,
-            Email = "gv@example.test",
+            Email = account.Email!,
             Password = "GoodPassword!123"
         });
 
-        Assert.Equal("/Home/Dashboard", Assert.IsType<LocalRedirectResult>(result).Url);
+        Assert.Equal("/Account/Profile", Assert.IsType<LocalRedirectResult>(result).Url);
     }
 
     private sealed class ControllerFixture
@@ -624,6 +615,32 @@ public class AccountControllerTests
             Password = "GoodPassword!123",
             ConfirmPassword = "GoodPassword!123"
         };
+
+        /// <summary>Tài khoản đã duyệt, đúng mật khẩu; IUrlHelper nhận diện URL nội bộ như bản thật.</summary>
+        public ApplicationUser SetupSuccessfulLogin(AccountType accountType, bool isAdmin)
+        {
+            var account = new ApplicationUser
+            {
+                Id = "user-1",
+                Email = "user@example.test",
+                FullName = "User",
+                EmailConfirmed = true,
+                AccountType = accountType,
+                IsApproved = true
+            };
+            UserManager.Setup(manager => manager.FindByEmailAsync(account.Email)).ReturnsAsync(account);
+            UserManager.Setup(manager => manager.IsInRoleAsync(account, SystemRoles.Admin)).ReturnsAsync(isAdmin);
+            SignInManager
+                .Setup(manager => manager.PasswordSignInAsync(account.Email, "GoodPassword!123", false, true))
+                .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
+            UrlHelper
+                .Setup(helper => helper.IsLocalUrl(It.IsAny<string?>()))
+                .Returns((string? url) => url is not null && (url.StartsWith('/') || url.StartsWith("~/")));
+            UrlHelper
+                .Setup(helper => helper.Action(It.IsAny<UrlActionContext>()))
+                .Returns((UrlActionContext context) => $"/{context.Controller}/{context.Action}");
+            return account;
+        }
 
         public void SetupSuccessfulRegistration()
         {

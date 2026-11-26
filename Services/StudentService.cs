@@ -116,6 +116,29 @@ public sealed class StudentService(
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <summary>
+    /// Hồ sơ sinh viên của chính tài khoản: nối theo email đăng nhập đã xác thực trùng với email trên hồ sơ.
+    /// Không nối theo <see cref="ApplicationUser.MemberCode"/> vì người đăng ký tự khai, có thể khai mã của người khác.
+    /// Trả null khi chưa liên kết, kể cả khi có nhiều hồ sơ cùng email (không đoán hồ sơ nào là đúng).
+    /// </summary>
+    public async Task<StudentDetailsViewModel?> GetOwnProfileAsync(
+        ApplicationUser account,
+        CancellationToken cancellationToken = default)
+    {
+        var email = account.Email?.Trim().ToLowerInvariant();
+        if (account.AccountType != AccountType.Student || !account.EmailConfirmed || string.IsNullOrEmpty(email))
+            return null;
+
+        var ids = await context.Students
+            .AsNoTracking()
+            .Where(student => student.Email != null && student.Email.ToLower() == email)
+            .Select(student => student.Id)
+            .Take(2)
+            .ToListAsync(cancellationToken);
+
+        return ids.Count == 1 ? await GetDetailsAsync(ids[0], cancellationToken) : null;
+    }
+
     public async Task<StudentFormViewModel?> GetForEditAsync(int id, CancellationToken cancellationToken = default)
     {
         return await context.Students

@@ -174,7 +174,7 @@ public class PermissionAuthorizationFilterTests
 
         // Danh sách action chỉ cần đăng nhập phải nhỏ và có chủ đích; thêm action mới vào đây là một quyết định bảo mật.
         Assert.Equal(
-            new[] { "Account.ChangePassword", "Account.Logout", "Home.Dashboard" },
+            new[] { "Account.ChangePassword", "Account.Logout", "Account.Profile", "Home.Dashboard" },
             authenticatedOnly.Distinct().Order(StringComparer.Ordinal).ToArray());
         // Chỉ các bài thực hành Lec 1–6 được dành riêng cho Admin.
         Assert.Equal(

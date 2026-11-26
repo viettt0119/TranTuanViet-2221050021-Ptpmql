@@ -150,9 +150,9 @@ public class AccountController(
             lockoutOnFailure: true);
 
         if (result.Succeeded)
-            return LocalRedirect(Url.IsLocalUrl(model.ReturnUrl)
+            return LocalRedirect(IsDeepLink(model.ReturnUrl)
                 ? model.ReturnUrl!
-                : Url.Action("Dashboard", "Home")!);
+                : await GetHomeUrlAsync(account));
 
         if (result.IsNotAllowed)
         {
@@ -194,6 +194,28 @@ public class AccountController(
     [AllowAnonymous]
     [HttpGet]
     public IActionResult AccessDenied() => View();
+
+    // Trang "Tài khoản của tôi": chỉ cần đăng nhập và luôn lấy dữ liệu của chính người đang đăng nhập (không nhận id).
+    [Authorize]
+    [AuthenticatedOnly]
+    [HttpGet]
+    public async Task<IActionResult> Profile(
+        [FromServices] StudentService studentService,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user is null)
+            return Challenge();
+
+        return View(new AccountProfileViewModel
+        {
+            Email = user.Email ?? string.Empty,
+            FullName = user.FullName,
+            AccountType = user.AccountType,
+            MemberCode = user.MemberCode,
+            Student = await studentService.GetOwnProfileAsync(user, cancellationToken)
+        });
+    }
 
     [AllowAnonymous]
     [HttpGet]
@@ -389,6 +411,28 @@ public class AccountController(
             LogDeliveryFailure("Confirmation", ex);
             return (false, confirmationLink);
         }
+    }
+
+    // Trang giới thiệu không phải đích cần quay lại: đăng nhập từ đó vẫn đi tiếp tới trang theo vai trò.
+    private bool IsDeepLink(string? returnUrl)
+    {
+        if (!Url.IsLocalUrl(returnUrl))
+            return false;
+
+        var path = returnUrl!.Split('?', '#')[0].TrimStart('~').TrimEnd('/');
+        return path.Length > 0 &&
+            !path.Equals("/Home", StringComparison.OrdinalIgnoreCase) &&
+            !path.Equals("/Home/Index", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Admin vào "Tổng quan quản trị", tài khoản còn lại vào "Tài khoản của tôi" (không cần quyền nghiệp vụ nào).
+    // Đọc role từ CSDL vì User của request này vẫn là khách, cookie mới có hiệu lực từ request sau.
+    private async Task<string> GetHomeUrlAsync(ApplicationUser? account)
+    {
+        var isAdmin = account is not null && await userManager.IsInRoleAsync(account, SystemRoles.Admin);
+        return isAdmin
+            ? Url.Action("Dashboard", "Home")!
+            : Url.Action(nameof(Profile), "Account")!;
     }
 
     /// <summary>

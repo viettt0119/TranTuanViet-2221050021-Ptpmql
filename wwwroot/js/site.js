@@ -35,4 +35,11 @@ window.showToast = function (message, type = "success") {
     document.getElementById("mobile-sidebar")?.addEventListener("click", () => {
         document.getElementById("app-sidebar")?.classList.toggle("show");
     });
+
+    // Menu trên điện thoại che mất nút mở: đóng bằng cách chạm ra ngoài hoặc phím Escape.
+    const closeMobileSidebar = () => document.getElementById("app-sidebar")?.classList.remove("show");
+    document.getElementById("sidebar-backdrop")?.addEventListener("click", closeMobileSidebar);
+    document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeMobileSidebar();
+    });
 })();
