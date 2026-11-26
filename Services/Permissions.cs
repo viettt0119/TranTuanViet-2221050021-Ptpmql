@@ -1,105 +1,125 @@
+using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
 namespace DemoMVC.Services;
 
 public sealed record PermissionMetadata(
     string Key,
-    string Module,
+    string Controller,
+    string Action,
     string ModuleDisplayName,
     string ActionDisplayName,
     string Group,
     int SortOrder);
 
+/// <summary>
+/// Tự phát hiện mọi Controller/Action bằng reflection và sinh khoá quyền "Controller.Action".
+/// GET và POST cùng tên action (vd. Create) dùng chung một quyền; [ActionName] được tôn trọng
+/// (DeleteConfirmed có [ActionName("Delete")] thuộc quyền "X.Delete").
+/// </summary>
 public static class Permissions
 {
-    public static class Student
+    private static readonly Dictionary<string, string> DefaultActionNames = new(StringComparer.OrdinalIgnoreCase)
     {
-        public const string View = "Student.View";
-        public const string Create = "Student.Create";
-        public const string Edit = "Student.Edit";
-        public const string Delete = "Student.Delete";
-        public const string Export = "Student.Export";
-    }
+        ["Index"] = "Xem danh sách",
+        ["Details"] = "Xem chi tiết",
+        ["Create"] = "Thêm",
+        ["Edit"] = "Sửa",
+        ["Delete"] = "Xoá",
+        ["Export"] = "Xuất Excel"
+    };
 
-    public static class Department
-    {
-        public const string View = "Department.View";
-        public const string Create = "Department.Create";
-        public const string Edit = "Department.Edit";
-        public const string Delete = "Department.Delete";
-    }
+    private static readonly Lazy<IReadOnlyList<PermissionMetadata>> Cached =
+        new(() => Discover(typeof(Permissions).Assembly));
 
-    public static class Employee
-    {
-        public const string View = "Employee.View";
-        public const string Create = "Employee.Create";
-        public const string Edit = "Employee.Edit";
-        public const string Delete = "Employee.Delete";
-    }
+    public static string Key(string controller, string action) => $"{controller}.{action}";
 
-    public static class Product
-    {
-        public const string View = "Product.View";
-        public const string Create = "Product.Create";
-        public const string Edit = "Product.Edit";
-        public const string Delete = "Product.Delete";
-    }
+    /// <summary>Danh sách quyền của toàn bộ ứng dụng (tính một lần).</summary>
+    public static IReadOnlyList<PermissionMetadata> All() => Cached.Value;
 
-    public static class ExcelImport
+    public static IReadOnlyList<PermissionMetadata> Discover(Assembly assembly)
     {
-        public const string View = "ExcelImport.View";
-        public const string Import = "ExcelImport.Import";
-    }
-
-    public static class User
-    {
-        public const string View = "User.View";
-        public const string Edit = "User.Edit";
-    }
-
-    public static class Role
-    {
-        public const string View = "Role.View";
-        public const string Create = "Role.Create";
-        public const string Edit = "Role.Edit";
-        public const string Delete = "Role.Delete";
-    }
-
-    public static IReadOnlyList<PermissionMetadata> All()
-    {
-        var permissions = new List<PermissionMetadata>();
-        AddModule(permissions, "Student", "Sinh viên", "Đào tạo", 10,
-            ("View", "Xem"), ("Create", "Thêm"), ("Edit", "Sửa"), ("Delete", "Xoá"), ("Export", "Xuất dữ liệu"));
-        AddModule(permissions, "Department", "Khoa", "Đào tạo", 20,
-            ("View", "Xem"), ("Create", "Thêm"), ("Edit", "Sửa"), ("Delete", "Xoá"));
-        AddModule(permissions, "Employee", "Nhân viên", "Nhân sự", 30,
-            ("View", "Xem"), ("Create", "Thêm"), ("Edit", "Sửa"), ("Delete", "Xoá"));
-        AddModule(permissions, "Product", "Sản phẩm", "Kinh doanh", 40,
-            ("View", "Xem"), ("Create", "Thêm"), ("Edit", "Sửa"), ("Delete", "Xoá"));
-        AddModule(permissions, "ExcelImport", "Nhập Excel", "Hệ thống", 50,
-            ("View", "Xem"), ("Import", "Nhập dữ liệu"));
-        AddModule(permissions, "User", "Người dùng", "Hệ thống", 60,
-            ("View", "Xem"), ("Edit", "Sửa"));
-        AddModule(permissions, "Role", "Vai trò", "Hệ thống", 70,
-            ("View", "Xem"), ("Create", "Thêm"), ("Edit", "Sửa"), ("Delete", "Xoá"));
-        return permissions;
-    }
-
-    private static void AddModule(
-        ICollection<PermissionMetadata> target,
-        string module,
-        string moduleDisplayName,
-        string group,
-        int sortOrder,
-        params (string Action, string DisplayName)[] actions)
-    {
-        foreach (var action in actions)
+        var result = new Dictionary<string, PermissionMetadata>(StringComparer.OrdinalIgnoreCase);
+        foreach (var controllerType in GetControllerTypes(assembly))
         {
-            target.Add(new PermissionMetadata(
-                $"{module}.{action.Action}",
-                module,
-                moduleDisplayName,
-                action.DisplayName,
-                group,
-                sortOrder));
+            var controllerName = GetControllerName(controllerType);
+            var module = controllerType.GetCustomAttribute<PermissionModuleAttribute>();
+
+            foreach (var method in GetActionMethods(controllerType))
+            {
+                if (!RequiresPermission(controllerType, method))
+                    continue;
+
+                var actionName = GetActionName(method);
+                var key = Key(controllerName, actionName);
+                var displayName = method.GetCustomAttribute<PermissionActionAttribute>()?.DisplayName;
+
+                if (result.TryGetValue(key, out var existing))
+                {
+                    // Action GET/POST cùng tên: lấy tên hiển thị tuỳ biến nếu một trong hai có khai báo.
+                    if (displayName is not null && existing.ActionDisplayName == DefaultActionName(actionName))
+                        result[key] = existing with { ActionDisplayName = displayName };
+                    continue;
+                }
+
+                result[key] = new PermissionMetadata(
+                    key,
+                    controllerName,
+                    actionName,
+                    module?.DisplayName ?? controllerName,
+                    displayName ?? DefaultActionName(actionName),
+                    module?.Group ?? "Khác",
+                    module?.SortOrder ?? 1000);
+            }
         }
+
+        return result.Values
+            .OrderBy(x => x.SortOrder)
+            .ThenBy(x => x.Controller, StringComparer.Ordinal)
+            .ThenBy(x => x.Action, StringComparer.Ordinal)
+            .ToList();
     }
+
+    /// <summary>
+    /// false nếu action cho khách ([AllowAnonymous]) hoặc chỉ cần đăng nhập ([AuthenticatedOnly]).
+    /// </summary>
+    public static bool RequiresPermission(Type controllerType, MethodInfo method) =>
+        !IsAnonymous(controllerType, method) && !IsAuthenticatedOnly(controllerType, method);
+
+    public static bool IsAnonymous(Type controllerType, MethodInfo method) =>
+        method.IsDefined(typeof(AllowAnonymousAttribute), inherit: true) ||
+        controllerType.IsDefined(typeof(AllowAnonymousAttribute), inherit: true);
+
+    public static bool IsAuthenticatedOnly(Type controllerType, MethodInfo method) =>
+        method.IsDefined(typeof(AuthenticatedOnlyAttribute), inherit: true) ||
+        controllerType.IsDefined(typeof(AuthenticatedOnlyAttribute), inherit: true);
+
+    public static IEnumerable<Type> GetControllerTypes(Assembly assembly) =>
+        assembly.GetTypes().Where(type =>
+            type is { IsClass: true, IsAbstract: false, IsPublic: true, ContainsGenericParameters: false } &&
+            typeof(ControllerBase).IsAssignableFrom(type) &&
+            !type.IsDefined(typeof(NonControllerAttribute), inherit: true));
+
+    public static IEnumerable<MethodInfo> GetActionMethods(Type controllerType) =>
+        controllerType
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public)
+            .Where(method =>
+                !method.IsSpecialName &&
+                method.DeclaringType is not null &&
+                typeof(ControllerBase).IsAssignableFrom(method.DeclaringType) &&
+                method.DeclaringType != typeof(Controller) &&
+                method.DeclaringType != typeof(ControllerBase) &&
+                !method.IsDefined(typeof(NonActionAttribute), inherit: true));
+
+    public static string GetControllerName(Type controllerType) =>
+        controllerType.Name.EndsWith("Controller", StringComparison.Ordinal)
+            ? controllerType.Name[..^"Controller".Length]
+            : controllerType.Name;
+
+    public static string GetActionName(MethodInfo method) =>
+        method.GetCustomAttribute<ActionNameAttribute>()?.Name ?? method.Name;
+
+    private static string DefaultActionName(string action) =>
+        DefaultActionNames.TryGetValue(action, out var name) ? name : action;
 }

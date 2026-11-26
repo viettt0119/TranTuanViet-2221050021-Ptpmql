@@ -1,54 +1,76 @@
-@model List<Lec5Model>
+@model DemoMVC.Models.PagedList<Lec5Model>
+@{
+    var searchQuery = ViewData["SearchQuery"] as string;
+    var roleFilter = ViewData["RoleFilter"] as string;
+    var roles = ViewBag.RoleList as string[] ?? [];
+    ViewData["PagingRouteValues"] = new Dictionary<string, string?> { ["role"] = roleFilter };
+    var hasFilter = !string.IsNullOrWhiteSpace(searchQuery) || !string.IsNullOrWhiteSpace(roleFilter);
+}
 
-<h2>@ViewBag.Title</h2>
+<section class="list-page">
+    <div class="page-heading">
+        <div>
+            <span class="page-eyebrow">BÀI 5</span>
+            <h1>@ViewBag.Title</h1>
+            <p class="mb-0"><strong>ViewData:</strong> @ViewData["DemoViewData"]</p>
+            <p class="mb-0"><strong>ViewBag:</strong> @ViewBag.DemoViewBag</p>
+        </div>
+        <a asp-permission="Lec5.Create" asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm người dùng mới</a>
+    </div>
 
-<p><strong>ViewData:</strong> @ViewData["DemoViewData"]</p>
-<p><strong>ViewBag:</strong> @ViewBag.DemoViewBag</p>
-
-
-<p>Đây là danh sách người dùng của bạn...</p>
-
-<table border="1" cellpadding="10" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-    <thead>
-        <tr>
-            <th>STT</th>
-            <th>Tên đăng nhập</th>
-            <th>Quyền truy cập</th>
-            <th>Thao tác</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (Model == null || Model.Count == 0)
-        {
-            <tr>
-                <td colspan="4" style="text-align: center;">Chưa có người dùng nào.</td>
-            </tr>
-        }
-        else
-        {
-            var stt = 1;
-            foreach (var user in Model)
+    <div class="list-toolbar">
+        <form asp-action="Index" method="get" class="search-form">
+            <label class="visually-hidden" for="lec5-search">Tìm người dùng</label>
+            <input id="lec5-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo tên đăng nhập..." />
+            <label class="visually-hidden" for="lec5-role">Lọc theo quyền</label>
+            <select id="lec5-role" name="role" class="form-select w-auto">
+                <option value="">Tất cả quyền</option>
+                @foreach (var role in roles)
+                {
+                    <option value="@role" selected="@(role == roleFilter)">@role</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
+            @if (hasFilter)
             {
-                <tr>
-                    <td>@stt</td>
-                    <td>@user.Username</td>
-                    <td>@user.Role</td>
-                    <td>
-                        <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })">Chi tiết</a> |
-                        <a asp-action="Edit" asp-route-id="@user.Id" data-modal-url="@Url.Action("Edit", new { id = user.Id })">Sửa</a> |
-                        <a asp-action="Delete" asp-route-id="@user.Id" data-modal-url="@Url.Action("Delete", new { id = user.Id })">Xóa</a>
-                    </td>
-                </tr>
-                stt++;
+                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
             }
-        }
-    </tbody>
-</table>
+        </form>
+    </div>
 
-<br />
-<a asp-action="Create" data-modal-url="@Url.Action("Create")">Thêm người dùng mới</a>
-<br />
-
-<p> 
-     </p>
+    <div data-crud-list>
+        <div class="table-responsive list-card">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr><th>STT</th><th>Tên đăng nhập</th><th>Quyền truy cập</th><th class="text-end">Thao tác</th></tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
+                    {
+                        <tr><td colspan="4" class="empty-state">@(hasFilter ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng nào.")</td></tr>
+                    }
+                    else
+                    {
+                        var stt = (Model.PageIndex - 1) * Model.PageSize + 1;
+                        foreach (var user in Model.Items)
+                        {
+                            <tr>
+                                <td>@stt</td>
+                                <td class="fw-semibold">@user.Username</td>
+                                <td><span class="badge text-bg-secondary">@user.Role</span></td>
+                                <td class="text-end text-nowrap">
+                                    <a asp-permission="Lec5.Details" asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                                    <a asp-permission="Lec5.Edit" asp-action="Edit" asp-route-id="@user.Id" data-modal-url="@Url.Action("Edit", new { id = user.Id })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                                    <a asp-permission="Lec5.Delete" asp-action="Delete" asp-route-id="@user.Id" data-modal-url="@Url.Action("Delete", new { id = user.Id })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                                </td>
+                            </tr>
+                            stt++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        @await Html.PartialAsync("_PagedListFooter", (object)Model)
+    </div>
+</section>
 @await Html.PartialAsync("_CrudModalHost")

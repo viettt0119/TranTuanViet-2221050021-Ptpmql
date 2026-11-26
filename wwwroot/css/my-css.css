@@ -714,3 +714,59 @@ body {
         display: none;
     }
 }
+/* Ô mật khẩu có nút hiển thị/che (wwwroot/js/password-toggle.js) */
+.password-field {
+    position: relative;
+}
+
+.password-field > .form-control {
+    padding-right: 3rem;
+}
+
+/* Ẩn nút "hiện mật khẩu" có sẵn của Edge để không bị hai nút con mắt. */
+.password-field > input::-ms-reveal,
+.password-field > input::-ms-clear {
+    display: none;
+}
+
+.password-toggle {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 0.375rem;
+    color: var(--bs-secondary-color);
+    display: inline-flex;
+    height: calc(100% - 0.5rem);
+    justify-content: center;
+    position: absolute;
+    right: 0.25rem;
+    top: 0.25rem;
+    transition: color 0.15s ease, background-color 0.15s ease;
+    width: 2.5rem;
+}
+
+.password-toggle:hover {
+    background-color: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+.password-toggle:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(56, 103, 207, 0.25);
+    color: var(--bs-primary);
+    outline: 0;
+}
+
+.password-toggle[aria-pressed="true"] {
+    color: var(--bs-primary);
+}
+
+.password-caps-hint {
+    color: var(--bs-warning-text-emphasis);
+    display: none;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.password-caps-hint.show {
+    display: block;
+}

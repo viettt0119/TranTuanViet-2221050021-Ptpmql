@@ -7,6 +7,23 @@
 
 - {id?}: Tham số phụ truyền vào (dấu ? nghĩa là không bắt buộc).<br />
 <br />
+<div class="card my-3">
+    <div class="card-body">
+        <h2 class="h5">Định tuyến bằng thuộc tính [Route] (Lesson4Controller)</h2>
+        <p class="mb-2">Bấm thử các URL dưới đây; mỗi URL được khai báo bằng <code>[Route]</code>/<code>[HttpGet("...")]</code> trong controller.</p>
+        <ul class="mb-2">
+            <li><a href="/Lesson4">/Lesson4</a> và <a href="/bai-hoc/dinh-tuyen">/bai-hoc/dinh-tuyen</a>: cùng một action, hai tiền tố <code>[Route]</code> trên controller.</li>
+            <li><a href="/bai-hoc/dinh-tuyen/chao/Viet">/bai-hoc/dinh-tuyen/chao/Viet</a> và <a href="/bai-hoc/dinh-tuyen/chao/Viet/21">.../chao/Viet/21</a>: tham số <code>{name}</code> và tham số tuỳ chọn <code>{age:int?}</code>.</li>
+            <li><a href="/san-pham/5">/san-pham/5</a>: ràng buộc <code>{id:int:min(1)}</code>, dấu <code>~/</code> bỏ qua tiền tố controller.</li>
+        </ul>
+        <h3 class="h6 mt-3">Lỗi khi truy cập URL</h3>
+        <ul class="mb-0">
+            <li><a href="/san-pham/abc">/san-pham/abc</a> hoặc <a href="/san-pham/0">/san-pham/0</a>: vi phạm ràng buộc nên không khớp route nào, trả về 404.</li>
+            <li><a href="/khong-ton-tai">/khong-ton-tai</a>: không có controller nào khớp, trả về 404.</li>
+            <li>Mã lỗi được <code>UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}")</code> chuyển tới trang báo lỗi tuỳ biến bằng tiếng Việt (action <code>[Route("Home/StatusCode/{statusCode:int}")]</code>).</li>
+        </ul>
+    </div>
+</div>
 <h2>Student View index: @ViewBag.ThongBao</h2>
 <form asp-action="Index" method="post">
     <input type="text" name="FullName" placeholder="Nhập họ tên của bạn" />

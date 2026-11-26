@@ -163,7 +163,22 @@ public sealed class StudentService(
             MajorCode = form.MajorCode
         };
 
-        await codeGenerator.CreateAsync(student, cancellationToken);
+        try
+        {
+            await codeGenerator.CreateAsync(student, cancellationToken);
+        }
+        catch (StudentCodeExhaustedException ex)
+        {
+            context.Entry(student).State = EntityState.Detached;
+            return ServiceResult.Fail(ex.Message);
+        }
+        catch (DbUpdateException)
+        {
+            // Transaction đã hoàn tác cả bộ đếm; thường do email vừa bị người khác dùng hoặc mã trùng dữ liệu cũ.
+            context.Entry(student).State = EntityState.Detached;
+            return ServiceResult.Fail("Không thể lưu sinh viên do trùng mã sinh viên hoặc email. Vui lòng thử lại.");
+        }
+
         return ServiceResult.Ok($"Đã thêm sinh viên {student.StudentCode}.", student.StudentCode);
     }
 

@@ -4,6 +4,7 @@ using DemoMVC.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.WebUtilities;
 using DemoMVC.Data;
+using DemoMVC.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace DemoMVC.Controllers;
@@ -13,7 +14,9 @@ public class HomeController : Controller
     private readonly ApplicationDbContext context;
     public HomeController(ApplicationDbContext context) => this.context = context;
 
+    // Trang tổng quan chỉ cần đăng nhập; từng thẻ số liệu tự ẩn theo quyền Xem danh sách của module.
     [HttpGet]
+    [AuthenticatedOnly]
     public async Task<IActionResult> Index()
     {
         var model = new HomeDashboardViewModel

@@ -7,19 +7,32 @@ using Microsoft.Extensions.Caching.Memory;
 namespace DemoMVC.Controllers;
 
 [Microsoft.AspNetCore.Authorization.Authorize]
+[PermissionModule("Nhập Excel", "Hệ thống", 50)]
 public sealed class ExcelImportController(
     ExcelImportService importService,
-    IMemoryCache cache) : Controller
+    IMemoryCache cache,
+    PermissionCatalogService permissionCatalog) : Controller
 {
+    private const string RolePermissionEntity = "rolepermission";
+
+    // Nhập phân quyền chỉ dành cho Admin: người khác có quyền nhập Excel không được tự cấp quyền cho mình.
+    private bool CanImport(string? entity) =>
+        !string.Equals(entity, RolePermissionEntity, StringComparison.OrdinalIgnoreCase) || User.IsInRole("Admin");
+
     [HttpGet]
-    [RequirePermission(Permissions.ExcelImport.View)]
+    [PermissionAction("Xem trang nhập")]
     public IActionResult Index() => View(new ExcelImportResult());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.ExcelImport.Import)]
+    [PermissionAction("Tải file lên, xem trước")]
     public async Task<IActionResult> Import(IFormFile? file, string entity = "department", bool overwrite = false)
     {
+        if (!CanImport(entity))
+        {
+            ModelState.AddModelError("", "Chỉ Admin mới được nhập phân quyền vai trò.");
+            return View("Index", new ExcelImportResult());
+        }
         if (file is null || file.Length == 0)
         {
             ModelState.AddModelError("", "Vui lòng chọn file Excel.");
@@ -51,7 +64,7 @@ public sealed class ExcelImportController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.ExcelImport.Import)]
+    [PermissionAction("Xác nhận nhập dữ liệu")]
     public async Task<IActionResult> Confirm(string previewToken, ExcelImportMode mode)
     {
         if (!cache.TryGetValue(previewToken, out ExcelImportPreview? preview) || preview is null)
@@ -60,10 +73,18 @@ public sealed class ExcelImportController(
             return View("Index", new ExcelImportResult());
         }
 
+        if (!CanImport(preview.Entity))
+        {
+            ModelState.AddModelError("", "Chỉ Admin mới được nhập phân quyền vai trò.");
+            return View("Index", new ExcelImportResult());
+        }
+
         try
         {
             var result = await importService.ExecuteAsync(preview, mode);
             cache.Remove(previewToken);
+            if (preview.Entity == RolePermissionEntity)
+                permissionCatalog.InvalidateAll();
             return View("Result", result);
         }
         catch (InvalidOperationException ex)
@@ -76,7 +97,7 @@ public sealed class ExcelImportController(
     }
 
     [HttpGet]
-    [RequirePermission(Permissions.ExcelImport.View)]
+    [PermissionAction("Tải file mẫu")]
     public IActionResult DownloadTemplate(string entity = "department")
     {
         using var package = new ExcelPackage();
@@ -85,6 +106,7 @@ public sealed class ExcelImportController(
         {
             "employee" => (["EmpId", "FullName", "HireDate"], ["NV001", "Nguyen Van A", "2026-11-19"]),
             "product" => (["Id", "Name", "Price"], [1, "San pham mau", 1000]),
+            "rolepermission" => (["RoleName", "Permission", "IsGranted"], ["User", "Student.Index", 1]),
             "student" => (
                 ["StudentCode", "FullName", "Address", "University", "DepartmentCode", "AdmissionYear", "TrainingSystemCode", "MajorCode"],
                 ["", "Nguyen Van A", "Ha Noi", "Đại học Mỏ - Địa chất", "CNTT", 2026, "21", "05"]),

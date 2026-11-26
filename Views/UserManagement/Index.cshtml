@@ -1,38 +1,87 @@
-@model List<DemoMVC.Controllers.UserManagementController.UserRoleViewModel>
+@model DemoMVC.Models.PagedList<DemoMVC.Models.ApplicationUser>
 @{
     ViewData["Title"] = "Quản lý người dùng";
+    var searchQuery = ViewData["SearchQuery"] as string;
+    var roleFilter = ViewData["RoleFilter"] as string;
+    var allRoles = ViewData["AllRoles"] as List<Microsoft.AspNetCore.Identity.IdentityRole> ?? [];
+    var rolesByUser = ViewData["RolesByUser"] as Dictionary<string, List<string>> ?? [];
+    ViewData["PagingRouteValues"] = new Dictionary<string, string?> { ["role"] = roleFilter };
+    var hasFilter = !string.IsNullOrWhiteSpace(searchQuery) || !string.IsNullOrWhiteSpace(roleFilter);
 }
 
-<h2>Phân quyền người dùng</h2>
+<section class="list-page">
+    <div class="page-heading">
+        <div>
+            <span class="page-eyebrow">HỆ THỐNG</span>
+            <h1>Người dùng</h1>
+            <p class="text-muted mb-0">Gán vai trò cho người dùng; quyền của người dùng là tổng quyền của các vai trò.</p>
+        </div>
+    </div>
 
-<table class="table table-bordered table-striped">
-    <thead>
-        <tr>
-            <th>Email</th>
-            <th>Họ tên</th>
-            <th>Vai trò</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var user in Model)
-        {
-            <tr>
-                <td>@user.Email</td>
-                <td>@user.FullName</td>
-                <td>
-                    @foreach (var role in user.AllRoles)
+    <div class="list-toolbar">
+        <form asp-action="Index" method="get" class="search-form">
+            <label class="visually-hidden" for="user-search">Tìm người dùng</label>
+            <input id="user-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo email hoặc họ tên..." />
+            <label class="visually-hidden" for="user-role">Lọc theo vai trò</label>
+            <select id="user-role" name="role" class="form-select w-auto">
+                <option value="">Tất cả vai trò</option>
+                @foreach (var role in allRoles)
+                {
+                    <option value="@role.Id" selected="@(role.Id == roleFilter)">@role.Name</option>
+                }
+            </select>
+            <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
+            @if (hasFilter)
+            {
+                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+            }
+        </form>
+    </div>
+
+    <div data-crud-list>
+        <div class="table-responsive list-card">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr><th>Email</th><th>Họ tên</th><th>Email xác thực</th><th>Vai trò</th><th class="text-end">Thao tác</th></tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Count == 0)
                     {
-                        <form asp-action="@(role.IsSelected ? "RemoveRole" : "AssignRole")" method="post" class="d-inline-block mb-2">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="userId" value="@user.UserId" />
-                            <input type="hidden" name="roleId" value="@role.RoleId" />
-                            <button type="submit" class="btn btn-sm @(role.IsSelected ? "btn-success" : "btn-outline-secondary")">
-                                @role.RoleName @(role.IsSelected ? "✓" : "")
-                            </button>
-                        </form>
+                        <tr><td colspan="5" class="empty-state">@(hasFilter ? "Không tìm thấy người dùng phù hợp." : "Chưa có người dùng nào.")</td></tr>
                     }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+                    @foreach (var user in Model.Items)
+                    {
+                        var roles = rolesByUser.GetValueOrDefault(user.Id) ?? [];
+                        <tr>
+                            <td class="fw-semibold">@user.Email</td>
+                            <td>@user.FullName</td>
+                            <td>
+                                @if (user.EmailConfirmed)
+                                {
+                                    <span class="badge text-bg-success">Đã xác thực</span>
+                                }
+                                else
+                                {
+                                    <span class="badge text-bg-warning">Chưa xác thực</span>
+                                }
+                            </td>
+                            <td>
+                                @if (roles.Count == 0) { <span class="text-muted">—</span> }
+                                @foreach (var role in roles)
+                                {
+                                    <span class="badge @(role == "Admin" ? "text-bg-dark" : "text-bg-secondary") me-1">@role</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-outline-info" asp-permission="UserManagement.Details">Chi tiết</a>
+                                <a asp-action="Roles" asp-route-id="@user.Id" data-modal-url="@Url.Action("Roles", new { id = user.Id })" class="btn btn-sm btn-outline-primary" asp-permission="UserManagement.Roles">Vai trò</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @await Html.PartialAsync("_PagedListFooter", (object)Model)
+    </div>
+</section>
+@await Html.PartialAsync("_CrudModalHost")

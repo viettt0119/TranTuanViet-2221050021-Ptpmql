@@ -1,0 +1,46 @@
+@model DemoMVC.Controllers.UserManagementController.UserRolesViewModel
+@{
+    var readOnly = Model.ReadOnlyReason is not null;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="userRolesTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="@Url.Action("Roles", new { id = Model.UserId })" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="userRolesTitle">Vai trò của @Model.Email</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    @if (readOnly)
+                    {
+                        <div class="alert alert-info">@Model.ReadOnlyReason</div>
+                    }
+                    @foreach (var role in Model.Roles)
+                    {
+                        var inputId = $"user-role-{role.RoleId}";
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="selectedRoles" value="@role.RoleId" id="@inputId"
+                                   checked="@role.IsSelected" disabled="@(!role.CanEdit)" />
+                            <label class="form-check-label" for="@inputId">
+                                @role.RoleName
+                                @if (!role.CanEdit && !readOnly)
+                                {
+                                    <small class="text-muted">(vai trò có quyền vượt quá quyền của bạn)</small>
+                                }
+                            </label>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@(readOnly ? "Đóng" : "Hủy")</button>
+                    @if (!readOnly)
+                    {
+                        <button type="submit" class="btn btn-primary">Lưu</button>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -25,6 +25,7 @@
             return;
         }
         parseValidation(modalElement);
+        window.initPasswordToggles?.(modalElement);
         bootstrap.Modal.getOrCreateInstance(modalElement).show();
     };
 
@@ -46,6 +47,42 @@
         } catch (error) {
             window.showToast(error.message || "Không thể tải dữ liệu.", "danger");
         }
+    });
+
+    // Ma trận phân quyền: ô đầu dòng bật/tắt mọi action (còn sửa được) của controller đó.
+    const syncModuleToggle = (row) => {
+        const toggle = row?.querySelector("[data-permission-module-toggle]");
+        if (!toggle) return;
+        const boxes = [...row.querySelectorAll('input[name="selectedPermissions"]:not(:disabled)')];
+        const checked = boxes.filter(box => box.checked).length;
+        toggle.checked = boxes.length > 0 && checked === boxes.length;
+        toggle.indeterminate = checked > 0 && checked < boxes.length;
+    };
+
+    host.addEventListener("change", (event) => {
+        const row = event.target.closest("tr");
+        if (event.target.matches("[data-permission-module-toggle]")) {
+            row.querySelectorAll('input[name="selectedPermissions"]:not(:disabled)').forEach(box => {
+                box.checked = event.target.checked;
+            });
+            event.target.indeterminate = false;
+        } else if (event.target.matches('input[name="selectedPermissions"]')) {
+            syncModuleToggle(row);
+        }
+    });
+
+    host.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-permission-select-all]");
+        if (!button) return;
+        const boxes = [...host.querySelectorAll('input[name="selectedPermissions"]:not(:disabled)')];
+        const selectAll = boxes.some(box => !box.checked);
+        boxes.forEach(box => { box.checked = selectAll; });
+        host.querySelectorAll("tr").forEach(syncModuleToggle);
+        button.textContent = selectAll ? "Bỏ chọn tất cả" : "Chọn tất cả";
+    });
+
+    host.addEventListener("shown.bs.modal", () => {
+        host.querySelectorAll("tr").forEach(syncModuleToggle);
     });
 
     host.addEventListener("submit", async (event) => {

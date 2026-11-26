@@ -1,0 +1,53 @@
+@model DemoMVC.Controllers.RoleController.RoleDetailsViewModel
+<div class="modal fade" tabindex="-1" aria-labelledby="roleDetailsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="roleDetailsTitle">Vai trò @Model.Role.Name</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <h3 class="fs-6">Người dùng (@Model.Users.Count)</h3>
+                @if (Model.Users.Count == 0)
+                {
+                    <p class="text-muted">Chưa có người dùng nào.</p>
+                }
+                else
+                {
+                    <ul>
+                        @foreach (var user in Model.Users)
+                        {
+                            <li>@user.Email @(string.IsNullOrWhiteSpace(user.FullName) ? "" : $"— {user.FullName}")</li>
+                        }
+                    </ul>
+                }
+
+                <h3 class="fs-6 mt-3">Quyền được cấp</h3>
+                @if (Model.IsSystemAdmin)
+                {
+                    <p class="mb-0">Vai trò Admin luôn có toàn bộ quyền.</p>
+                }
+                else if (Model.Permissions.Count == 0)
+                {
+                    <p class="text-muted mb-0">Chưa được cấp quyền nào.</p>
+                }
+                else
+                {
+                    @foreach (var module in Model.Permissions.GroupBy(x => x.ModuleDisplayName))
+                    {
+                        <div class="mb-2">
+                            <strong>@module.Key:</strong>
+                            @foreach (var permission in module)
+                            {
+                                <span class="badge text-bg-light border me-1" title="@permission.Key">@permission.ActionDisplayName</span>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>

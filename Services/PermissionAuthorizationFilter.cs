@@ -1,20 +1,24 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace DemoMVC.Services;
 
+/// <summary>
+/// Phân quyền động cho từng action của tất cả controller, mặc định từ chối:
+/// - [AllowAnonymous]: ai cũng vào được.
+/// - [AuthenticatedOnly]: chỉ cần đăng nhập.
+/// - Còn lại: người dùng phải có quyền "Controller.Action" qua một role của mình (Admin luôn được phép).
+/// </summary>
 public sealed class PermissionAuthorizationFilter(
     PermissionCatalogService permissionCatalogService) : IAsyncAuthorizationFilter
 {
     public async Task OnAuthorizationAsync(AuthorizationFilterContext context)
     {
-        if (context == null)
-            return;
+        ArgumentNullException.ThrowIfNull(context);
 
-        var endpointMetadata = context.ActionDescriptor.EndpointMetadata;
-        if (endpointMetadata.Any(item => item is IAllowAnonymous))
+        if (context.ActionDescriptor.EndpointMetadata.Any(item => item is IAllowAnonymous))
             return;
 
         if (context.HttpContext.User.Identity?.IsAuthenticated != true)
@@ -23,29 +27,36 @@ public sealed class PermissionAuthorizationFilter(
             return;
         }
 
-        var controllerAction = context.ActionDescriptor as Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor;
-        var methodPermission = controllerAction?.MethodInfo.GetCustomAttribute<RequirePermissionAttribute>();
-        var classPermission = controllerAction?.ControllerTypeInfo.GetCustomAttribute<RequirePermissionAttribute>();
-        var permission = methodPermission ?? classPermission;
-        if (permission is null)
+        if (context.ActionDescriptor is not ControllerActionDescriptor action)
+        {
+            // Không phải action MVC (không xảy ra với filter MVC); từ chối cho an toàn.
+            Deny(context);
+            return;
+        }
+
+        if (Permissions.IsAuthenticatedOnly(action.ControllerTypeInfo, action.MethodInfo))
             return;
 
         if (context.HttpContext.User.IsInRole("Admin"))
             return;
 
-        if (!await permissionCatalogService.HasAccessAsync(context.HttpContext.User, permission.Key))
-        {
-            if (IsAjaxRequest(context.HttpContext.Request))
-            {
-                context.Result = new JsonResult(new { success = false, message = "Bạn không có quyền truy cập chức năng này." })
-                {
-                    StatusCode = StatusCodes.Status403Forbidden
-                };
-                return;
-            }
+        var key = Permissions.Key(action.ControllerName, action.ActionName);
+        if (!await permissionCatalogService.HasAccessAsync(context.HttpContext.User, key))
+            Deny(context);
+    }
 
-            context.Result = new RedirectToActionResult("AccessDenied", "Account", null);
+    private static void Deny(AuthorizationFilterContext context)
+    {
+        if (IsAjaxRequest(context.HttpContext.Request))
+        {
+            context.Result = new JsonResult(new { success = false, message = "Bạn không có quyền truy cập chức năng này." })
+            {
+                StatusCode = StatusCodes.Status403Forbidden
+            };
+            return;
         }
+
+        context.Result = new RedirectToActionResult("AccessDenied", "Account", null);
     }
 
     public static bool IsAjaxRequest(HttpRequest request)

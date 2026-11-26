@@ -11,7 +11,7 @@
             <h1>Danh mục khoa</h1>
             <p class="text-muted mb-0">Quản lý các khoa và danh sách sinh viên trực thuộc.</p>
         </div>
-        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm khoa</a>
+        <a asp-permission="Department.Create" asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm khoa</a>
     </div>
 
     <div class="list-toolbar">
@@ -39,9 +39,9 @@
                         <td><span class="code-chip">@department.DepartmentCode</span></td>
                         <td class="fw-semibold">@department.DepartmentName</td>
                         <td class="text-end text-nowrap">
-                            <a asp-action="Details" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Details", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-info">Chi tiết</a>
-                            <a asp-action="Edit" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Edit", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-warning">Sửa</a>
-                            <a asp-action="Delete" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Delete", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                            <a asp-permission="Department.Details" asp-action="Details" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Details", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                            <a asp-permission="Department.Edit" asp-action="Edit" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Edit", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                            <a asp-permission="Department.Delete" asp-action="Delete" asp-route-id="@department.DepartmentCode" data-modal-url="@Url.Action("Delete", new { id = department.DepartmentCode })" class="btn btn-sm btn-outline-danger">Xóa</a>
                         </td>
                     </tr>
                 }

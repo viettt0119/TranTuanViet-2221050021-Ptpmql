@@ -163,6 +163,7 @@ public class AccountController(
     }
 
     [Authorize]
+    [AuthenticatedOnly]
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
@@ -294,10 +295,12 @@ public class AccountController(
     }
 
     [Authorize]
+    [AuthenticatedOnly]
     [HttpGet]
     public IActionResult ChangePassword() => View(new ChangePasswordViewModel());
 
     [Authorize]
+    [AuthenticatedOnly]
     [HttpPost]
     [ValidateAntiForgeryToken]
     [EnableRateLimiting(AuthRateLimitPolicy)]

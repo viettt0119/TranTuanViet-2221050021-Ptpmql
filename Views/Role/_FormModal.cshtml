@@ -1,0 +1,34 @@
+@model DemoMVC.Controllers.RoleController.RoleFormViewModel
+@{
+    var isCreate = (bool)ViewData["IsCreate"]!;
+    var formActionUrl = (string)ViewData["FormActionUrl"]!;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="roleFormTitle" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="@formActionUrl" method="post" data-ajax-modal-form>
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="roleFormTitle">@(isCreate ? "Thêm vai trò" : "Sửa vai trò")</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" autocomplete="off" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    @if (isCreate)
+                    {
+                        <p class="form-text mb-0">Vai trò mới chưa có quyền nào. Sau khi tạo, bấm <strong>Phân quyền</strong> để chọn các action được phép.</p>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

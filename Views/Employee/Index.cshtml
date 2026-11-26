@@ -11,7 +11,7 @@
             <h1>Nhân viên</h1>
             <p class="text-muted mb-0">Tra cứu và quản lý hồ sơ nhân viên.</p>
         </div>
-        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm nhân viên</a>
+        <a asp-permission="Employee.Create" asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm nhân viên</a>
     </div>
 
     <div class="list-toolbar">
@@ -39,9 +39,9 @@
                         <td class="fw-semibold">@item.FullName</td>
                         <td>@item.HireDate.ToString("dd/MM/yyyy")</td>
                         <td class="text-end text-nowrap">
-                            <a asp-action="Edit" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Edit", new { id = item.EmpId })" class="btn btn-sm btn-outline-warning">Sửa</a>
-                            <a asp-action="Details" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Details", new { id = item.EmpId })" class="btn btn-sm btn-outline-info">Chi tiết</a>
-                            <a asp-action="Delete" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Delete", new { id = item.EmpId })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                            <a asp-permission="Employee.Edit" asp-action="Edit" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Edit", new { id = item.EmpId })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                            <a asp-permission="Employee.Details" asp-action="Details" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Details", new { id = item.EmpId })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                            <a asp-permission="Employee.Delete" asp-action="Delete" asp-route-id="@item.EmpId" data-modal-url="@Url.Action("Delete", new { id = item.EmpId })" class="btn btn-sm btn-outline-danger">Xóa</a>
                         </td>
                     </tr>
                 }

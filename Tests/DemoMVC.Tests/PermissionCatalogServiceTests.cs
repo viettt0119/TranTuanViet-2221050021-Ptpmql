@@ -15,67 +15,94 @@ namespace DemoMVC.Tests;
 public class PermissionCatalogServiceTests
 {
     [Fact]
-    public async Task EnsureDefaultUserPermissionsAsync_grants_only_view_permissions_once()
+    public async Task EnsureDefaultUserPermissionsAsync_grants_only_default_read_permissions_once()
     {
         await using var fixture = await PermissionFixture.CreateAsync();
 
         var userRole = new IdentityRole { Id = "user-role", Name = "User", NormalizedName = "USER" };
         fixture.Context.Roles.Add(userRole);
         fixture.Context.ApplicationPermissions.AddRange(
-            Permission(Permissions.Student.View),
-            Permission(Permissions.Department.View),
-            Permission(Permissions.Employee.View),
-            Permission(Permissions.Product.View),
-            Permission(Permissions.Student.Create));
+            Permission("Student.Index"),
+            Permission("Student.Details"),
+            Permission("Department.Index"),
+            Permission("Student.Create"),
+            Permission("Student.Delete"));
         await fixture.Context.SaveChangesAsync();
 
         await fixture.Service.EnsureDefaultUserPermissionsAsync();
         await fixture.Service.EnsureDefaultUserPermissionsAsync();
 
-        var assignments = await fixture.Context.ApplicationRolePermissions
-            .Where(x => x.RoleId == userRole.Id)
-            .Join(fixture.Context.ApplicationPermissions,
-                x => x.PermissionId,
-                x => x.Id,
-                (assignment, permission) => new { permission.Key, assignment.IsGranted })
-            .ToListAsync();
-
-        Assert.Equal(4, assignments.Count);
-        Assert.All(assignments, item => Assert.True(item.IsGranted));
-        Assert.DoesNotContain(assignments, item => item.Key == Permissions.Student.Create);
+        var keys = await GrantedKeysAsync(fixture, userRole.Id);
+        Assert.Equal(["Department.Index", "Student.Details", "Student.Index"], keys.Order(StringComparer.Ordinal));
     }
 
     [Fact]
-    public async Task SyncAsync_creates_module_permissions_and_removes_old_controller_action_permissions()
+    public async Task SyncAsync_creates_one_permission_per_controller_action()
     {
         await using var fixture = await PermissionFixture.CreateAsync();
-        var oldPermission = Permission("Student.Index");
-        var role = new IdentityRole { Id = "old-role", Name = "OldRole", NormalizedName = "OLDROLE" };
+
+        await fixture.Service.SyncAsync();
+
+        var stored = await fixture.Context.ApplicationPermissions.ToListAsync();
+        foreach (var metadata in Permissions.All())
+        {
+            var permission = Assert.Single(stored, x => x.Key == metadata.Key);
+            Assert.Equal(metadata.Controller, permission.Controller);
+            Assert.Equal(metadata.Action, permission.Action);
+            Assert.Equal(metadata.ModuleDisplayName, permission.ModuleDisplayName);
+            Assert.Equal(metadata.ActionDisplayName, permission.ActionDisplayName);
+        }
+        Assert.Equal(Permissions.All().Count, stored.Count);
+    }
+
+    [Fact]
+    public async Task SyncAsync_moves_grants_from_legacy_module_permissions_to_actions()
+    {
+        await using var fixture = await PermissionFixture.CreateAsync();
+        var role = new IdentityRole { Id = "legacy-role", Name = "Legacy", NormalizedName = "LEGACY" };
         fixture.Context.Roles.Add(role);
-        fixture.Context.ApplicationPermissions.Add(oldPermission);
+        var legacyView = Permission("Student.View");
+        var legacyUserEdit = Permission("User.Edit");
+        var legacyRevoked = Permission("Product.Delete.Old");
+        fixture.Context.ApplicationPermissions.AddRange(legacyView, legacyUserEdit, legacyRevoked);
+        await fixture.Context.SaveChangesAsync();
+        fixture.Context.ApplicationRolePermissions.AddRange(
+            new ApplicationRolePermission { RoleId = role.Id, PermissionId = legacyView.Id, IsGranted = true },
+            new ApplicationRolePermission { RoleId = role.Id, PermissionId = legacyUserEdit.Id, IsGranted = true },
+            new ApplicationRolePermission { RoleId = role.Id, PermissionId = legacyRevoked.Id, IsGranted = true });
+        await fixture.Context.SaveChangesAsync();
+
+        await fixture.Service.SyncAsync();
+
+        var keys = await GrantedKeysAsync(fixture, role.Id);
+        Assert.Contains("Student.Index", keys);
+        Assert.Contains("Student.Details", keys);
+        Assert.Contains("UserManagement.Roles", keys);
+        Assert.DoesNotContain("Student.Create", keys);
+        Assert.DoesNotContain(await fixture.Context.ApplicationPermissions.ToListAsync(),
+            x => x.Key is "Student.View" or "User.Edit" or "Product.Delete.Old");
+    }
+
+    [Fact]
+    public async Task SyncAsync_keeps_existing_action_grants()
+    {
+        await using var fixture = await PermissionFixture.CreateAsync();
+        var role = new IdentityRole { Id = "keep-role", Name = "Keep", NormalizedName = "KEEP" };
+        var permission = Permission("Student.Create");
+        fixture.Context.Roles.Add(role);
+        fixture.Context.ApplicationPermissions.Add(permission);
         await fixture.Context.SaveChangesAsync();
         fixture.Context.ApplicationRolePermissions.Add(new ApplicationRolePermission
         {
             RoleId = role.Id,
-            PermissionId = oldPermission.Id,
+            PermissionId = permission.Id,
             IsGranted = true
         });
         await fixture.Context.SaveChangesAsync();
 
         await fixture.Service.SyncAsync();
 
-        Assert.DoesNotContain(await fixture.Context.ApplicationPermissions.ToListAsync(),
-            item => item.Key == "Student.Index");
-        Assert.DoesNotContain(await fixture.Context.ApplicationRolePermissions.ToListAsync(),
-            item => item.PermissionId == oldPermission.Id);
-        foreach (var metadata in Permissions.All())
-        {
-            var permission = await fixture.Context.ApplicationPermissions.SingleAsync(x => x.Key == metadata.Key);
-            Assert.Equal(metadata.ModuleDisplayName, permission.ModuleDisplayName);
-            Assert.Equal(metadata.ActionDisplayName, permission.ActionDisplayName);
-            Assert.Equal(metadata.Group, permission.Group);
-            Assert.Equal(metadata.SortOrder, permission.SortOrder);
-        }
+        Assert.Equal(["Student.Create"], await GrantedKeysAsync(fixture, role.Id));
     }
 
     [Fact]
@@ -83,7 +110,7 @@ public class PermissionCatalogServiceTests
     {
         await using var fixture = await PermissionFixture.CreateAsync();
         var role = new IdentityRole { Id = "cache-role", Name = "CacheRole", NormalizedName = "CACHEROLE" };
-        var permission = Permission(Permissions.Student.View);
+        var permission = Permission("Student.Index");
         fixture.Context.Roles.Add(role);
         fixture.Context.ApplicationPermissions.Add(permission);
         fixture.Context.Users.Add(new ApplicationUser
@@ -110,27 +137,23 @@ public class PermissionCatalogServiceTests
         var user = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, "cache-user")],
             "test"));
-        Assert.True(await fixture.Service.HasAccessAsync(user, Permissions.Student.View));
+        Assert.True(await fixture.Service.HasAccessAsync(user, "Student.Index"));
 
         var assignment = await fixture.Context.ApplicationRolePermissions
             .SingleAsync(x => x.RoleId == role.Id && x.PermissionId == permission.Id);
         assignment.IsGranted = false;
         await fixture.Context.SaveChangesAsync();
 
-        Assert.True(await fixture.Service.HasAccessAsync(user, Permissions.Student.View));
+        Assert.True(await fixture.Service.HasAccessAsync(user, "Student.Index"));
         fixture.Service.InvalidateUser("cache-user");
-        Assert.False(await fixture.Service.HasAccessAsync(user, Permissions.Student.View));
+        Assert.False(await fixture.Service.HasAccessAsync(user, "Student.Index"));
     }
 
-    [Fact]
-    public void All_permissions_cover_module_metadata()
-    {
-        var all = Permissions.All();
-        Assert.Contains(all, x => x.Key == Permissions.Student.View);
-        Assert.Contains(all, x => x.Key == Permissions.Student.Create);
-        Assert.Contains(all, x => x.ModuleDisplayName == "Sinh viên");
-        Assert.DoesNotContain(all, x => x.Module is "Lesson" or "Lesson4" or "Lec5");
-    }
+    private static async Task<List<string>> GrantedKeysAsync(PermissionFixture fixture, string roleId) =>
+        await fixture.Context.ApplicationRolePermissions
+            .Where(x => x.RoleId == roleId && x.IsGranted)
+            .Select(x => x.Permission.Key)
+            .ToListAsync();
 
     private static ApplicationPermission Permission(string key)
     {

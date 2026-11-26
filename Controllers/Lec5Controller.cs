@@ -1,9 +1,11 @@
 using DemoMVC.Models;
+using DemoMVC.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Concurrent;
 
 namespace DemoMVC.Controllers;
 
+[PermissionModule("Người dùng demo (Lec5)", "Bài học", 90)]
 public class Lec5Controller : Controller
 {
     private static readonly ConcurrentDictionary<int, Lec5Model> Users = new();
@@ -35,13 +37,23 @@ public class Lec5Controller : Controller
     }
 
     [HttpGet]
-    public IActionResult Index()
+    public IActionResult Index(string? q, string? role, int page = 1, int pageSize = 10)
     {
         ViewBag.Title = "Index Page";
         ViewBag.DemoViewBag = "Dữ liệu này được truyền bằng ViewBag .";
         ViewData["DemoViewData"] = "Dữ liệu này được truyền bằng ViewData trên trang Index.";
 
-        return View(Users.Values.OrderBy(user => user.Id).ToList());
+        IEnumerable<Lec5Model> users = Users.Values;
+        var search = q?.Trim();
+        if (!string.IsNullOrEmpty(search))
+            users = users.Where(user => user.Username?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
+        if (!string.IsNullOrWhiteSpace(role) && Roles.Contains(role, StringComparer.Ordinal))
+            users = users.Where(user => user.Role == role);
+
+        ViewData["SearchQuery"] = search;
+        ViewData["RoleFilter"] = role;
+        ViewBag.RoleList = Roles;
+        return View(PagedList<Lec5Model>.Create(users.OrderBy(user => user.Id), page, pageSize));
     }
 
     [HttpGet]
