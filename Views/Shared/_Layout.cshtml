@@ -13,7 +13,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - DemoMVC</title>
+    <title>@ViewData["Title"] - HUMG</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
@@ -22,11 +22,11 @@
 </head>
 <body>
     <aside class="app-sidebar" id="app-sidebar">
-        <a asp-controller="Home" asp-action="Index" class="sidebar-brand">
-            <i class="bi bi-grid-1x2-fill me-2"></i><span class="brand-text">DemoMVC</span>
+        <a asp-controller="Home" asp-action="Dashboard" class="sidebar-brand">
+            <i class="bi bi-mortarboard-fill me-2"></i><span class="brand-text">HUMG</span>
         </a>
         <nav class="sidebar-nav">
-            <a asp-controller="Home" asp-action="Index" class="sidebar-link"><i class="bi bi-house-door"></i><span class="sidebar-label">Tổng quan</span></a>
+            <a asp-controller="Home" asp-action="Dashboard" class="sidebar-link"><i class="bi bi-house-door"></i><span class="sidebar-label">Tổng quan</span></a>
             @if (canStudent || canDepartment)
             {
                 <div class="sidebar-heading">Đào tạo</div>

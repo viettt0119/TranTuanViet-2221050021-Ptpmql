@@ -14,10 +14,14 @@ public class HomeController : Controller
     private readonly ApplicationDbContext context;
     public HomeController(ApplicationDbContext context) => this.context = context;
 
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult Index() => View();
+
     // Trang tổng quan chỉ cần đăng nhập; từng thẻ số liệu tự ẩn theo quyền Xem danh sách của module.
     [HttpGet]
     [AuthenticatedOnly]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Dashboard()
     {
         var model = new HomeDashboardViewModel
         {

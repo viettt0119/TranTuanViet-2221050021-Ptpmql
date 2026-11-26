@@ -121,20 +121,23 @@ public class PermissionAuthorizationFilterTests
     }
 
     [Fact]
-    public async Task Authenticated_only_action_needs_login_but_no_permission()
+    public async Task Landing_page_is_anonymous_and_dashboard_needs_login()
     {
         await using var fixture = await FilterFixture.CreateAsync();
-        var context = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Index), "Index");
-        context.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+        var landingPage = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Index), "Index");
+        await fixture.Filter.OnAuthorizationAsync(landingPage);
+        Assert.Null(landingPage.Result);
+
+        var dashboard = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Dashboard), "Dashboard");
+        dashboard.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, "user-without-permission")],
             "test"));
+        await fixture.Filter.OnAuthorizationAsync(dashboard);
+        Assert.Null(dashboard.Result);
 
-        await fixture.Filter.OnAuthorizationAsync(context);
-        Assert.Null(context.Result);
-
-        var anonymous = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Index), "Index");
-        await fixture.Filter.OnAuthorizationAsync(anonymous);
-        Assert.IsType<ChallengeResult>(anonymous.Result);
+        var anonymousDashboard = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Dashboard), "Dashboard");
+        await fixture.Filter.OnAuthorizationAsync(anonymousDashboard);
+        Assert.IsType<ChallengeResult>(anonymousDashboard.Result);
     }
 
     [Fact]
@@ -164,7 +167,7 @@ public class PermissionAuthorizationFilterTests
 
         // Danh sách action chỉ cần đăng nhập phải nhỏ và có chủ đích; thêm action mới vào đây là một quyết định bảo mật.
         Assert.Equal(
-            new[] { "Account.ChangePassword", "Account.Logout", "Home.Index" },
+            new[] { "Account.ChangePassword", "Account.Logout", "Home.Dashboard" },
             authenticatedOnly.Distinct().Order(StringComparer.Ordinal).ToArray());
     }
 
@@ -244,9 +247,12 @@ public class PermissionAuthorizationFilterTests
                 ControllerName = controllerName,
                 ActionName = actionName,
                 ControllerTypeInfo = controllerType.GetTypeInfo(),
+                EndpointMetadata = new List<object>(),
                 MethodInfo = controllerType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
                     .First(method => method.Name == methodName)
             };
+            foreach (var metadata in action.MethodInfo.GetCustomAttributes(inherit: true))
+                action.EndpointMetadata.Add(metadata);
             var httpContext = new DefaultHttpContext();
             httpContext.Request.Method = HttpMethods.Get;
             httpContext.Request.Headers["Content-Type"] = "text/html";

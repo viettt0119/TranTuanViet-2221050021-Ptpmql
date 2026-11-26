@@ -116,6 +116,85 @@ body {
 .empty-state { text-align: center; color: var(--app-muted); padding: 48px 16px; }
 .empty-state i { display: block; font-size: 2.5rem; margin-bottom: 8px; }
 
+.landing-page {
+    background: #f5f7fb;
+    color: #1d2939;
+    min-height: 100vh;
+}
+
+.landing-header,
+.landing-footer {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin: 0 auto;
+    max-width: 1240px;
+    padding: 1.15rem 1.5rem;
+}
+
+.landing-brand {
+    align-items: center;
+    color: #173b80;
+    display: inline-flex;
+    gap: 0.75rem;
+    text-decoration: none;
+}
+
+.landing-brand-mark {
+    align-items: center;
+    background: #e8efff;
+    border-radius: 0.8rem;
+    color: #2457c5;
+    display: inline-flex;
+    font-size: 1.3rem;
+    height: 2.8rem;
+    justify-content: center;
+    width: 2.8rem;
+}
+
+.landing-brand strong,
+.landing-brand small {
+    display: block;
+}
+
+.landing-brand strong {
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+}
+
+.landing-brand small {
+    color: #667085;
+    font-size: 0.75rem;
+}
+
+.landing-nav,
+.landing-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.landing-page .portal-page {
+    margin-top: 1.25rem;
+}
+
+.landing-actions {
+    position: relative;
+    z-index: 1;
+}
+
+.landing-actions .btn {
+    font-weight: 650;
+}
+
+.landing-footer {
+    border-top: 1px solid #e6eaf0;
+    color: #667085;
+    font-size: 0.85rem;
+    margin-top: 2rem;
+}
+
 @media (max-width: 991.98px) {
     .app-sidebar {
         width: 260px;
@@ -127,4 +206,28 @@ body {
     .app-main.sidebar-collapsed { margin-left: 0; }
     .topbar { padding: 0 16px; }
     .app-content { padding: 16px; }
+}
+
+@media (max-width: 575.98px) {
+    .landing-header {
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding-inline: 1rem;
+    }
+
+    .landing-brand small {
+        max-width: 8rem;
+    }
+
+    .landing-nav .btn {
+        font-size: 0.82rem;
+        padding: 0.4rem 0.55rem;
+    }
+
+    .landing-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.35rem;
+        padding-inline: 1rem;
+    }
 }
