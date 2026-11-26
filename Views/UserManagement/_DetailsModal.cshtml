@@ -49,7 +49,7 @@
                 </dl>
             </div>
             <div class="modal-footer">
-                @if (!Model.IsApproved)
+                @if (!Model.IsApproved && Model.AccountType == DemoMVC.Models.AccountType.Staff)
                 {
                     <form action="@Url.Action("Approve", new { id = Model.Id })" method="post" data-ajax-modal-form asp-permission="UserManagement.Approve">
                         @Html.AntiForgeryToken()

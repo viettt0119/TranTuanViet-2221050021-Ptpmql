@@ -1,12 +1,19 @@
 @model DemoMVC.Models.ExcelImportResult
 @{
     ViewData["Title"] = "Kết quả nhập Excel";
+    var (heading, style) = Model.Status switch
+    {
+        DemoMVC.Models.ExcelImportStatus.Completed => ("Đã nhập dữ liệu Excel", "alert-success"),
+        DemoMVC.Models.ExcelImportStatus.Partial => ("Chỉ nhập được một phần", "alert-warning"),
+        DemoMVC.Models.ExcelImportStatus.Failed => ("Nhập dữ liệu không thành công", "alert-danger"),
+        _ => ("Không có dữ liệu nào thay đổi", "alert-secondary")
+    };
 }
 <section class="list-page">
     <div class="page-heading">
-        <div><span class="page-eyebrow">KẾT QUẢ</span><h1>Đã nhập dữ liệu Excel</h1></div>
+        <div><span class="page-eyebrow">KẾT QUẢ</span><h1>@heading</h1></div>
     </div>
-    <div class="alert alert-success">
+    <div class="alert @style" role="status">
         Thêm mới: <strong>@Model.AddedCount</strong> |
         Cập nhật: <strong>@Model.UpdatedCount</strong> |
         Bỏ qua: <strong>@Model.SkippedCount</strong> |
@@ -14,7 +21,7 @@
     </div>
     @if (Model.Errors.Count > 0)
     {
-        <ul class="alert alert-danger">@foreach (var error in Model.Errors) { <li>@error</li> }</ul>
+        <ul class="alert alert-danger ps-4">@foreach (var error in Model.Errors) { <li>@error</li> }</ul>
     }
     <a asp-action="Index" class="btn btn-primary">Nhập file khác</a>
 </section>

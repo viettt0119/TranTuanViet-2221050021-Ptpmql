@@ -16,9 +16,11 @@ public class HomeController : Controller
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult Index() => View();
+    public IActionResult Index() => User.Identity?.IsAuthenticated == true
+        ? RedirectToAction(nameof(Dashboard))
+        : View();
 
-    // Trang tổng quan chỉ cần đăng nhập; từng thẻ số liệu tự ẩn theo quyền Xem danh sách của module.
+    // Trang chủ chung chỉ cần đăng nhập; từng thẻ số liệu tự ẩn theo quyền Xem danh sách của module.
     [HttpGet]
     [AuthenticatedOnly]
     public async Task<IActionResult> Dashboard()

@@ -1,0 +1,25 @@
+@inject DemoMVC.Services.PermissionCatalogService PermissionCatalogService
+@{
+    var canUser = await PermissionCatalogService.HasAccessAsync(User, "UserManagement.Index");
+    var canRole = await PermissionCatalogService.HasAccessAsync(User, "Role.Index");
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var onUsers = string.Equals(controller, "UserManagement", StringComparison.OrdinalIgnoreCase);
+    var onRoles = string.Equals(controller, "Role", StringComparison.OrdinalIgnoreCase);
+}
+@if (canUser || canRole)
+{
+    <nav class="nav nav-tabs mb-3" aria-label="Tài khoản và phân quyền">
+        @if (canUser)
+        {
+            <a asp-controller="UserManagement" asp-action="Index" class="nav-link @(onUsers ? "active" : null)" aria-current="@(onUsers ? "page" : null)">
+                <i class="bi bi-people me-1" aria-hidden="true"></i>Người dùng
+            </a>
+        }
+        @if (canRole)
+        {
+            <a asp-controller="Role" asp-action="Index" class="nav-link @(onRoles ? "active" : null)" aria-current="@(onRoles ? "page" : null)">
+                <i class="bi bi-shield-check me-1" aria-hidden="true"></i>Vai trò &amp; quyền
+            </a>
+        }
+    </nav>
+}

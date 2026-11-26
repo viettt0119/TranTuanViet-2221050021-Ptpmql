@@ -1,11 +1,6 @@
 @{
     Layout = "_LandingLayout";
     ViewData["Title"] = "Hệ thống Quản lý Sinh viên HUMG";
-    // Người đã đăng nhập: Admin quay lại trang quản trị, tài khoản còn lại vào "Tài khoản của tôi".
-    var isAdmin = User.IsInRole(DemoMVC.Services.SystemRoles.Admin);
-    var entryController = isAdmin ? "Home" : "Account";
-    var entryAction = isAdmin ? "Dashboard" : "Profile";
-    var entryLabel = isAdmin ? "Vào trang quản trị" : "Vào hệ thống";
 }
 
 <header class="landing-header">
@@ -19,7 +14,7 @@
     <nav class="landing-nav" aria-label="Điều hướng chính">
         @if (User.Identity?.IsAuthenticated == true)
         {
-            <a class="btn btn-primary" asp-controller="@entryController" asp-action="@entryAction">@entryLabel</a>
+            <a class="btn btn-primary" asp-controller="Home" asp-action="Dashboard">Vào hệ thống</a>
         }
         else
         {
@@ -41,8 +36,8 @@
             <div class="landing-actions">
                 @if (User.Identity?.IsAuthenticated == true)
                 {
-                    <a class="btn btn-light btn-lg" asp-controller="@entryController" asp-action="@entryAction">
-                        @entryLabel <i class="bi bi-arrow-right ms-2"></i>
+                    <a class="btn btn-light btn-lg" asp-controller="Home" asp-action="Dashboard">
+                        Vào hệ thống <i class="bi bi-arrow-right ms-2"></i>
                     </a>
                 }
                 else

@@ -108,6 +108,12 @@ public class UserManagementController(
 
         var allRoles = await roleManager.Roles.ToListAsync();
         var selectedIds = (selectedRoles ?? []).ToHashSet(StringComparer.Ordinal);
+        if (selectedIds.Except(allRoles.Select(item => item.Id), StringComparer.Ordinal).Any())
+        {
+            ModelState.AddModelError(string.Empty, "Danh sách vai trò đã thay đổi. Vui lòng mở lại hộp thoại và chọn lại vai trò.");
+            Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
+            return PartialView("_RolesModal", await BuildRolesModelAsync(user));
+        }
         var currentNames = (await userManager.GetRolesAsync(user)).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var editable = await GetEditableRoleIdsAsync(allRoles);
 
@@ -126,6 +132,9 @@ public class UserManagementController(
                 (wanted ? toAdd : toRemove).Add(name);
         }
 
+        // Giữ cả kiểm tra Admin cuối cùng trong transaction để hai lần gỡ đồng thời
+        // không cùng nhìn thấy một quản trị viên dự phòng rồi gỡ hết Admin.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(HttpContext.RequestAborted);
         if (toRemove.Contains(AdminRole, StringComparer.OrdinalIgnoreCase))
         {
             var admins = await userManager.GetUsersInRoleAsync(AdminRole);
@@ -137,23 +146,44 @@ public class UserManagementController(
             }
         }
 
-        if (toAdd.Count > 0)
+        // Identity lưu từng lần gán/gỡ riêng. Một thao tác trong modal phải được ghi trọn vẹn
+        // hoặc hoàn tác toàn bộ, kể cả khi bước gỡ vai trò thất bại sau bước gán.
+        try
         {
-            var result = await userManager.AddToRolesAsync(user, toAdd);
-            if (!result.Succeeded)
-                return RolesError(result, await BuildRolesModelAsync(user, selectedIds));
+            if (toAdd.Count > 0)
+            {
+                var result = await userManager.AddToRolesAsync(user, toAdd);
+                if (!result.Succeeded)
+                    return await RollbackAsync(result);
+            }
+            if (toRemove.Count > 0)
+            {
+                var result = await userManager.RemoveFromRolesAsync(user, toRemove);
+                if (!result.Succeeded)
+                    return await RollbackAsync(result);
+            }
+
+            await transaction.CommitAsync(HttpContext.RequestAborted);
         }
-        if (toRemove.Count > 0)
+        catch (DbUpdateException)
         {
-            var result = await userManager.RemoveFromRolesAsync(user, toRemove);
-            if (!result.Succeeded)
-                return RolesError(result, await BuildRolesModelAsync(user, selectedIds));
+            await transaction.RollbackAsync(CancellationToken.None);
+            dbContext.ChangeTracker.Clear();
+            return new JsonResult(new { success = false, message = "Tài khoản hoặc vai trò vừa thay đổi. Vui lòng mở lại hộp thoại và thử lại." })
+                { StatusCode = StatusCodes.Status409Conflict };
         }
 
         // Quyền theo action đọc từ CSDL nên có hiệu lực ngay; role trong cookie được làm mới sau tối đa 1 phút
         // (SecurityStampValidator, Program.cs) mà không đăng xuất người dùng.
         permissionCatalog.InvalidateUser(user.Id);
         return Json(new { success = true, message = $"Đã cập nhật vai trò cho {user.Email}." });
+
+        async Task<IActionResult> RollbackAsync(IdentityResult result)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            dbContext.ChangeTracker.Clear();
+            return RolesError(result, await BuildRolesModelAsync(user, selectedIds));
+        }
     }
 
     // Dự phòng khi email xác thực không gửi được: quản trị viên xác thực thủ công.
@@ -178,6 +208,12 @@ public class UserManagementController(
     /// <summary>
     /// Phê duyệt tài khoản Giảng viên / Cán bộ tự đăng ký: cho phép đăng nhập và gán role GiangVien.
     /// </summary>
+    [HttpGet, ActionName("Approve")]
+    [PermissionAction("Phê duyệt giảng viên")]
+    public Task<IActionResult> ApproveConfirmation(string id) =>
+        // Mở modal bằng cùng quyền Approve với POST; không đòi thêm quyền Details.
+        Details(id);
+
     [HttpPost]
     [ValidateAntiForgeryToken]
     [PermissionAction("Phê duyệt giảng viên")]
@@ -187,31 +223,57 @@ public class UserManagementController(
         if (user is null) return NotFound();
         if (user.AccountType != AccountType.Staff)
             return Forbidden("Chỉ tài khoản Giảng viên / Cán bộ mới cần phê duyệt.");
-        if (user.IsApproved)
+        if (user.IsApproved && await userManager.IsInRoleAsync(user, SystemRoles.Lecturer))
             return Json(new { success = true, message = $"{user.Email} đã được phê duyệt từ trước." });
 
-        if (!await roleManager.RoleExistsAsync(SystemRoles.Lecturer))
+        // Identity tự SaveChanges ở mỗi thao tác. Bao cả gán vai trò và phê duyệt trong
+        // một transaction để lỗi ở bước sau không để lại tài khoản được duyệt một nửa.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(HttpContext.RequestAborted);
+        try
         {
-            var createRole = await roleManager.CreateAsync(new IdentityRole(SystemRoles.Lecturer));
-            if (!createRole.Succeeded)
-                return Forbidden(string.Join(" ", createRole.Errors.Select(x => x.Description)));
+            if (!await roleManager.RoleExistsAsync(SystemRoles.Lecturer))
+            {
+                var createRole = await roleManager.CreateAsync(new IdentityRole(SystemRoles.Lecturer));
+                if (!createRole.Succeeded)
+                    return await RollbackAsync(createRole);
+            }
+
+            if (!await userManager.IsInRoleAsync(user, SystemRoles.Lecturer))
+            {
+                var roleResult = await userManager.AddToRoleAsync(user, SystemRoles.Lecturer);
+                if (!roleResult.Succeeded)
+                    return await RollbackAsync(roleResult);
+            }
+
+            if (!user.IsApproved)
+            {
+                user.IsApproved = true;
+                var result = await userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                    return await RollbackAsync(result);
+            }
+
+            await transaction.CommitAsync(HttpContext.RequestAborted);
         }
-
-        user.IsApproved = true;
-        var result = await userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-            return Forbidden(string.Join(" ", result.Errors.Select(x => x.Description)));
-
-        if (!await userManager.IsInRoleAsync(user, SystemRoles.Lecturer))
+        catch (DbUpdateException)
         {
-            var roleResult = await userManager.AddToRoleAsync(user, SystemRoles.Lecturer);
-            if (!roleResult.Succeeded)
-                return Forbidden(string.Join(" ", roleResult.Errors.Select(x => x.Description)));
+            await transaction.RollbackAsync(CancellationToken.None);
+            dbContext.ChangeTracker.Clear();
+            return new JsonResult(new { success = false, message = "Tài khoản hoặc vai trò vừa thay đổi. Vui lòng tải lại và thử phê duyệt lần nữa." })
+                { StatusCode = StatusCodes.Status409Conflict };
         }
 
         permissionCatalog.InvalidateUser(user.Id);
         var note = user.EmailConfirmed ? string.Empty : " Người dùng vẫn cần xác thực email trước khi đăng nhập.";
         return Json(new { success = true, message = $"Đã phê duyệt {user.Email} và gán vai trò {SystemRoles.Lecturer}.{note}" });
+
+        async Task<IActionResult> RollbackAsync(IdentityResult result)
+        {
+            await transaction.RollbackAsync(CancellationToken.None);
+            dbContext.ChangeTracker.Clear();
+            return new JsonResult(new { success = false, message = string.Join(" ", result.Errors.Select(x => x.Description)) })
+                { StatusCode = StatusCodes.Status422UnprocessableEntity };
+        }
     }
 
     private async Task<UserRolesViewModel> BuildRolesModelAsync(ApplicationUser user, ISet<string>? selectedOverride = null)

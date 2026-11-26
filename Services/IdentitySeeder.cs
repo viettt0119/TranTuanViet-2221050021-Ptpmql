@@ -71,7 +71,7 @@ public sealed class IdentitySeeder(
                 admin.EmailConfirmed = true;
                 needsUpdate = true;
             }
-            // Admin đăng nhập bằng tư cách "Giảng viên / Quản trị".
+            // Hồ sơ Admin thuộc nhóm Cán bộ; mọi tài khoản dùng chung một form đăng nhập.
             if (admin.AccountType != AccountType.Staff || !admin.IsApproved)
             {
                 admin.AccountType = AccountType.Staff;

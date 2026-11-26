@@ -16,7 +16,6 @@
         <form asp-action="Register" method="post" id="register-form">
             <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
 
-            @{ ViewData["AccountTypeMode"] = "register"; }
             <partial name="_AccountTypePicker" model="Model.AccountType" />
             <p class="small text-warning-emphasis mb-3" id="staff-approval-note" hidden="@(!isStaff)">
                 <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Tài khoản Giảng viên/Cán bộ cần được Quản trị viên phê duyệt trước khi đăng nhập.

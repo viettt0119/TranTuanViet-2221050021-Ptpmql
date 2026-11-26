@@ -14,3 +14,4 @@ appsettings.Production.json
 .vscode/*
 !.vscode/extensions.json
 TestResults/
+HANDOFF.MD

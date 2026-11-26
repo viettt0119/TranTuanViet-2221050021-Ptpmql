@@ -4,7 +4,7 @@
     var searchQuery = ViewData["SearchQuery"] as string;
 }
 
-<section class="list-page">
+<section class="list-page" data-crud-list>
     <div class="page-heading">
         <div>
             <span class="page-eyebrow">QUẢN LÝ KHO</span>
@@ -16,12 +16,13 @@
 
     <div class="list-toolbar">
         <form asp-action="Index" method="get" class="search-form">
+            <input type="hidden" name="pageSize" value="@Model.PageSize" />
             <label class="visually-hidden" for="product-search">Tìm sản phẩm</label>
             <input id="product-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo tên sản phẩm..." />
             <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
             @if (!string.IsNullOrWhiteSpace(searchQuery))
             {
-                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+                <a asp-action="Index" asp-route-pageSize="@Model.PageSize" data-list-url class="btn btn-link">Xóa lọc</a>
             }
         </form>
     </div>
@@ -54,57 +55,8 @@
             }
             </tbody>
         </table>
-        @await Html.PartialAsync("_CrudModalHost")
     </div>
 
-    <div class="list-footer">
-        <form asp-action="Index" method="get" class="page-size-form">
-            <input type="hidden" name="q" value="@searchQuery" />
-            <label for="pageSize" class="form-label mb-0">Mỗi trang</label>
-            <select id="pageSize" name="pageSize" class="form-select w-auto">
-                @foreach (var size in DemoMVC.Models.PagedList<DemoMVC.Models.ProductModel>.PageSizeOptions)
-                {
-                    if (Model.PageSize == size)
-                    {
-                        <option value="@size" selected>@size</option>
-                    }
-                    else
-                    {
-                        <option value="@size">@size</option>
-                    }
-                }
-            </select>
-            <button type="submit" class="btn btn-outline-secondary">Áp dụng</button>
-        </form>
-
-        @if (Model.TotalPages > 0)
-        {
-            var startPage = Math.Max(1, Model.PageIndex - 2);
-            var endPage = Math.Min(Model.TotalPages, startPage + 4);
-            startPage = Math.Max(1, endPage - 4);
-            <nav aria-label="Phân trang sản phẩm">
-                <ul class="pagination mb-0">
-                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasPreviousPage ? 1 : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Đầu</a>
-                    </li>
-                    <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
-                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasPreviousPage ? Model.PageIndex - 1 : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Trước</a>
-                    </li>
-                    @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
-                    {
-                        <li class="page-item @(pageNumber == Model.PageIndex ? "active" : "")">
-                            <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@pageNumber" asp-route-pageSize="@Model.PageSize" aria-current="@(pageNumber == Model.PageIndex ? "page" : null)">@pageNumber</a>
-                        </li>
-                    }
-                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasNextPage ? Model.PageIndex + 1 : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Sau</a>
-                    </li>
-                    <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
-                        <a class="page-link" asp-action="Index" asp-route-q="@searchQuery" asp-route-page="@(Model.HasNextPage ? Model.TotalPages : Model.PageIndex)" asp-route-pageSize="@Model.PageSize">Cuối</a>
-                    </li>
-                </ul>
-            </nav>
-        }
-        <span class="list-summary">@Model.TotalRecords sản phẩm</span>
-    </div>
+    @await Html.PartialAsync("_PagedListFooter", (object)Model)
 </section>
+@await Html.PartialAsync("_CrudModalHost")

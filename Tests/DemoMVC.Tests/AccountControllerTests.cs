@@ -11,6 +11,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using System.Security.Claims;
 using Xunit;
 
 namespace DemoMVC.Tests;
@@ -324,31 +325,78 @@ public class AccountControllerTests
     }
 
     [Theory]
-    [InlineData(false, null, "/Account/Profile")]
-    [InlineData(false, "/", "/Account/Profile")]
-    [InlineData(false, "/Student", "/Student")]
-    [InlineData(false, "https://outside.example/", "/Account/Profile")]
-    [InlineData(true, null, "/Home/Dashboard")]
-    [InlineData(true, "/", "/Home/Dashboard")]
-    [InlineData(true, "~/", "/Home/Dashboard")]
-    [InlineData(true, "/Home", "/Home/Dashboard")]
-    [InlineData(true, "/home/index/?from=landing", "/Home/Dashboard")]
-    [InlineData(true, "/Role", "/Role")]
-    public async Task Login_redirects_by_role_unless_a_specific_page_was_requested(
-        bool isAdmin, string? returnUrl, string expectedUrl)
+    [InlineData(AccountType.Student, false, null, "/Home/Dashboard")]
+    [InlineData(AccountType.Student, false, "/", "/Home/Dashboard")]
+    [InlineData(AccountType.Student, false, "/Student", "/Student")]
+    [InlineData(AccountType.Student, false, "https://outside.example/", "/Home/Dashboard")]
+    [InlineData(AccountType.Student, false, "//outside.example/", "/Home/Dashboard")]
+    [InlineData(AccountType.Student, false, "/\\outside.example/", "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, false, null, "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, false, "/Student?page=2", "/Student?page=2")]
+    [InlineData(AccountType.Staff, true, null, "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, true, "/", "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, true, "~/", "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, true, "/Home", "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, true, "/home/index/?from=landing", "/Home/Dashboard")]
+    [InlineData(AccountType.Staff, true, "/Role", "/Role")]
+    public async Task Login_uses_the_shared_home_unless_a_local_specific_page_was_requested(
+        AccountType accountType, bool isAdmin, string? returnUrl, string expectedUrl)
     {
         var fixture = new ControllerFixture();
-        var account = fixture.SetupSuccessfulLogin(AccountType.Student, isAdmin);
+        var account = fixture.SetupSuccessfulLogin(accountType, isAdmin);
 
         var result = await fixture.Controller.Login(new LoginViewModel
         {
-            AccountType = account.AccountType,
             Email = account.Email!,
             Password = "GoodPassword!123",
             ReturnUrl = returnUrl
         });
 
         Assert.Equal(expectedUrl, Assert.IsType<LocalRedirectResult>(result).Url);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("/Student?page=2", "/Student?page=2")]
+    [InlineData("https://outside.example/", null)]
+    [InlineData("//outside.example/", null)]
+    public void Login_page_for_guest_only_keeps_local_return_urls(string? returnUrl, string? expectedUrl)
+    {
+        var fixture = new ControllerFixture();
+
+        var result = fixture.Controller.Login(returnUrl: returnUrl);
+
+        var model = Assert.IsType<LoginViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.Equal(expectedUrl, model.ReturnUrl);
+    }
+
+    [Theory]
+    [InlineData(SystemRoles.User)]
+    [InlineData(SystemRoles.Lecturer)]
+    [InlineData(SystemRoles.Admin)]
+    public void Login_page_for_signed_in_accounts_redirects_to_the_shared_home(string role)
+    {
+        var fixture = new ControllerFixture();
+        fixture.Controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "signed-in-user"), new Claim(ClaimTypes.Role, role)], "test"));
+
+        var result = Assert.IsType<RedirectToActionResult>(fixture.Controller.Login(returnUrl: "/Role"));
+
+        Assert.Equal("Dashboard", result.ActionName);
+        Assert.Equal("Home", result.ControllerName);
+    }
+
+    [Fact]
+    public async Task Logout_signs_out_and_returns_to_the_public_index()
+    {
+        var fixture = new ControllerFixture();
+        fixture.SignInManager.Setup(manager => manager.SignOutAsync()).Returns(Task.CompletedTask);
+
+        var result = Assert.IsType<RedirectToActionResult>(await fixture.Controller.Logout());
+
+        fixture.SignInManager.Verify(manager => manager.SignOutAsync(), Times.Once);
+        Assert.Equal("Index", result.ActionName);
+        Assert.Equal("Home", result.ControllerName);
     }
 
     [Fact]
@@ -467,12 +515,8 @@ public class AccountControllerTests
         Assert.Single(fixture.Controller.ModelState[nameof(RegisterViewModel.MemberCode)]!.Errors);
     }
 
-    [Theory]
-    [InlineData(AccountType.Staff, AccountType.Student, true, "tư cách Giảng viên / Cán bộ")]
-    [InlineData(AccountType.Student, AccountType.Staff, true, "tư cách Sinh viên")]
-    [InlineData(AccountType.Staff, AccountType.Staff, false, "chờ Quản trị viên phê duyệt")]
-    public async Task Login_with_wrong_account_type_or_pending_approval_is_refused_without_signing_in(
-        AccountType registeredAs, AccountType chosen, bool approved, string expectedMessage)
+    [Fact]
+    public async Task Login_with_pending_approval_is_refused_without_signing_in()
     {
         var fixture = new ControllerFixture();
         var account = new ApplicationUser
@@ -481,8 +525,8 @@ public class AccountControllerTests
             Email = "user@example.test",
             FullName = "User",
             EmailConfirmed = true,
-            AccountType = registeredAs,
-            IsApproved = approved
+            AccountType = AccountType.Staff,
+            IsApproved = false
         };
         fixture.UserManager.Setup(manager => manager.FindByEmailAsync("user@example.test")).ReturnsAsync(account);
         fixture.SignInManager
@@ -491,7 +535,6 @@ public class AccountControllerTests
 
         var result = await fixture.Controller.Login(new LoginViewModel
         {
-            AccountType = chosen,
             Email = "user@example.test",
             Password = "GoodPassword!123"
         });
@@ -499,17 +542,19 @@ public class AccountControllerTests
         Assert.IsType<ViewResult>(result);
         Assert.Contains(
             fixture.Controller.ModelState[string.Empty]!.Errors,
-            error => error.ErrorMessage.Contains(expectedMessage, StringComparison.Ordinal));
+            error => error.ErrorMessage.Contains("chờ Quản trị viên phê duyệt", StringComparison.Ordinal));
         fixture.SignInManager.Verify(manager => manager.PasswordSignInAsync(
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
         fixture.SignInManager.Verify(manager => manager.SignInAsync(
             It.IsAny<ApplicationUser>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
     }
 
-    [Fact]
-    public async Task Login_with_wrong_account_type_and_wrong_password_stays_generic()
+    [Theory]
+    [InlineData(false, "Email hoặc mật khẩu không đúng.")]
+    [InlineData(true, "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.")]
+    public async Task Login_with_pending_approval_preserves_password_failure_and_lockout_handling(bool lockedOut, string expectedMessage)
     {
-        // Không để lộ tư cách của email cho người không biết mật khẩu.
+        // Không tiết lộ trạng thái chờ duyệt khi người đăng nhập không biết mật khẩu.
         var fixture = new ControllerFixture();
         var account = new ApplicationUser
         {
@@ -517,38 +562,64 @@ public class AccountControllerTests
             Email = "user@example.test",
             FullName = "User",
             EmailConfirmed = true,
-            AccountType = AccountType.Staff
+            AccountType = AccountType.Staff,
+            IsApproved = false
         };
         fixture.UserManager.Setup(manager => manager.FindByEmailAsync("user@example.test")).ReturnsAsync(account);
         fixture.SignInManager
             .Setup(manager => manager.CheckPasswordSignInAsync(account, "WrongPassword!123", true))
-            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Failed);
+            .ReturnsAsync(lockedOut
+                ? Microsoft.AspNetCore.Identity.SignInResult.LockedOut
+                : Microsoft.AspNetCore.Identity.SignInResult.Failed);
 
         await fixture.Controller.Login(new LoginViewModel
         {
-            AccountType = AccountType.Student,
             Email = "user@example.test",
             Password = "WrongPassword!123"
         });
 
         var errors = fixture.Controller.ModelState[string.Empty]!.Errors.Select(x => x.ErrorMessage).ToList();
-        Assert.Equal(["Email hoặc mật khẩu không đúng."], errors);
+        Assert.Equal([expectedMessage], errors);
+        fixture.SignInManager.Verify(manager => manager.PasswordSignInAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
     }
 
-    [Fact]
-    public async Task Login_with_matching_account_type_signs_in_normally()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Login_with_pending_approval_and_unconfirmed_email_does_not_issue_a_cookie(bool correctPassword)
     {
         var fixture = new ControllerFixture();
-        var account = fixture.SetupSuccessfulLogin(AccountType.Staff, isAdmin: false);
+        var account = new ApplicationUser
+        {
+            Id = "pending-user", Email = "pending@example.test", AccountType = AccountType.Staff,
+            EmailConfirmed = false, IsApproved = false
+        };
+        fixture.UserManager.Setup(manager => manager.FindByEmailAsync(account.Email)).ReturnsAsync(account);
+        fixture.SignInManager.Setup(manager => manager.CheckPasswordSignInAsync(account, "Attempt!123", true))
+            .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.NotAllowed);
+        fixture.UserManager.Setup(manager => manager.IsEmailConfirmedAsync(account)).ReturnsAsync(false);
+        fixture.UserManager.Setup(manager => manager.CheckPasswordAsync(account, "Attempt!123")).ReturnsAsync(correctPassword);
+        fixture.UserManager.Setup(manager => manager.AccessFailedAsync(account)).ReturnsAsync(IdentityResult.Success);
 
         var result = await fixture.Controller.Login(new LoginViewModel
         {
-            AccountType = AccountType.Staff,
             Email = account.Email!,
-            Password = "GoodPassword!123"
+            Password = "Attempt!123"
         });
 
-        Assert.Equal("/Account/Profile", Assert.IsType<LocalRedirectResult>(result).Url);
+        var view = Assert.IsType<ViewResult>(result);
+        if (correctPassword)
+            Assert.True(Assert.IsType<bool>(view.ViewData["ShowResendConfirmation"]));
+        else
+        {
+            Assert.Null(view.ViewData["ShowResendConfirmation"]);
+            fixture.UserManager.Verify(manager => manager.AccessFailedAsync(account), Times.Once);
+        }
+        fixture.SignInManager.Verify(manager => manager.PasswordSignInAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+        fixture.SignInManager.Verify(manager => manager.SignInAsync(
+            It.IsAny<ApplicationUser>(), It.IsAny<bool>(), It.IsAny<string?>()), Times.Never);
     }
 
     private sealed class ControllerFixture
@@ -605,6 +676,8 @@ public class AccountControllerTests
                 HttpContext = new DefaultHttpContext(),
                 RouteData = new RouteData()
             };
+            UrlHelper.Setup(helper => helper.IsLocalUrl(It.IsAny<string?>()))
+                .Returns((string? url) => new Microsoft.AspNetCore.Mvc.Routing.UrlHelper(Controller.ControllerContext).IsLocalUrl(url));
         }
 
         public static RegisterViewModel ValidRegistration() => new()
@@ -633,9 +706,6 @@ public class AccountControllerTests
             SignInManager
                 .Setup(manager => manager.PasswordSignInAsync(account.Email, "GoodPassword!123", false, true))
                 .ReturnsAsync(Microsoft.AspNetCore.Identity.SignInResult.Success);
-            UrlHelper
-                .Setup(helper => helper.IsLocalUrl(It.IsAny<string?>()))
-                .Returns((string? url) => url is not null && (url.StartsWith('/') || url.StartsWith("~/")));
             UrlHelper
                 .Setup(helper => helper.Action(It.IsAny<UrlActionContext>()))
                 .Returns((UrlActionContext context) => $"/{context.Controller}/{context.Action}");

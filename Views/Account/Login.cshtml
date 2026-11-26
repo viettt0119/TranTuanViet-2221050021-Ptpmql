@@ -1,14 +1,14 @@
 @model DemoMVC.Models.LoginViewModel
 @{
     Layout = "_AuthLayout";
-    ViewData["Title"] = "Đăng nhập";
+    ViewData["Title"] = "Đăng nhập tài khoản";
 }
 
 <div class="auth-page">
     <section class="auth-card auth-card-wide">
         <div class="auth-header">
             <span class="auth-header-icon bg-primary"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i></span>
-            <h1>Đăng nhập hệ thống</h1>
+            <h1>Đăng nhập tài khoản</h1>
             <p>Sử dụng tài khoản HUMG để đăng nhập</p>
         </div>
         <form asp-action="Login" method="post">
@@ -20,9 +20,6 @@
                 </div>
             }
             <input asp-for="ReturnUrl" type="hidden" />
-
-            @{ ViewData["AccountTypeMode"] = "login"; }
-            <partial name="_AccountTypePicker" model="Model.AccountType" />
 
             <div class="mb-3">
                 <label asp-for="Email" class="form-label fw-semibold">Email</label>

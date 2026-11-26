@@ -30,27 +30,55 @@
         return values;
     }
 }
-<div class="list-footer">
+<div class="list-footer" data-page-index="@pageIndex" data-page-size="@pageSize" data-total-records="@totalRecords">
     @{
         var first = totalRecords == 0 ? 0 : (pageIndex - 1) * pageSize + 1;
         var last = Math.Min(pageIndex * pageSize, totalRecords);
     }
     <span class="list-summary">Hiển thị @first–@last trên tổng @totalRecords bản ghi</span>
+    <form asp-action="Index" method="get" class="page-size-form">
+        @foreach (var pair in RouteFor(1).Where(pair => pair.Key != "pageSize"))
+        {
+            <input type="hidden" name="@pair.Key" value="@pair.Value" />
+        }
+        <label class="form-label mb-0">Mỗi trang
+            <select name="pageSize" class="form-select w-auto d-inline-block">
+                @foreach (var size in DemoMVC.Models.PagedList<object>.PageSizeOptions)
+                {
+                    <option value="@size" selected="@(size == pageSize)">@size</option>
+                }
+            </select>
+        </label>
+        <button type="submit" class="btn btn-outline-secondary">Áp dụng</button>
+    </form>
     @if (totalPages > 1)
     {
+        var startPage = Math.Max(1, pageIndex - 2);
+        var endPage = Math.Min(totalPages, startPage + 4);
+        startPage = Math.Max(1, endPage - 4);
         <nav aria-label="Phân trang">
             <ul class="pagination mb-0">
                 <li class="page-item @(hasPrevious ? "" : "disabled")">
-                    <a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(Math.Max(1, pageIndex - 1))">Trước</a>
+                    <a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(Math.Max(1, pageIndex - 1))" aria-disabled="@(!hasPrevious ? "true" : null)" tabindex="@(!hasPrevious ? "-1" : null)">Trước</a>
                 </li>
-                @for (var pageNumber = 1; pageNumber <= totalPages; pageNumber++)
+                @if (startPage > 1)
+                {
+                    <li class="page-item"><a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(1)">1</a></li>
+                    @if (startPage > 2) { <li class="page-item disabled"><span class="page-link">…</span></li> }
+                }
+                @for (var pageNumber = startPage; pageNumber <= endPage; pageNumber++)
                 {
                     <li class="page-item @(pageNumber == pageIndex ? "active" : "")">
-                        <a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(pageNumber)">@pageNumber</a>
+                        <a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(pageNumber)" aria-current="@(pageNumber == pageIndex ? "page" : null)">@pageNumber</a>
                     </li>
                 }
+                @if (endPage < totalPages)
+                {
+                    @if (endPage < totalPages - 1) { <li class="page-item disabled"><span class="page-link">…</span></li> }
+                    <li class="page-item"><a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(totalPages)">@totalPages</a></li>
+                }
                 <li class="page-item @(hasNext ? "" : "disabled")">
-                    <a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(Math.Min(totalPages, pageIndex + 1))">Sau</a>
+                    <a class="page-link" asp-action="Index" asp-all-route-data="RouteFor(Math.Min(totalPages, pageIndex + 1))" aria-disabled="@(!hasNext ? "true" : null)" tabindex="@(!hasNext ? "-1" : null)">Sau</a>
                 </li>
             </ul>
         </nav>

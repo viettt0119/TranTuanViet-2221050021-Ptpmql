@@ -54,7 +54,7 @@ public class IdentitySeederTests
         var admin = await provider.GetRequiredService<UserManager<ApplicationUser>>()
             .FindByEmailAsync("admin@example.test");
         Assert.NotNull(admin);
-        Assert.Equal(AccountType.Staff, admin!.AccountType); // Admin đăng nhập bằng tư cách "Giảng viên / Quản trị".
+        Assert.Equal(AccountType.Staff, admin!.AccountType); // Admin có hồ sơ cán bộ; mọi tài khoản dùng chung form đăng nhập.
         Assert.True(admin.IsApproved);
         Assert.True(admin.EmailConfirmed);
         Assert.True(await provider.GetRequiredService<UserManager<ApplicationUser>>().IsInRoleAsync(admin, "Admin"));

@@ -13,8 +13,14 @@
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
     bool IsController(params string[] names) => names.Contains(currentController, StringComparer.OrdinalIgnoreCase);
     var onDashboard = IsController("Home") && string.Equals(currentAction, "Dashboard", StringComparison.OrdinalIgnoreCase);
-    string LinkClass(bool active) => active ? "sidebar-link active" : "sidebar-link";
+    string? LinkClass(bool active) => active ? "mm-active" : null;
     string? Current(bool active) => active ? "page" : null;
+
+    var userName = User.Identity?.Name ?? string.Empty;
+    var userInitial = string.IsNullOrEmpty(userName) ? "?" : userName[..1].ToUpperInvariant();
+    var userRole = User.IsInRole(DemoMVC.Services.SystemRoles.Admin) ? "Quản trị viên"
+        : User.IsInRole(DemoMVC.Services.SystemRoles.Lecturer) ? "Giảng viên"
+        : "Người dùng";
 }
 <!DOCTYPE html>
 <html lang="vi" data-bs-theme="light">
@@ -22,65 +28,123 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - HUMG</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/architectui/architectui.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons/font/bootstrap-icons.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/my-css.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/DemoMVC.styles.css" asp-append-version="true" />
 </head>
-<body>
-    <aside class="app-sidebar" id="app-sidebar">
-        <a asp-controller="Home" asp-action="Dashboard" class="sidebar-brand">
-            <i class="bi bi-mortarboard-fill me-2"></i><span class="brand-text">HUMG</span>
-        </a>
-        <nav class="sidebar-nav">
-            <a asp-controller="Home" asp-action="Dashboard" class="@LinkClass(onDashboard)" aria-current="@Current(onDashboard)"><i class="bi bi-house-door"></i><span class="sidebar-label">Tổng quan</span></a>
-            @if (canStudent || canDepartment)
-            {
-                <div class="sidebar-heading">Đào tạo</div>
-                @if (canStudent) { <a asp-controller="Student" asp-action="Index" class="@LinkClass(IsController("Student"))" aria-current="@Current(IsController("Student"))"><i class="bi bi-person-badge"></i><span class="sidebar-label">Sinh viên</span></a> }
-                @if (canDepartment) { <a asp-controller="Department" asp-action="Index" class="@LinkClass(IsController("Department"))" aria-current="@Current(IsController("Department"))"><i class="bi bi-buildings"></i><span class="sidebar-label">Khoa</span></a> }
-            }
-            @if (canEmployee) { <div class="sidebar-heading">Nhân sự</div><a asp-controller="Employee" asp-action="Index" class="@LinkClass(IsController("Employee"))" aria-current="@Current(IsController("Employee"))"><i class="bi bi-people"></i><span class="sidebar-label">Nhân viên</span></a> }
-            @if (canProduct) { <div class="sidebar-heading">Kinh doanh</div><a asp-controller="Product" asp-action="Index" class="@LinkClass(IsController("Product"))" aria-current="@Current(IsController("Product"))"><i class="bi bi-box-seam"></i><span class="sidebar-label">Sản phẩm</span></a> }
-            @if (canExcel || canUser || canRole)
-            {
-                <div class="sidebar-heading">Hệ thống</div>
-                @if (canExcel) { <a asp-controller="ExcelImport" asp-action="Index" class="@LinkClass(IsController("ExcelImport"))" aria-current="@Current(IsController("ExcelImport"))"><i class="bi bi-file-earmark-excel"></i><span class="sidebar-label">Nhập Excel</span></a> }
-                @if (canUser) { <a asp-controller="UserManagement" asp-action="Index" class="@LinkClass(IsController("UserManagement"))" aria-current="@Current(IsController("UserManagement"))"><i class="bi bi-person-gear"></i><span class="sidebar-label">Người dùng</span></a> }
-                @if (canRole) { <a asp-controller="Role" asp-action="Index" class="@LinkClass(IsController("Role"))" aria-current="@Current(IsController("Role"))"><i class="bi bi-shield-check"></i><span class="sidebar-label">Vai trò</span></a> }
-            }
-            @* Bài thực hành Lec 1–6 là [AdminOnly]: chỉ hiện với Admin, không cấp được qua ma trận quyền. *@
-            @if (User.IsInRole("Admin"))
-            {
-                <div class="sidebar-heading">Bài học</div>
-                <a asp-controller="Lesson" asp-action="Index" class="@LinkClass(IsController("Lesson", "Lesson4", "Lec5"))" aria-current="@Current(IsController("Lesson", "Lesson4", "Lec5"))"><i class="bi bi-journal-bookmark"></i><span class="sidebar-label">Xem lại bài học</span></a>
-            }
-        </nav>
-    </aside>
-    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
-    <div class="app-main" id="app-main">
-        <header class="topbar">
-            <div class="d-flex align-items-center gap-2 min-w-0">
-                <button class="btn btn-outline-secondary d-lg-none" id="mobile-sidebar" type="button"><i class="bi bi-list"></i></button>
-                <button class="btn btn-outline-secondary d-none d-lg-inline-flex" id="collapse-sidebar" type="button"><i class="bi bi-layout-sidebar"></i></button>
-                <nav aria-label="breadcrumb">@await RenderSectionAsync("Breadcrumb", required: false)</nav>
+<body class="app-body">
+    @* Khung trang theo ArchitectUI (DashboardPack, MIT): app-header + app-sidebar + app-main__outer. *@
+    <div class="app-container app-theme-white body-tabs-shadow fixed-sidebar fixed-header" id="app-container">
+        <header class="app-header header-shadow">
+            <div class="app-header__logo">
+                <a asp-controller="Home" asp-action="Dashboard" class="logo-src" aria-label="HUMG – Trang chủ">
+                    <i class="bi bi-mortarboard-fill" aria-hidden="true"></i><span>HUMG</span>
+                </a>
+                <div class="header__pane ms-auto">
+                    <button type="button" class="hamburger close-sidebar-btn hamburger--elastic" id="collapse-sidebar"
+                            aria-label="Thu gọn hoặc mở rộng menu" aria-controls="app-sidebar" aria-expanded="true">
+                        <span class="hamburger-box"><span class="hamburger-inner"></span></span>
+                    </button>
+                </div>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-secondary" id="theme-toggle" type="button" title="Chuyển sáng/tối"><i class="bi bi-moon-stars"></i></button>
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle user-menu-toggle" type="button" data-bs-toggle="dropdown" title="@User.Identity?.Name" aria-label="Tài khoản @User.Identity?.Name"><i class="bi bi-person-circle d-sm-none"></i><span class="text-truncate d-none d-sm-inline">@User.Identity?.Name</span></button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li class="d-sm-none"><span class="dropdown-item-text small text-muted text-break">@User.Identity?.Name</span></li>
-                        <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile"><i class="bi bi-person-circle me-2"></i>Tài khoản của tôi</a></li>
-                        <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a></li>
-                        <li><hr class="dropdown-divider" /></li>
-                        <li><form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button></form></li>
-                    </ul>
+            <div class="app-header__mobile-menu">
+                <button type="button" class="hamburger hamburger--elastic mobile-toggle-nav" id="mobile-sidebar"
+                        aria-label="Mở hoặc đóng menu" aria-controls="app-sidebar" aria-expanded="false">
+                    <span class="hamburger-box"><span class="hamburger-inner"></span></span>
+                </button>
+            </div>
+            <div class="app-header__menu">
+                <button type="button" class="btn-icon btn-icon-only btn btn-primary btn-sm mobile-toggle-header-nav" id="mobile-header"
+                        aria-label="Mở hoặc đóng thanh tài khoản" aria-controls="app-header-content" aria-expanded="false">
+                    <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="app-header__content" id="app-header-content">
+                <div class="app-header-left">
+                    <nav aria-label="breadcrumb">@await RenderSectionAsync("Breadcrumb", required: false)</nav>
+                </div>
+                <div class="app-header-right">
+                    <button class="btn btn-light btn-icon-only header-theme-toggle" id="theme-toggle" type="button" title="Chuyển sáng/tối" aria-label="Chuyển giao diện sáng hoặc tối">
+                        <i class="bi bi-moon-stars" aria-hidden="true"></i>
+                    </button>
+                    <div class="header-btn-lg pe-0">
+                        <div class="widget-content p-0">
+                            <div class="widget-content-wrapper">
+                                <div class="widget-content-left">
+                                    <div class="btn-group">
+                                        <button type="button" class="p-0 btn header-user-toggle" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tài khoản @userName">
+                                            <span class="header-avatar" aria-hidden="true">@userInitial</span>
+                                            <i class="bi bi-chevron-down ms-2 opacity-75" aria-hidden="true"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><span class="dropdown-header text-break">@userName</span></li>
+                                            <li><a class="dropdown-item" asp-controller="Account" asp-action="Profile"><i class="bi bi-person-circle me-2"></i>Tài khoản của tôi</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a></li>
+                                            <li><hr class="dropdown-divider" /></li>
+                                            <li><form asp-controller="Account" asp-action="Logout" method="post"><button class="dropdown-item" type="submit"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button></form></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="widget-content-left ms-3 header-user-info">
+                                    <div class="widget-heading" title="@userName">@userName</div>
+                                    <div class="widget-subheading">@userRole</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
-        <main class="app-content">@RenderBody()</main>
+        <div class="app-main">
+            <aside class="app-sidebar sidebar-shadow" id="app-sidebar" aria-label="Menu chính">
+                <div class="scrollbar-sidebar">
+                    <nav class="app-sidebar__inner">
+                        <ul class="vertical-nav-menu">
+                            <li class="app-sidebar__heading">Tổng quan</li>
+                            <li><a asp-controller="Home" asp-action="Dashboard" class="@LinkClass(onDashboard)" aria-current="@Current(onDashboard)"><i class="metismenu-icon bi bi-house-door"></i>Trang chủ</a></li>
+                            @if (canStudent || canDepartment)
+                            {
+                                <li class="app-sidebar__heading">Đào tạo</li>
+                                @if (canStudent) { <li><a asp-controller="Student" asp-action="Index" class="@LinkClass(IsController("Student"))" aria-current="@Current(IsController("Student"))"><i class="metismenu-icon bi bi-person-badge"></i>Sinh viên</a></li> }
+                                @if (canDepartment) { <li><a asp-controller="Department" asp-action="Index" class="@LinkClass(IsController("Department"))" aria-current="@Current(IsController("Department"))"><i class="metismenu-icon bi bi-buildings"></i>Khoa</a></li> }
+                            }
+                            @if (canEmployee)
+                            {
+                                <li class="app-sidebar__heading">Nhân sự</li>
+                                <li><a asp-controller="Employee" asp-action="Index" class="@LinkClass(IsController("Employee"))" aria-current="@Current(IsController("Employee"))"><i class="metismenu-icon bi bi-people"></i>Nhân viên</a></li>
+                            }
+                            @if (canProduct)
+                            {
+                                <li class="app-sidebar__heading">Kinh doanh</li>
+                                <li><a asp-controller="Product" asp-action="Index" class="@LinkClass(IsController("Product"))" aria-current="@Current(IsController("Product"))"><i class="metismenu-icon bi bi-box-seam"></i>Sản phẩm</a></li>
+                            }
+                            @if (canExcel || canUser || canRole)
+                            {
+                                <li class="app-sidebar__heading">Hệ thống</li>
+                                @if (canExcel) { <li><a asp-controller="ExcelImport" asp-action="Index" class="@LinkClass(IsController("ExcelImport"))" aria-current="@Current(IsController("ExcelImport"))"><i class="metismenu-icon bi bi-file-earmark-excel"></i>Nhập Excel</a></li> }
+                                @if (canUser || canRole)
+                                {
+                                    <li><a asp-controller="@(canUser ? "UserManagement" : "Role")" asp-action="Index" class="@LinkClass(IsController("UserManagement", "Role"))" aria-current="@Current(IsController("UserManagement", "Role"))"><i class="metismenu-icon bi bi-person-gear"></i>Tài khoản &amp; phân quyền</a></li>
+                                }
+                            }
+                            @* Bài thực hành Lec 1–6 là [AdminOnly]: chỉ hiện với Admin, không cấp được qua ma trận quyền. *@
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <li class="app-sidebar__heading">Bài học</li>
+                                <li><a asp-controller="Lesson" asp-action="Index" class="@LinkClass(IsController("Lesson", "Lesson4", "Lec5"))" aria-current="@Current(IsController("Lesson", "Lesson4", "Lec5"))"><i class="metismenu-icon bi bi-journal-bookmark"></i>Xem lại bài học</a></li>
+                            }
+                        </ul>
+                    </nav>
+                </div>
+            </aside>
+            <div class="app-main__outer">
+                <main class="app-main__inner app-content">@RenderBody()</main>
+            </div>
+        </div>
+        @* Lớp phủ trên điện thoại: menu che nút mở nên chạm ra ngoài để đóng. *@
+        <div class="sidebar-mobile-overlay" id="sidebar-backdrop"></div>
     </div>
     <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

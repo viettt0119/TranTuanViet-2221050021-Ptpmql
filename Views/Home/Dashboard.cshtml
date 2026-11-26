@@ -1,8 +1,7 @@
 @model DemoMVC.Models.HomeDashboardViewModel
 @inject DemoMVC.Services.PermissionCatalogService PermissionCatalogService
 @{
-    var isAdmin = User.IsInRole(DemoMVC.Services.SystemRoles.Admin);
-    ViewData["Title"] = isAdmin ? "Tổng quan quản trị" : "Tổng quan";
+    ViewData["Title"] = "Trang chủ";
     var canStudent = await PermissionCatalogService.HasAccessAsync(User, "Student.Index");
     var canDepartment = await PermissionCatalogService.HasAccessAsync(User, "Department.Index");
     var canEmployee = await PermissionCatalogService.HasAccessAsync(User, "Employee.Index");
@@ -11,16 +10,8 @@
 <div class="d-flex justify-content-between align-items-start mb-4">
     <div class="text-break">
         <span class="page-eyebrow">CỔNG QUẢN LÝ</span>
-        @if (isAdmin)
-        {
-            <h1>Tổng quan quản trị</h1>
-            <p class="text-muted mb-0">Xin chào, @User.Identity?.Name. Theo dõi nhanh các khu vực dữ liệu.</p>
-        }
-        else
-        {
-            <h1>Xin chào, @User.Identity?.Name</h1>
-            <p class="text-muted mb-0">Theo dõi nhanh các khu vực dữ liệu.</p>
-        }
+        <h1>Trang chủ</h1>
+        <p class="text-muted mb-0">Xin chào, @User.Identity?.Name. Theo dõi nhanh các khu vực dữ liệu.</p>
     </div>
 </div>
 @if (!(canStudent || canDepartment || canEmployee || canProduct))

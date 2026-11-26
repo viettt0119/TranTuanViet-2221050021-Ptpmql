@@ -24,7 +24,7 @@ namespace DemoMVC.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
         {
-            var employees = _context.Employees.AsQueryable();
+            var employees = _context.Employees.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(q))
             {
                 var search = q.Trim().ToLowerInvariant();
@@ -135,7 +135,14 @@ namespace DemoMVC.Controllers
             var employeeModel = await _context.Employees.FindAsync(id);
             if (employeeModel == null) return NotFound();
             _context.Employees.Remove(employeeModel);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound();
+            }
             return Json(new { success = true, message = "Đã xóa nhân viên." });
         }
 

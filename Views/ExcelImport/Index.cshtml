@@ -1,61 +1,64 @@
 @model DemoMVC.Models.ExcelImportResult
 @{
     ViewData["Title"] = "Nhập dữ liệu Excel";
+    var allowed = ViewData["AllowedEntities"] as IReadOnlyList<string> ?? [];
+    var selected = ViewData["SelectedEntity"] as string;
+    var names = new Dictionary<string, string>
+    {
+        ["department"] = "Khoa",
+        ["employee"] = "Nhân viên",
+        ["product"] = "Sản phẩm",
+        ["student"] = "Sinh viên",
+        ["rolepermission"] = "Phân quyền vai trò"
+    };
 }
 <section class="list-page">
     <div class="page-heading">
         <div><span class="page-eyebrow">DATA IMPORT</span><h1>Nhập dữ liệu từ Excel</h1></div>
     </div>
-    <form asp-action="Import" method="post" enctype="multipart/form-data" class="list-card p-4">
-        @Html.AntiForgeryToken()
-        <div asp-validation-summary="All" class="text-danger"></div>
-        <div class="mb-3">
-            <label class="form-label" for="entity">Loại dữ liệu</label>
-            <select id="entity" name="entity" class="form-select">
-                <option value="department">Khoa</option>
-                <option value="employee">Nhân viên</option>
-                <option value="product">Sản phẩm</option>
-                <option value="student">Sinh viên</option>
-                @if (User.IsInRole("Admin"))
-                {
-                    <option value="rolepermission">Phân quyền vai trò</option>
-                }
-            </select>
-        </div>
-        <div class="d-flex flex-wrap gap-2 mb-3">
-            <a asp-action="DownloadTemplate" asp-route-entity="department" class="btn btn-outline-secondary">Mẫu Khoa</a>
-            <a asp-action="DownloadTemplate" asp-route-entity="employee" class="btn btn-outline-secondary">Mẫu Nhân viên</a>
-            <a asp-action="DownloadTemplate" asp-route-entity="product" class="btn btn-outline-secondary">Mẫu Sản phẩm</a>
-            <a asp-action="DownloadTemplate" asp-route-entity="student" class="btn btn-outline-secondary">Mẫu Sinh viên</a>
-            @if (User.IsInRole("Admin"))
-            {
-                <a asp-action="DownloadTemplate" asp-route-entity="rolepermission" class="btn btn-outline-secondary">Mẫu Phân quyền vai trò</a>
-            }
-        </div>
-        <div class="mb-3">
-            <label class="form-label" for="file">File Excel (.xlsx)</label>
-            <input id="file" name="file" type="file" accept=".xlsx" class="form-control" />
-        </div>
-        <button type="submit" class="btn btn-primary">Tải lên để xem trước</button>
-    </form>
-    @if (Model.SuccessCount > 0 || Model.ErrorCount > 0)
+    @if (allowed.Count == 0)
     {
-        <div class="alert alert-info mt-3">Thành công: @Model.SuccessCount dòng; lỗi: @Model.ErrorCount dòng.</div>
-        @if (Model.Errors.Count > 0)
-        {
-            <ul class="alert alert-danger">@foreach (var error in Model.Errors) { <li>@error</li> }</ul>
-        }
+        <div asp-validation-summary="All" class="text-danger"></div>
+        <div class="alert alert-warning">Bạn chưa được cấp quyền Thêm hoặc Sửa cho loại dữ liệu nào nên không thể nhập Excel.</div>
+    }
+    else
+    {
+        <form asp-action="Import" method="post" enctype="multipart/form-data" class="list-card p-4">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <div class="mb-3">
+                <label class="form-label" for="entity">Loại dữ liệu</label>
+                <select id="entity" name="entity" class="form-select">
+                    @foreach (var entity in allowed)
+                    {
+                        <option value="@entity" selected="@(entity == selected)">@names[entity]</option>
+                    }
+                </select>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @foreach (var entity in allowed)
+                {
+                    <a asp-action="DownloadTemplate" asp-route-entity="@entity" class="btn btn-outline-secondary">Mẫu @names[entity]</a>
+                }
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="file">File Excel (.xlsx, tối đa 5 MB và @DemoMVC.Services.ExcelImportService.MaximumRows dòng)</label>
+                <input id="file" name="file" type="file" accept=".xlsx" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary">Tải lên để xem trước</button>
+        </form>
     }
     <div class="mt-3">
         <p><strong>Mẫu cột Excel:</strong></p>
         <ul>
-            <li>Khoa: Mã Khoa | Tên Khoa</li>
-            <li>Nhân viên: Mã nhân viên | Họ tên | Ngày vào làm</li>
-            <li>Sản phẩm: ID | Tên sản phẩm | Giá</li>
-            <li>Sinh viên: Mã sinh viên (để trống để tự sinh; nếu có phải khớp năm/hệ/ngành) | Họ tên | Địa chỉ | Trường | Mã Khoa | Năm | Mã hệ | Mã ngành</li>
+            <li>Khoa: DepartmentCode | DepartmentName</li>
+            <li>Nhân viên: EmpId | FullName | HireDate</li>
+            <li>Sản phẩm: Id | Name | Price. Giá dùng ô số của Excel; nếu dùng ô văn bản, nhập dấu chấm cho phần thập phân (ví dụ 1000.50), không dùng dấu phân cách hàng nghìn.</li>
+            <li>Sinh viên: StudentCode (để trống để tự sinh; nếu có phải khớp năm/hệ/ngành) | FullName | Address | University | DepartmentCode | AdmissionYear | TrainingSystemCode | MajorCode; tuỳ chọn: Email | PhoneNumber | DateOfBirth | Gender (Nam, Nữ, Khác)</li>
             <li>Phân quyền vai trò (chỉ Admin): RoleName | Permission (dạng Controller.Action, vd. Student.Index) | IsGranted (1/0, để trống = 1)</li>
         </ul>
-        <p class="text-muted small mb-0">Danh mục quyền (ApplicationPermissions) tự sinh từ các Controller/Action nên không nhập bằng Excel;
+        <p class="text-muted small mb-0">Cột tuỳ chọn không có trong file được giữ nguyên khi ghi đè; cột có mặt nhưng để trống sẽ xoá giá trị cũ.
+            Danh mục quyền (ApplicationPermissions) tự sinh từ các Controller/Action nên không nhập bằng Excel;
             bộ đếm mã sinh viên (StudentCodeCounters) tự đồng bộ khi nhập sinh viên. Các bảng của Identity không thuộc phạm vi nhập.</p>
     </div>
 </section>

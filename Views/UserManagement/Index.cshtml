@@ -18,16 +18,17 @@
         statusFilter is not null || typeFilter is not null;
 }
 
-<section class="list-page">
+<section class="list-page" data-crud-list>
+    @await Html.PartialAsync("_AccountManagementTabs")
     <div class="page-heading">
         <div>
-            <span class="page-eyebrow">HỆ THỐNG</span>
+            <span class="page-eyebrow">TÀI KHOẢN &amp; PHÂN QUYỀN</span>
             <h1>Người dùng</h1>
             <p class="text-muted mb-0">Gán vai trò cho người dùng; quyền của người dùng là tổng quyền của các vai trò.</p>
         </div>
         @if (pendingCount > 0)
         {
-            <a asp-action="Index" asp-route-status="@DemoMVC.Controllers.UserManagementController.PendingStatus" class="btn btn-warning">
+            <a asp-action="Index" asp-route-status="@DemoMVC.Controllers.UserManagementController.PendingStatus" asp-route-pageSize="@Model.PageSize" data-list-url class="btn btn-warning">
                 <i class="bi bi-hourglass-split me-1"></i>@pendingCount tài khoản chờ duyệt
             </a>
         }
@@ -35,6 +36,7 @@
 
     <div class="list-toolbar">
         <form asp-action="Index" method="get" class="search-form">
+            <input type="hidden" name="pageSize" value="@Model.PageSize" />
             <label class="visually-hidden" for="user-search">Tìm người dùng</label>
             <input id="user-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo email, họ tên, mã SV / mã cán bộ..." />
             <label class="visually-hidden" for="user-type">Lọc theo tư cách</label>
@@ -59,12 +61,12 @@
             <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
             @if (hasFilter)
             {
-                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+                <a asp-action="Index" asp-route-pageSize="@Model.PageSize" data-list-url class="btn btn-link">Xóa lọc</a>
             }
         </form>
     </div>
 
-    <div data-crud-list>
+    <div>
         <div class="table-responsive list-card">
             <table class="table table-hover align-middle mb-0">
                 <thead>
@@ -111,9 +113,9 @@
                             </td>
                             <td class="text-end text-nowrap">
                                 <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-outline-info" asp-permission="UserManagement.Details">Chi tiết</a>
-                                @if (!user.IsApproved)
+                                @if (!user.IsApproved && user.AccountType == DemoMVC.Models.AccountType.Staff)
                                 {
-                                    <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-warning" asp-permission="UserManagement.Approve">Duyệt</a>
+                                    <a asp-action="Approve" asp-route-id="@user.Id" data-modal-url="@Url.Action("Approve", new { id = user.Id })" class="btn btn-sm btn-warning" asp-permission="UserManagement.Approve">Duyệt</a>
                                 }
                                 <a asp-action="Roles" asp-route-id="@user.Id" data-modal-url="@Url.Action("Roles", new { id = user.Id })" class="btn btn-sm btn-outline-primary" asp-permission="UserManagement.Roles">Vai trò</a>
                             </td>

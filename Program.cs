@@ -18,6 +18,8 @@ builder.Services.AddScoped<PermissionCatalogService>();
 builder.Services.AddScoped<StudentCodeGenerator>();
 builder.Services.AddScoped<StudentService>();
 builder.Services.AddScoped<DemoDataSeeder>();
+builder.Services.AddOptions<DemoDataSeedOptions>()
+    .Bind(builder.Configuration.GetSection(DemoDataSeedOptions.SectionName));
 builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddMemoryCache();
 

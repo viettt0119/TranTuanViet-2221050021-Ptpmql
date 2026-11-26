@@ -21,7 +21,7 @@ public class StudentController(
         ViewData["SearchQuery"] = filter.Q?.Trim();
 
         if (IsAjaxRequest())
-            return PartialView("_StudentTable", model);
+            return PartialView("_StudentList", model);
         return View(model);
     }
 
@@ -105,7 +105,7 @@ public class StudentController(
         var student = await studentService.GetDetailsAsync(id.Value, HttpContext.RequestAborted);
         if (student is null) return NotFound();
         if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
-        ViewData["FormActionUrl"] = Url.Action(nameof(DeleteConfirmed), new { id });
+        ViewData["FormActionUrl"] = Url.Action("Delete", new { id });
         return PartialView("_DeleteModal", student);
     }
 
@@ -121,7 +121,7 @@ public class StudentController(
             Response.StatusCode = StatusCodes.Status422UnprocessableEntity;
             var student = await studentService.GetDetailsAsync(id, HttpContext.RequestAborted);
             if (student is null) return NotFound();
-            ViewData["FormActionUrl"] = Url.Action(nameof(DeleteConfirmed), new { id });
+            ViewData["FormActionUrl"] = Url.Action("Delete", new { id });
             ModelState.AddModelError(string.Empty, result.Message ?? "Không thể xoá sinh viên.");
             return PartialView("_DeleteModal", student);
         }
@@ -131,20 +131,7 @@ public class StudentController(
     [HttpGet]
     public async Task<IActionResult> Export([FromQuery] StudentFilterViewModel filter)
     {
-        var query = context.Students.AsNoTracking().Include(student => student.Department).AsQueryable();
-        if (!string.IsNullOrWhiteSpace(filter.Q))
-        {
-            var keyword = $"%{filter.Q.Trim()}%";
-            query = query.Where(student =>
-                EF.Functions.Like(student.StudentCode, keyword) ||
-                EF.Functions.Like(student.FullName, keyword) ||
-                (student.Email != null && EF.Functions.Like(student.Email, keyword)));
-        }
-        if (!string.IsNullOrWhiteSpace(filter.DepartmentCode))
-            query = query.Where(student => student.DepartmentCode == filter.DepartmentCode);
-        if (filter.AdmissionYear.HasValue)
-            query = query.Where(student => student.AdmissionYear == filter.AdmissionYear.Value);
-        var students = await query.OrderBy(student => student.StudentCode).ToListAsync(HttpContext.RequestAborted);
+        var students = await studentService.GetForExportAsync(filter, HttpContext.RequestAborted);
 
         using var package = new ExcelPackage();
         var sheet = package.Workbook.Worksheets.Add("SinhVien");

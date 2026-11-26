@@ -10,7 +10,7 @@ public class LessonViewMarkupTests
     [Fact]
     public void Lesson_views_close_exactly_the_divs_they_open()
     {
-        var views = Directory.GetFiles(Path.Combine(ProjectRoot(), "Views", "Lesson"), "*.cshtml");
+        var views = Directory.GetFiles(Path.Combine(TestProject.Root(), "Views", "Lesson"), "*.cshtml");
         Assert.NotEmpty(views);
 
         foreach (var view in views)
@@ -25,15 +25,5 @@ public class LessonViewMarkupTests
             }
             Assert.True(depth == 0, $"{Path.GetFileName(view)}: còn {depth} thẻ <div> chưa đóng.");
         }
-    }
-
-    private static string ProjectRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "DemoMVC.csproj")))
-                return directory.FullName;
-        }
-        throw new DirectoryNotFoundException("Không tìm thấy thư mục chứa DemoMVC.csproj.");
     }
 }

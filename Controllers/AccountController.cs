@@ -122,12 +122,16 @@ public class AccountController(
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null, AccountType accountType = AccountType.Student) =>
-        View(new LoginViewModel
+    public IActionResult Login(string? returnUrl = null)
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToAction(nameof(HomeController.Dashboard), "Home");
+
+        return View(new LoginViewModel
         {
-            ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null,
-            AccountType = Enum.IsDefined(accountType) ? accountType : AccountType.Student
+            ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null
         });
+    }
 
     [AllowAnonymous]
     [HttpPost]
@@ -138,10 +142,11 @@ public class AccountController(
         if (!ModelState.IsValid)
             return View(model);
 
-        // Sai tư cách hoặc giảng viên chưa được duyệt: kiểm tra mật khẩu nhưng không cấp cookie đăng nhập.
+        // Loại hồ sơ và quyền được đọc từ tài khoản; người dùng chỉ nhập email và mật khẩu.
+        // Tài khoản chờ duyệt vẫn phải kiểm tra mật khẩu nhưng không được cấp cookie đăng nhập.
         var account = await userManager.FindByEmailAsync(model.Email.Trim());
-        if (account is not null && (account.AccountType != model.AccountType || !account.IsApproved))
-            return await RejectAccountGateAsync(account, model);
+        if (account is not null && !account.IsApproved)
+            return await RejectPendingApprovalAsync(account, model);
 
         var result = await signInManager.PasswordSignInAsync(
             model.Email.Trim(),
@@ -152,7 +157,7 @@ public class AccountController(
         if (result.Succeeded)
             return LocalRedirect(IsDeepLink(model.ReturnUrl)
                 ? model.ReturnUrl!
-                : await GetHomeUrlAsync(account));
+                : Url.Action(nameof(HomeController.Dashboard), "Home")!);
 
         if (result.IsNotAllowed)
         {
@@ -188,7 +193,7 @@ public class AccountController(
     public async Task<IActionResult> Logout()
     {
         await signInManager.SignOutAsync();
-        return RedirectToAction(nameof(Login));
+        return RedirectToAction(nameof(HomeController.Index), "Home");
     }
 
     [AllowAnonymous]
@@ -413,7 +418,7 @@ public class AccountController(
         }
     }
 
-    // Trang giới thiệu không phải đích cần quay lại: đăng nhập từ đó vẫn đi tiếp tới trang theo vai trò.
+    // Đăng nhập từ trang giới thiệu mặc định đi tới Trang chủ chung.
     private bool IsDeepLink(string? returnUrl)
     {
         if (!Url.IsLocalUrl(returnUrl))
@@ -425,28 +430,17 @@ public class AccountController(
             !path.Equals("/Home/Index", StringComparison.OrdinalIgnoreCase);
     }
 
-    // Admin vào "Tổng quan quản trị", tài khoản còn lại vào "Tài khoản của tôi" (không cần quyền nghiệp vụ nào).
-    // Đọc role từ CSDL vì User của request này vẫn là khách, cookie mới có hiệu lực từ request sau.
-    private async Task<string> GetHomeUrlAsync(ApplicationUser? account)
-    {
-        var isAdmin = account is not null && await userManager.IsInRoleAsync(account, SystemRoles.Admin);
-        return isAdmin
-            ? Url.Action("Dashboard", "Home")!
-            : Url.Action(nameof(Profile), "Account")!;
-    }
-
     /// <summary>
-    /// Tài khoản tồn tại nhưng chọn sai tư cách hoặc chưa được duyệt. Chỉ nói rõ lý do khi mật khẩu đúng,
-    /// để người không biết mật khẩu không dò được tư cách / trạng thái của email; sai mật khẩu vẫn tính vào khoá tài khoản.
+    /// Tài khoản chưa được duyệt. Chỉ nói rõ lý do khi mật khẩu đúng,
+    /// để người không biết mật khẩu không dò được trạng thái của email; sai mật khẩu vẫn tính vào khoá tài khoản.
     /// </summary>
-    private async Task<IActionResult> RejectAccountGateAsync(ApplicationUser account, LoginViewModel model)
+    private async Task<IActionResult> RejectPendingApprovalAsync(ApplicationUser account, LoginViewModel model)
     {
         var check = await signInManager.CheckPasswordSignInAsync(account, model.Password, lockoutOnFailure: true);
         if (check.Succeeded)
         {
-            ModelState.AddModelError(string.Empty, account.AccountType != model.AccountType
-                ? $"Tài khoản này đăng ký với tư cách {account.AccountType.DisplayName()}. Vui lòng chọn đúng tư cách đăng nhập."
-                : "Tài khoản Giảng viên / Cán bộ đang chờ Quản trị viên phê duyệt. Bạn sẽ đăng nhập được sau khi được duyệt.");
+            ModelState.AddModelError(string.Empty,
+                "Tài khoản đang chờ Quản trị viên phê duyệt. Bạn sẽ đăng nhập được sau khi được duyệt.");
             return View(model);
         }
 

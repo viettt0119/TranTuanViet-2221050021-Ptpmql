@@ -19,7 +19,7 @@ namespace DemoMVC.Controllers
         [HttpGet]
         public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
         {
-            var productsQuery = _context.Products.AsQueryable();
+            var productsQuery = _context.Products.AsNoTracking();
             if (!string.IsNullOrWhiteSpace(q))
             {
                 var search = q.Trim().ToLowerInvariant();
@@ -85,7 +85,14 @@ namespace DemoMVC.Controllers
 
             product.Name = form.Name;
             product.Price = form.Price;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound();
+            }
             return Json(new { success = true, message = "Đã cập nhật sản phẩm." });
         }
 
@@ -107,7 +114,14 @@ namespace DemoMVC.Controllers
             if (product == null) return NotFound();
 
             _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return NotFound();
+            }
             return Json(new { success = true, message = "Đã xóa sản phẩm." });
         }
 

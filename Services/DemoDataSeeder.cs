@@ -1,12 +1,15 @@
 using DemoMVC.Data;
 using DemoMVC.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace DemoMVC.Services;
 
 public sealed class DemoDataSeeder(
     ApplicationDbContext context,
-    StudentCodeGenerator studentCodeGenerator)
+    StudentCodeGenerator studentCodeGenerator,
+    IOptions<DemoDataSeedOptions> options,
+    IHostEnvironment environment)
 {
     private const int SampleRecordCount = 20;
     private const int SampleAdmissionYear = 2026;
@@ -15,6 +18,9 @@ public sealed class DemoDataSeeder(
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
+        if (!(options.Value.Enabled ?? environment.IsDevelopment()))
+            return;
+
         var departments = await context.Departments
             .AsNoTracking()
             .OrderBy(department => department.DepartmentCode)

@@ -3,12 +3,49 @@ using DemoMVC.Models;
 using DemoMVC.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace DemoMVC.Tests;
 
 public class DemoDataSeederTests
 {
+    [Theory]
+    [InlineData(nameof(Environments.Production), null)]
+    [InlineData(nameof(Environments.Staging), null)]
+    [InlineData(nameof(Environments.Development), false)]
+    public async Task SeedAsync_when_disabled_does_not_reinsert_deleted_samples(
+        string environmentName, bool? enabled)
+    {
+        await using var fixture = await SeedFixture.CreateAsync();
+        await fixture.Seeder.SeedAsync();
+        var deletedStudent = await fixture.Context.Students.FirstAsync();
+        var deletedEmployee = await fixture.Context.Employees.FirstAsync();
+        fixture.Context.Students.Remove(deletedStudent);
+        fixture.Context.Employees.Remove(deletedEmployee);
+        await fixture.Context.SaveChangesAsync();
+
+        await fixture.CreateSeeder(environmentName, enabled).SeedAsync();
+
+        Assert.Equal(19, await fixture.Context.Students.CountAsync());
+        Assert.Equal(19, await fixture.Context.Employees.CountAsync());
+        Assert.False(await fixture.Context.Students.AnyAsync(x => x.Email == deletedStudent.Email));
+        Assert.False(await fixture.Context.Employees.AnyAsync(x => x.EmpId == deletedEmployee.EmpId));
+    }
+
+    [Fact]
+    public async Task SeedAsync_allows_explicit_opt_in_outside_development()
+    {
+        await using var fixture = await SeedFixture.CreateAsync();
+
+        await fixture.CreateSeeder(Environments.Production, true).SeedAsync();
+
+        Assert.Equal(20, await fixture.Context.Students.CountAsync());
+        Assert.Equal(20, await fixture.Context.Employees.CountAsync());
+    }
+
     [Fact]
     public async Task SeedAsync_adds_twenty_sample_students_and_employees_once_without_changing_departments()
     {
@@ -91,8 +128,13 @@ public class DemoDataSeederTests
         {
             _connection = connection;
             Context = context;
-            Seeder = new DemoDataSeeder(context, new StudentCodeGenerator(context));
+            Seeder = CreateSeeder(Environments.Development);
         }
+
+        public DemoDataSeeder CreateSeeder(string environmentName, bool? enabled = null) =>
+            new(Context, new StudentCodeGenerator(Context),
+                Options.Create(new DemoDataSeedOptions { Enabled = enabled }),
+                new SeedEnvironment { EnvironmentName = environmentName });
 
         public static async Task<SeedFixture> CreateAsync()
         {
@@ -111,5 +153,13 @@ public class DemoDataSeederTests
             await Context.DisposeAsync();
             await _connection.DisposeAsync();
         }
+    }
+
+    private sealed class SeedEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = "DemoMVC.Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
     }
 }

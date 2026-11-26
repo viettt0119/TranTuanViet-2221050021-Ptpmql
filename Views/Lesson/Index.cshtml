@@ -7,10 +7,10 @@
     var hasFilter = !string.IsNullOrWhiteSpace(searchQuery) || lectureFilter is not null;
 }
 @section Breadcrumb {
-    <ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard">Tổng quan</a></li><li class="breadcrumb-item active">Xem lại bài học</li></ol>
+    <ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard">Trang chủ</a></li><li class="breadcrumb-item active">Xem lại bài học</li></ol>
 }
 
-<section class="list-page">
+<section class="list-page" data-crud-list>
     <div class="page-heading">
         <div>
             <span class="page-eyebrow">BÀI HỌC · CHỈ DÀNH CHO QUẢN TRỊ VIÊN</span>
@@ -21,6 +21,7 @@
 
     <div class="list-toolbar">
         <form asp-action="Index" method="get" class="search-form">
+            <input type="hidden" name="pageSize" value="@Model.PageSize" />
             <label class="visually-hidden" for="lesson-search">Tìm bài học</label>
             <input id="lesson-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo tên bài, chủ đề (VD: routing, EF Core)..." />
             <label class="visually-hidden" for="lesson-lecture">Lọc theo buổi</label>
@@ -34,7 +35,7 @@
             <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
             @if (hasFilter)
             {
-                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+                <a asp-action="Index" asp-route-pageSize="@Model.PageSize" data-list-url class="btn btn-link">Xóa lọc</a>
             }
         </form>
     </div>

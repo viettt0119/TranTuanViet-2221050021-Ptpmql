@@ -12,6 +12,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Xunit;
 
 namespace DemoMVC.Tests;
@@ -109,6 +110,51 @@ public class AccountTypeAndApprovalTests
         Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<JsonResult>(result).StatusCode);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Approve_rolls_back_both_role_and_approval_when_identity_fails(bool failApprovalUpdate)
+    {
+        await using var fixture = await IdentityFixture.CreateAsync();
+        var staff = NewUser("pending@example.test", AccountType.Staff, "GV0123", approved: false);
+        Assert.True((await fixture.UserManager.CreateAsync(staff, "GoodPassword!123")).Succeeded);
+        Assert.True((await fixture.RoleManager.CreateAsync(new IdentityRole(SystemRoles.Lecturer))).Succeeded);
+        var manager = fixture.CreateFailingApprovalManager(failApprovalUpdate);
+
+        var result = await fixture.CreateUserManagementController(manager).Approve(staff.Id);
+
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, Assert.IsType<JsonResult>(result).StatusCode);
+        fixture.Context.ChangeTracker.Clear();
+        var stored = await fixture.UserManager.FindByIdAsync(staff.Id);
+        Assert.False(stored!.IsApproved);
+        Assert.False(await fixture.UserManager.IsInRoleAsync(stored, SystemRoles.Lecturer));
+
+        // Sau lỗi có thể thử lại thành công, không mắc kẹt ở trạng thái được duyệt nhưng thiếu vai trò.
+        var retry = Assert.IsType<JsonResult>(await fixture.CreateUserManagementController().Approve(staff.Id));
+        Assert.Null(retry.StatusCode);
+        Assert.True((await fixture.UserManager.FindByIdAsync(staff.Id))!.IsApproved);
+        Assert.Single(await fixture.Context.UserRoles.Where(x => x.UserId == staff.Id).ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Approve_is_idempotent_and_repairs_an_old_approved_account_without_a_role(bool alreadyApproved)
+    {
+        await using var fixture = await IdentityFixture.CreateAsync();
+        var staff = NewUser("staff@example.test", AccountType.Staff, "GV0123", approved: alreadyApproved);
+        Assert.True((await fixture.UserManager.CreateAsync(staff, "GoodPassword!123")).Succeeded);
+        var controller = fixture.CreateUserManagementController();
+
+        Assert.Null(Assert.IsType<JsonResult>(await controller.Approve(staff.Id)).StatusCode);
+        Assert.Null(Assert.IsType<JsonResult>(await controller.Approve(staff.Id)).StatusCode);
+
+        fixture.Context.ChangeTracker.Clear();
+        Assert.True((await fixture.UserManager.FindByIdAsync(staff.Id))!.IsApproved);
+        Assert.Single(await fixture.Context.UserRoles.Where(x => x.UserId == staff.Id).ToListAsync());
+        Assert.Single(await fixture.Context.Roles.Where(x => x.Name == SystemRoles.Lecturer).ToListAsync());
+    }
+
     [Fact]
     public void Approve_is_a_separate_permission_on_the_matrix()
     {
@@ -124,6 +170,74 @@ public class AccountTypeAndApprovalTests
         Assert.True(SystemRoles.IsSystemRole("giangvien"));
         Assert.True(SystemRoles.IsSystemRole("USER"));
         Assert.False(SystemRoles.IsSystemRole("Kế toán"));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Roles_rolls_back_the_whole_assignment_when_an_identity_step_fails(bool failRemoval)
+    {
+        await using var fixture = await IdentityFixture.CreateAsync();
+        var user = NewUser("roles@example.test", AccountType.Student, "2521050001");
+        Assert.True((await fixture.UserManager.CreateAsync(user, "GoodPassword!123")).Succeeded);
+        var oldRole = new IdentityRole("Reader");
+        var newRole = new IdentityRole("Editor");
+        Assert.True((await fixture.RoleManager.CreateAsync(oldRole)).Succeeded);
+        Assert.True((await fixture.RoleManager.CreateAsync(newRole)).Succeeded);
+        Assert.True((await fixture.UserManager.AddToRoleAsync(user, oldRole.Name!)).Succeeded);
+        var controller = fixture.CreateUserManagementController(fixture.CreateFailingRolesManager(failRemoval));
+
+        var result = await controller.Roles(user.Id, [newRole.Id]);
+
+        Assert.Equal("_RolesModal", Assert.IsType<PartialViewResult>(result).ViewName);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, controller.Response.StatusCode);
+        Assert.False(controller.ModelState.IsValid);
+        fixture.Context.ChangeTracker.Clear();
+        var stored = (await fixture.UserManager.FindByIdAsync(user.Id))!;
+        Assert.Equal(new[] { "Reader" }, await fixture.UserManager.GetRolesAsync(stored));
+
+        var retry = await fixture.CreateUserManagementController().Roles(user.Id, [newRole.Id]);
+        Assert.True(JsonSerializer.SerializeToElement(Assert.IsType<JsonResult>(retry).Value)
+            .GetProperty("success").GetBoolean());
+        fixture.Context.ChangeTracker.Clear();
+        stored = (await fixture.UserManager.FindByIdAsync(user.Id))!;
+        Assert.Equal(new[] { "Editor" }, await fixture.UserManager.GetRolesAsync(stored));
+    }
+
+    [Fact]
+    public async Task Roles_rejects_a_deleted_or_unknown_selection_without_removing_existing_roles()
+    {
+        await using var fixture = await IdentityFixture.CreateAsync();
+        var user = NewUser("roles@example.test", AccountType.Student, "2521050001");
+        Assert.True((await fixture.UserManager.CreateAsync(user, "GoodPassword!123")).Succeeded);
+        Assert.True((await fixture.RoleManager.CreateAsync(new IdentityRole("Reader"))).Succeeded);
+        Assert.True((await fixture.UserManager.AddToRoleAsync(user, "Reader")).Succeeded);
+        var controller = fixture.CreateUserManagementController();
+
+        var result = await controller.Roles(user.Id, ["deleted-role"]);
+
+        Assert.IsType<PartialViewResult>(result);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, controller.Response.StatusCode);
+        Assert.Equal(new[] { "Reader" }, await fixture.UserManager.GetRolesAsync(user));
+    }
+
+    [Fact]
+    public async Task Roles_cannot_remove_the_last_admin_or_add_another_role_during_the_rejected_request()
+    {
+        await using var fixture = await IdentityFixture.CreateAsync();
+        var user = NewUser("admin@example.test", AccountType.Staff, "GV0123");
+        Assert.True((await fixture.UserManager.CreateAsync(user, "GoodPassword!123")).Succeeded);
+        Assert.True((await fixture.RoleManager.CreateAsync(new IdentityRole(SystemRoles.Admin))).Succeeded);
+        var otherRole = new IdentityRole("Reader");
+        Assert.True((await fixture.RoleManager.CreateAsync(otherRole)).Succeeded);
+        Assert.True((await fixture.UserManager.AddToRoleAsync(user, SystemRoles.Admin)).Succeeded);
+        var controller = fixture.CreateUserManagementController();
+
+        var result = await controller.Roles(user.Id, [otherRole.Id]);
+
+        Assert.IsType<PartialViewResult>(result);
+        Assert.Equal(StatusCodes.Status422UnprocessableEntity, controller.Response.StatusCode);
+        Assert.Equal(new[] { SystemRoles.Admin }, await fixture.UserManager.GetRolesAsync(user));
     }
 
     private static ApplicationUser NewUser(string email, AccountType type, string code, bool approved = true) => new()
@@ -171,10 +285,10 @@ public class AccountTypeAndApprovalTests
             return new IdentityFixture(connection, provider);
         }
 
-        public UserManagementController CreateUserManagementController()
+        public UserManagementController CreateUserManagementController(UserManager<ApplicationUser>? manager = null)
         {
             var catalog = new PermissionCatalogService(Context, RoleManager, _provider.GetRequiredService<IMemoryCache>());
-            return new UserManagementController(UserManager, RoleManager, Context, catalog)
+            return new UserManagementController(manager ?? UserManager, RoleManager, Context, catalog)
             {
                 ControllerContext = new ControllerContext
                 {
@@ -186,6 +300,63 @@ public class AccountTypeAndApprovalTests
                     }
                 }
             };
+        }
+
+        public UserManager<ApplicationUser> CreateFailingApprovalManager(bool failApprovalUpdate)
+        {
+            var mock = new Mock<UserManager<ApplicationUser>>(
+                Mock.Of<IUserStore<ApplicationUser>>(), null!, null!, null!, null!, null!, null!, null!, null!);
+            mock.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns((string id) => UserManager.FindByIdAsync(id));
+            mock.Setup(x => x.IsInRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+                .Returns((ApplicationUser user, string role) => UserManager.IsInRoleAsync(user, role));
+            mock.Setup(x => x.AddToRoleAsync(It.IsAny<ApplicationUser>(), It.IsAny<string>()))
+                .Returns(async (ApplicationUser user, string role) =>
+                {
+                    // Ghi thật vào SQLite trước khi mô phỏng lỗi để chứng minh transaction hoàn tác được.
+                    var result = await UserManager.AddToRoleAsync(user, role);
+                    return failApprovalUpdate ? result : Failure();
+                });
+            mock.Setup(x => x.UpdateAsync(It.IsAny<ApplicationUser>()))
+                .Returns(async (ApplicationUser user) =>
+                {
+                    var result = await UserManager.UpdateAsync(user);
+                    return failApprovalUpdate ? Failure() : result;
+                });
+            return mock.Object;
+
+            static IdentityResult Failure() => IdentityResult.Failed(new IdentityError
+            {
+                Code = "ApprovalTestFailure", Description = "Không thể hoàn tất phê duyệt."
+            });
+        }
+
+        public UserManager<ApplicationUser> CreateFailingRolesManager(bool failRemoval)
+        {
+            var mock = new Mock<UserManager<ApplicationUser>>(
+                Mock.Of<IUserStore<ApplicationUser>>(), null!, null!, null!, null!, null!, null!, null!, null!);
+            mock.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns((string id) => UserManager.FindByIdAsync(id));
+            mock.Setup(x => x.GetRolesAsync(It.IsAny<ApplicationUser>()))
+                .Returns((ApplicationUser user) => UserManager.GetRolesAsync(user));
+            mock.Setup(x => x.AddToRolesAsync(It.IsAny<ApplicationUser>(), It.IsAny<IEnumerable<string>>()))
+                .Returns(async (ApplicationUser user, IEnumerable<string> roles) =>
+                {
+                    var result = await UserManager.AddToRolesAsync(user, roles);
+                    return failRemoval ? result : Failure();
+                });
+            mock.Setup(x => x.RemoveFromRolesAsync(It.IsAny<ApplicationUser>(), It.IsAny<IEnumerable<string>>()))
+                .Returns(async (ApplicationUser user, IEnumerable<string> roles) =>
+                {
+                    await UserManager.RemoveFromRolesAsync(user, roles);
+                    return Failure();
+                });
+            return mock.Object;
+
+            static IdentityResult Failure() => IdentityResult.Failed(new IdentityError
+            {
+                Code = "RoleTestFailure", Description = "Không thể hoàn tất gán vai trò."
+            });
         }
 
         public async ValueTask DisposeAsync()

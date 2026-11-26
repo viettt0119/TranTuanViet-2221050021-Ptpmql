@@ -1,0 +1,81 @@
+/*!
+ * ArchitectUI HTML Theme Dashboard Free v4.9.3 – bản dựng rút gọn cho DemoMVC.
+ * Copyright 2025 DashboardPack (https://dashboardpack.com), MIT License.
+ * Gồm Bootstrap 5, khung trang và các thành phần; bỏ font icon (dùng Bootstrap Icons), lịch, bản đồ,
+ * toastr, perfect-scrollbar, animate-sass và trang demo.
+ */
+@use "sass:map";
+@use "sass:math";
+@use "sass:color";
+
+@import "components/bootstrap5/functions";
+@import "themes/layout-variables";
+@import "components/bootstrap5/variables";
+@import "components/bootstrap5/variables-dark";
+@import "components/bootstrap5/maps";
+@import "components/bootstrap5/mixins";
+@import "components/bootstrap5/utilities";
+
+@import "components/bootstrap5/root";
+@import "components/bootstrap5/reboot";
+@import "components/bootstrap5/type";
+@import "components/bootstrap5/images";
+@import "components/bootstrap5/containers";
+@import "components/bootstrap5/grid";
+@import "components/bootstrap5/tables";
+@import "components/bootstrap5/forms";
+@import "components/bootstrap5/buttons";
+@import "components/bootstrap5/transitions";
+@import "components/bootstrap5/dropdown";
+@import "components/bootstrap5/button-group";
+@import "components/bootstrap5/nav";
+@import "components/bootstrap5/navbar";
+@import "components/bootstrap5/card";
+@import "components/bootstrap5/accordion";
+@import "components/bootstrap5/breadcrumb";
+@import "components/bootstrap5/pagination";
+@import "components/bootstrap5/badge";
+@import "components/bootstrap5/alert";
+@import "components/bootstrap5/progress";
+@import "components/bootstrap5/list-group";
+@import "components/bootstrap5/close";
+@import "components/bootstrap5/toasts";
+@import "components/bootstrap5/modal";
+@import "components/bootstrap5/tooltip";
+@import "components/bootstrap5/popover";
+@import "components/bootstrap5/carousel";
+@import "components/bootstrap5/spinners";
+@import "components/bootstrap5/offcanvas";
+@import "components/bootstrap5/placeholders";
+@import "components/bootstrap5/helpers";
+@import "components/bootstrap5/utilities/api";
+
+@import "layout/layout";
+
+@import "utils/design-system";
+@import "utils/helpers";
+@import "utils/backgrounds";
+
+@import "elements/buttons";
+@import "elements/dropdown";
+@import "elements/badges";
+@import "elements/cards";
+@import "elements/tabs";
+@import "elements/accordions";
+@import "elements/modals";
+@import "elements/navs";
+@import "elements/listgroup";
+@import "elements/forms";
+@import "elements/pagination";
+
+@import "widgets/content-boxes/content-boxes";
+@import "components/hamburgers/hamburgers";
+@import "components/popovers-tooltips/popovers-tooltips";
+@import "layout/responsive/responsive-base";
+@import "utils/modern-refresh";
+
+// Sửa xung đột với Bootstrap 5 trong utils/_helpers của theme:
+// - .h-100 bị định nghĩa lại thành 100vh làm thẻ trong lưới (col > .card.h-100) cao bằng cả màn hình.
+// - --bs-table-hover-bg được xuất nguyên văn "rgba(#e0f3ff, .62)" (CSS không hợp lệ) nên hàng không đổi màu khi rê chuột.
+.h-100 { height: 100% !important; }
+.table { --bs-table-hover-bg: rgba(224, 243, 255, .62); }

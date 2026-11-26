@@ -1,5 +1,8 @@
 using DemoMVC.Data;
 using DemoMVC.Models;
+using DemoMVC.Models.ViewModels.Students;
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 
@@ -7,6 +10,68 @@ namespace DemoMVC.Services;
 
 public sealed class ExcelImportService(ApplicationDbContext context, StudentCodeGenerator studentCodeGenerator)
 {
+    public const int MaximumRows = 2000;
+    public static IReadOnlyList<string> SupportedEntities { get; } =
+        ["department", "employee", "product", "student", "rolepermission"];
+
+    public static bool IsSupportedEntity(string? entity) =>
+        entity is not null && SupportedEntities.Contains(entity);
+
+    /// <summary>
+    /// Các trường sẽ thực sự đổi nếu ghi đè dòng trùng này, so sánh sau khi chuẩn hoá giống lúc lưu.
+    /// Cột không có trong file thì giữ nguyên dữ liệu cũ nên không xuất hiện ở đây.
+    /// </summary>
+    public static IReadOnlyList<ImportFieldChange> DescribeOverwrite(string entity, ExcelImportRow row)
+    {
+        if (!row.IsExisting)
+            return [];
+
+        string[] fields = entity switch
+        {
+            "department" => ["DepartmentName"],
+            "employee" => ["FullName", "HireDate"],
+            "product" => ["Name", "Price"],
+            "student" => ["FullName", "Address", "University", "DepartmentCode", "Email", "PhoneNumber", "DateOfBirth", "Gender"],
+            "rolepermission" => ["IsGranted"],
+            _ => []
+        };
+
+        var changes = new List<ImportFieldChange>();
+        foreach (var field in fields)
+        {
+            // IsGranted vắng mặt nghĩa là "cấp quyền" (xem ParseGranted), không phải giữ nguyên.
+            if (!row.Values.ContainsKey(field) && field != "IsGranted")
+                continue;
+
+            var oldValue = row.ExistingValues.GetValueOrDefault(field, "");
+            var newValue = row.Values.GetValueOrDefault(field, "").Trim();
+            var unchanged = false;
+            switch (field)
+            {
+                case "HireDate" when DateTime.TryParse(newValue, out var hireDate):
+                    newValue = hireDate.ToString("yyyy-MM-dd");
+                    break;
+                case "DateOfBirth" when DateOnly.TryParse(newValue, out var dateOfBirth):
+                    newValue = dateOfBirth.ToString("yyyy-MM-dd");
+                    break;
+                case "Gender" when Enum.TryParse<StudentGender>(newValue, true, out var gender):
+                    newValue = gender.ToString();
+                    break;
+                case "Price" when TryParsePrice(newValue, out var price):
+                    unchanged = TryParsePrice(oldValue, out var oldPrice) && oldPrice == price;
+                    newValue = price.ToString(CultureInfo.InvariantCulture);
+                    break;
+                case "IsGranted":
+                    newValue = ParseGranted(row.Values) ? "1" : "0";
+                    break;
+            }
+
+            if (!unchanged && !string.Equals(oldValue, newValue, StringComparison.Ordinal))
+                changes.Add(new ImportFieldChange(field, oldValue, newValue));
+        }
+        return changes;
+    }
+
     public async Task<ExcelImportResult> ImportAsync(
         Stream stream,
         string entity,
@@ -45,7 +110,7 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
     {
         using var package = new ExcelPackage(stream);
         var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-        var preview = new ExcelImportPreview { Entity = entity.ToLowerInvariant() };
+        var preview = new ExcelImportPreview { Entity = entity.Trim().ToLowerInvariant() };
         if (worksheet is null)
         {
             preview.Errors.Add(new ImportRowError(0, "File Excel không có worksheet."));
@@ -55,6 +120,11 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
         if (dimension is null)
         {
             preview.Errors.Add(new ImportRowError(0, "File Excel không có dữ liệu."));
+            return preview;
+        }
+        if (dimension.End.Row > MaximumRows + 1 || dimension.End.Column > 30)
+        {
+            preview.Errors.Add(new ImportRowError(0, $"Mỗi file tối đa {MaximumRows} dòng dữ liệu và 30 cột."));
             return preview;
         }
 
@@ -89,20 +159,25 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
         if (preview.Errors.Count > 0)
             return preview;
 
-        preview.Total = Math.Max(0, dimension.End.Row - 1);
         var seenKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var row = 2; row <= dimension.End.Row; row++)
         {
             var values = headers.ToDictionary(
                 pair => pair.Key,
-                pair => worksheet.Cells[row, pair.Value].Text.Trim(),
+                pair => ReadCellValue(worksheet.Cells[row, pair.Value], pair.Key),
                 StringComparer.OrdinalIgnoreCase);
+            if (values.Values.All(string.IsNullOrWhiteSpace)) continue;
+            preview.Total++;
+            if (values.ContainsKey("DepartmentCode")) values["DepartmentCode"] = values["DepartmentCode"].ToUpperInvariant();
+            if (values.ContainsKey("Email")) values["Email"] = values["Email"].ToLowerInvariant();
 
             var key = normalizedEntity switch
             {
                 "department" => values.GetValueOrDefault("DepartmentCode", ""),
                 "employee" => values.GetValueOrDefault("EmpId", ""),
-                "product" => values.GetValueOrDefault("Id", ""),
+                "product" => int.TryParse(values.GetValueOrDefault("Id"), out var productId)
+                    ? productId.ToString(CultureInfo.InvariantCulture) : values.GetValueOrDefault("Id", ""),
                 "student" => values.GetValueOrDefault("StudentCode", ""),
                 "rolepermission" => $"{values.GetValueOrDefault("RoleName", "")}|{values.GetValueOrDefault("Permission", "")}",
                 _ => ""
@@ -114,14 +189,18 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
                 await ValidatePreviewRowAsync(normalizedEntity, values, cancellationToken);
                 if (!string.IsNullOrWhiteSpace(key) && !seenKeys.Add(key))
                     throw new InvalidOperationException($"Khoá '{key}' bị trùng trong file.");
+                if (normalizedEntity == "student" && values.TryGetValue("Email", out var email) &&
+                    !string.IsNullOrEmpty(email) && !seenEmails.Add(email))
+                    throw new InvalidOperationException("Email bị trùng trong file.");
 
-                var duplicate = await IsDuplicateAsync(normalizedEntity, values, cancellationToken);
-                if (duplicate)
+                var importRow = new ExcelImportRow { RowNumber = row, Values = values };
+                await CaptureExistingAsync(normalizedEntity, importRow, cancellationToken);
+                if (importRow.IsExisting)
                     preview.DuplicateCount++;
                 else
                     preview.NewCount++;
 
-                preview.Rows.Add(new ExcelImportRow { RowNumber = row, Values = values });
+                preview.Rows.Add(importRow);
                 preview.Valid++;
             }
             catch (Exception ex) when (ex is InvalidOperationException or FormatException)
@@ -137,23 +216,46 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
         ExcelImportMode mode,
         CancellationToken cancellationToken = default)
     {
-        var result = new ExcelImportResult();
+        if (!Enum.IsDefined(mode) || !IsSupportedEntity(preview.Entity))
+            throw new InvalidOperationException("Loại dữ liệu hoặc chế độ nhập không hợp lệ.");
+        var result = new ExcelImportResult { ErrorCount = preview.Errors.Count };
+        result.Errors.AddRange(preview.Errors.Select(error => $"Dòng {error.Row}: {error.Message}"));
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         try
         {
-            foreach (var row in preview.Rows)
+            // Lưu các mã có sẵn trước để nâng bộ đếm, tránh dòng tự sinh chiếm mã của dòng sau trong file.
+            // OrderBy ổn định nên giữ thứ tự tương đối giữa các dòng tự sinh và trong từng nhóm mã có sẵn.
+            var rows = preview.Entity == "student"
+                ? preview.Rows.OrderBy(row => string.IsNullOrWhiteSpace(row.Values.GetValueOrDefault("StudentCode")))
+                : preview.Rows.AsEnumerable();
+            foreach (var row in rows)
             {
                 try
                 {
+                    ValidatePreviewRow(preview.Entity, row.Values);
+                    await ValidatePreviewRowAsync(preview.Entity, row.Values, cancellationToken);
+                    var current = new ExcelImportRow { Values = row.Values };
+                    await CaptureExistingAsync(preview.Entity, current, cancellationToken);
+                    if (current.IsExisting != row.IsExisting ||
+                        (mode == ExcelImportMode.Overwrite && row.IsExisting &&
+                         (current.ConcurrencyStamp != row.ConcurrencyStamp ||
+                          current.ExistingValues.Count != row.ExistingValues.Count ||
+                          current.ExistingValues.Any(pair => row.ExistingValues.GetValueOrDefault(pair.Key) != pair.Value))))
+                        throw new InvalidOperationException("Dữ liệu đã thay đổi từ lúc xem trước. Vui lòng tải file lên lại.");
                     var changed = await ExecuteRowAsync(preview.Entity, row, mode, cancellationToken);
                     if (changed == 1) result.AddedCount++;
                     else if (changed == 2) result.UpdatedCount++;
                     else result.SkippedCount++;
-                    result.SuccessCount++;
+                    if (changed != 0) result.SuccessCount++;
+                    // Lưu theo dòng trong cùng transaction để kiểm tra ràng buộc và báo đúng dòng lỗi.
+                    await context.SaveChangesAsync(cancellationToken);
                 }
                 catch (Exception ex) when (ex is InvalidOperationException or DbUpdateException or FormatException)
                 {
-                    throw new InvalidOperationException($"Dòng {row.RowNumber}: {ex.Message}", ex);
+                    var message = ex is DbUpdateException
+                        ? "Không thể lưu do dữ liệu trùng hoặc đã thay đổi. Toàn bộ lần nhập đã được hoàn tác."
+                        : ex.Message;
+                    throw new InvalidOperationException($"Dòng {row.RowNumber}: {message}", ex);
                 }
             }
             await context.SaveChangesAsync(cancellationToken);
@@ -163,6 +265,7 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
         catch
         {
             await transaction.RollbackAsync(cancellationToken);
+            context.ChangeTracker.Clear();
             throw;
         }
     }
@@ -172,32 +275,28 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
         switch (entity)
         {
             case "department":
-                if (string.IsNullOrWhiteSpace(values.GetValueOrDefault("DepartmentCode")))
-                    throw new InvalidOperationException("Mã Khoa là bắt buộc.");
-                if (string.IsNullOrWhiteSpace(values.GetValueOrDefault("DepartmentName")))
-                    throw new InvalidOperationException("Tên Khoa là bắt buộc.");
+                ValidateModel(new DepartmentModel
+                {
+                    DepartmentCode = values.GetValueOrDefault("DepartmentCode", "").ToUpperInvariant(),
+                    DepartmentName = values.GetValueOrDefault("DepartmentName", "")
+                });
                 break;
             case "employee":
-                if (string.IsNullOrWhiteSpace(values.GetValueOrDefault("EmpId")) ||
-                    string.IsNullOrWhiteSpace(values.GetValueOrDefault("FullName")))
-                    throw new InvalidOperationException("Mã nhân viên và họ tên là bắt buộc.");
-                if (!DateTime.TryParse(values.GetValueOrDefault("HireDate"), out _))
+                if (!DateTime.TryParse(values.GetValueOrDefault("HireDate"), out var hireDate))
                     throw new FormatException("Ngày vào làm không hợp lệ.");
+                ValidateModel(new EmployeeModel
+                {
+                    EmpId = values.GetValueOrDefault("EmpId", ""),
+                    FullName = values.GetValueOrDefault("FullName", ""), HireDate = hireDate
+                });
                 break;
             case "product":
-                if (!int.TryParse(values.GetValueOrDefault("Id"), out _) ||
-                    !decimal.TryParse(values.GetValueOrDefault("Price"), out var price) ||
-                    price is < 1000 or > 100000000)
+                if (!int.TryParse(values.GetValueOrDefault("Id"), out var productId) || productId <= 0 ||
+                    !TryParsePrice(values.GetValueOrDefault("Price"), out var price))
                     throw new InvalidOperationException("ID hoặc giá sản phẩm không hợp lệ.");
-                if (string.IsNullOrWhiteSpace(values.GetValueOrDefault("Name")) ||
-                    values["Name"].Length is < 5 or > 100)
-                    throw new InvalidOperationException("Tên sản phẩm phải từ 5 đến 100 ký tự.");
+                ValidateModel(new ProductModel { Id = productId, Name = values.GetValueOrDefault("Name"), Price = price });
                 break;
             case "student":
-                if (string.IsNullOrWhiteSpace(values.GetValueOrDefault("FullName")) ||
-                    string.IsNullOrWhiteSpace(values.GetValueOrDefault("Address")) ||
-                    string.IsNullOrWhiteSpace(values.GetValueOrDefault("DepartmentCode")))
-                    throw new InvalidOperationException("Họ tên, địa chỉ và mã Khoa là bắt buộc.");
                 if (!int.TryParse(values.GetValueOrDefault("AdmissionYear"), out var year) || year is < 2000 or > 2099)
                     throw new InvalidOperationException("Năm nhập học phải từ 2000 đến 2099.");
                 var trainingSystemCode = values.GetValueOrDefault("TrainingSystemCode") ?? "";
@@ -215,20 +314,42 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
                         throw new InvalidOperationException(
                             $"Mã sinh viên {studentCode} không khớp năm/hệ/ngành của dòng (phải bắt đầu bằng {prefix}).");
                 }
-                if (values.TryGetValue("Email", out var email) &&
-                    !string.IsNullOrWhiteSpace(email) &&
-                    !System.Net.Mail.MailAddress.TryCreate(email, out _))
-                    throw new InvalidOperationException("Email không hợp lệ.");
-                if (values.TryGetValue("PhoneNumber", out var phone) &&
-                    !string.IsNullOrWhiteSpace(phone) &&
-                    (phone.Length != 10 || !phone.StartsWith('0')))
-                    throw new InvalidOperationException("Số điện thoại gồm 10 chữ số và bắt đầu bằng 0.");
-                if (values.TryGetValue("DateOfBirth", out var dateOfBirth) &&
-                    !string.IsNullOrWhiteSpace(dateOfBirth) &&
-                    !DateOnly.TryParse(dateOfBirth, out _))
-                    throw new InvalidOperationException("Ngày sinh không hợp lệ.");
+                ValidateModel(new StudentFormViewModel
+                {
+                    FullName = values.GetValueOrDefault("FullName", ""),
+                    Address = values.GetValueOrDefault("Address", ""),
+                    University = values.GetValueOrDefault("University", ""),
+                    DepartmentCode = values.GetValueOrDefault("DepartmentCode", ""),
+                    AdmissionYear = year, TrainingSystemCode = trainingSystemCode, MajorCode = majorCode,
+                    Email = NormalizeImportOptional(values, "Email"),
+                    PhoneNumber = NormalizeImportOptional(values, "PhoneNumber"),
+                    DateOfBirth = ParseDateOfBirth(values), Gender = ParseGender(values)
+                });
                 break;
         }
+    }
+
+    private static void ValidateModel(object model)
+    {
+        var errors = new List<ValidationResult>();
+        if (!Validator.TryValidateObject(model, new ValidationContext(model), errors, true))
+            throw new InvalidOperationException(string.Join(" ", errors.Select(error => error.ErrorMessage)));
+    }
+
+    private static DateOnly? ParseDateOfBirth(Dictionary<string, string> values)
+    {
+        var text = NormalizeImportOptional(values, "DateOfBirth");
+        if (text is null) return null;
+        return DateOnly.TryParse(text, out var date)
+            ? date : throw new InvalidOperationException("Ngày sinh không hợp lệ.");
+    }
+
+    private static StudentGender? ParseGender(Dictionary<string, string> values)
+    {
+        var text = NormalizeImportOptional(values, "Gender");
+        if (text is null) return null;
+        return Enum.TryParse<StudentGender>(text, true, out var gender) && Enum.IsDefined(gender)
+            ? gender : throw new InvalidOperationException("Giới tính chỉ nhận Nam, Nữ hoặc Khác.");
     }
 
     private async Task<bool> IsDuplicateAsync(
@@ -251,6 +372,56 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
             _ => false
         };
     }
+
+    private async Task CaptureExistingAsync(string entity, ExcelImportRow row, CancellationToken cancellationToken)
+    {
+        var values = row.Values;
+        switch (entity)
+        {
+            case "department":
+                var department = await context.Departments.AsNoTracking().FirstOrDefaultAsync(
+                    x => x.DepartmentCode == values["DepartmentCode"].ToUpperInvariant(), cancellationToken);
+                if (department is not null)
+                    row.ExistingValues = Snapshot(("DepartmentCode", department.DepartmentCode), ("DepartmentName", department.DepartmentName));
+                break;
+            case "employee":
+                var employee = await context.Employees.AsNoTracking().FirstOrDefaultAsync(x => x.EmpId == values["EmpId"], cancellationToken);
+                if (employee is not null)
+                    row.ExistingValues = Snapshot(("EmpId", employee.EmpId), ("FullName", employee.FullName), ("HireDate", employee.HireDate.ToString("yyyy-MM-dd")));
+                break;
+            case "product":
+                var id = int.Parse(values["Id"]);
+                var product = await context.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                if (product is not null)
+                    row.ExistingValues = Snapshot(("Id", product.Id.ToString()), ("Name", product.Name), ("Price", product.Price.ToString(CultureInfo.InvariantCulture)));
+                break;
+            case "student":
+                var code = values.GetValueOrDefault("StudentCode", "");
+                var student = await context.Students.AsNoTracking().FirstOrDefaultAsync(x => x.StudentCode == code, cancellationToken);
+                if (student is not null)
+                {
+                    row.ConcurrencyStamp = student.ConcurrencyStamp;
+                    row.ExistingValues = Snapshot(("StudentCode", student.StudentCode), ("FullName", student.FullName),
+                        ("Address", student.Address), ("University", student.University), ("DepartmentCode", student.DepartmentCode),
+                        ("AdmissionYear", student.AdmissionYear.ToString()), ("TrainingSystemCode", student.TrainingSystemCode),
+                        ("MajorCode", student.MajorCode), ("Email", student.Email), ("PhoneNumber", student.PhoneNumber),
+                        ("DateOfBirth", student.DateOfBirth?.ToString("yyyy-MM-dd")), ("Gender", student.Gender?.ToString()));
+                }
+                break;
+            case "rolepermission":
+                var roleName = values["RoleName"].ToUpperInvariant();
+                var permission = values["Permission"];
+                var grant = await context.ApplicationRolePermissions.AsNoTracking().FirstOrDefaultAsync(
+                    x => x.Role.NormalizedName == roleName && x.Permission.Key == permission, cancellationToken);
+                if (grant is not null)
+                    row.ExistingValues = Snapshot(("RoleName", values["RoleName"]), ("Permission", permission), ("IsGranted", grant.IsGranted ? "1" : "0"));
+                break;
+        }
+        row.IsExisting = row.ExistingValues.Count > 0;
+    }
+
+    private static Dictionary<string, string> Snapshot(params (string Key, string? Value)[] fields) =>
+        fields.ToDictionary(field => field.Key, field => field.Value ?? "", StringComparer.OrdinalIgnoreCase);
 
     private async Task<int> ExecuteRowAsync(
         string entity,
@@ -316,18 +487,21 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
     private async Task<int> ExecuteProductAsync(Dictionary<string, string> values, ExcelImportMode mode, CancellationToken cancellationToken)
     {
         var id = int.Parse(values["Id"]);
+        if (!TryParsePrice(values["Price"], out var price))
+            throw new InvalidOperationException("Giá sản phẩm không hợp lệ. Dùng dấu chấm cho phần thập phân và không dùng dấu phân cách hàng nghìn.");
         var existing = await context.Products.FindAsync([id], cancellationToken);
         if (existing is not null)
         {
             if (mode == ExcelImportMode.Append) return 0;
             existing.Name = values["Name"].Trim();
-            existing.Price = decimal.Parse(values["Price"]);
+            existing.Price = price;
             return 2;
         }
         context.Products.Add(new ProductModel
         {
+            Id = id,
             Name = values["Name"].Trim(),
-            Price = decimal.Parse(values["Price"])
+            Price = price
         });
         return 1;
     }
@@ -344,19 +518,22 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
             : await context.Students.FirstOrDefaultAsync(item => item.StudentCode == code, cancellationToken);
         if (existing is not null)
         {
-            if (mode == ExcelImportMode.Append) return 0;
+            if (mode == ExcelImportMode.Append)
+            {
+                // Dữ liệu cũ có thể chưa đồng bộ bộ đếm; dòng tự sinh sau đó vẫn phải tránh mã đã có.
+                await studentCodeGenerator.ReserveExistingCodeAsync(existing, cancellationToken);
+                return 0;
+            }
             existing.FullName = values["FullName"].Trim();
             existing.Address = values["Address"].Trim();
             existing.University = values["University"].Trim();
             existing.DepartmentCode = departmentCode;
-            existing.Email = NormalizeImportOptional(values, "Email");
-            existing.PhoneNumber = NormalizeImportOptional(values, "PhoneNumber");
-            if (values.TryGetValue("DateOfBirth", out var existingDobText) &&
-                DateOnly.TryParse(existingDobText, out var existingDob))
-                existing.DateOfBirth = existingDob;
-            if (values.TryGetValue("Gender", out var existingGenderText) &&
-                Enum.TryParse<StudentGender>(existingGenderText, ignoreCase: true, out var existingGender))
-                existing.Gender = existingGender;
+            if (values.ContainsKey("Email")) existing.Email = NormalizeImportOptional(values, "Email")?.ToLowerInvariant();
+            if (values.ContainsKey("PhoneNumber")) existing.PhoneNumber = NormalizeImportOptional(values, "PhoneNumber");
+            if (values.ContainsKey("DateOfBirth")) existing.DateOfBirth = ParseDateOfBirth(values);
+            if (values.ContainsKey("Gender")) existing.Gender = ParseGender(values);
+            existing.UpdatedAt = DateTimeOffset.UtcNow;
+            existing.ConcurrencyStamp = Guid.NewGuid();
             // Mã cũ có thể được nhập trước khi có cơ chế đồng bộ bộ đếm: đảm bảo bộ đếm không tụt sau mã này.
             await studentCodeGenerator.ReserveExistingCodeAsync(existing, cancellationToken);
             return 2;
@@ -372,15 +549,10 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
             TrainingSystemCode = values["TrainingSystemCode"].Trim(),
             MajorCode = values["MajorCode"].Trim(),
             StudentCode = code,
-            Email = NormalizeImportOptional(values, "Email"),
-            PhoneNumber = NormalizeImportOptional(values, "PhoneNumber")
+            Email = NormalizeImportOptional(values, "Email")?.ToLowerInvariant(),
+            PhoneNumber = NormalizeImportOptional(values, "PhoneNumber"),
+            DateOfBirth = ParseDateOfBirth(values), Gender = ParseGender(values)
         };
-        if (values.TryGetValue("DateOfBirth", out var dateOfBirthText) &&
-            DateOnly.TryParse(dateOfBirthText, out var dateOfBirth))
-            student.DateOfBirth = dateOfBirth;
-        if (values.TryGetValue("Gender", out var genderText) &&
-            Enum.TryParse<StudentGender>(genderText, ignoreCase: true, out var gender))
-            student.Gender = gender;
         if (string.IsNullOrWhiteSpace(student.StudentCode))
             await studentCodeGenerator.AssignNextCodeAsync(student, cancellationToken);
         else
@@ -394,12 +566,39 @@ public sealed class ExcelImportService(ApplicationDbContext context, StudentCode
             ? value.Trim()
             : null;
 
+    private static string ReadCellValue(ExcelRange cell, string header)
+    {
+        // Giá lấy từ giá trị số gốc, không lấy chuỗi hiển thị có ký hiệu tiền tệ hoặc làm tròn của Excel.
+        if (string.Equals(header, "Price", StringComparison.OrdinalIgnoreCase) &&
+            cell.Value is double or decimal or int or long or float)
+            return Convert.ToString(cell.Value, CultureInfo.InvariantCulture) ?? "";
+        return cell.Text.Trim();
+    }
+
+    private static bool TryParsePrice(string? value, out decimal price) =>
+        decimal.TryParse(value,
+            NumberStyles.AllowLeadingWhite | NumberStyles.AllowTrailingWhite |
+            NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+            CultureInfo.InvariantCulture, out price);
+
     // ----- Phân quyền role (bảng ApplicationRolePermissions) -----
     // Cột: RoleName | Permission (khoá Controller.Action, vd. Student.Index) | IsGranted (tuỳ chọn, mặc định 1).
     // Bảng ApplicationPermissions (danh mục quyền) tự sinh từ code; StudentCodeCounters tự đồng bộ khi nhập sinh viên.
 
     private async Task ValidatePreviewRowAsync(string entity, Dictionary<string, string> values, CancellationToken cancellationToken)
     {
+        if (entity == "student")
+        {
+            var departmentCode = values["DepartmentCode"].ToUpperInvariant();
+            if (!await context.Departments.AnyAsync(x => x.DepartmentCode == departmentCode, cancellationToken))
+                throw new InvalidOperationException($"Khoa {departmentCode} không tồn tại.");
+            var email = NormalizeImportOptional(values, "Email")?.ToLowerInvariant();
+            var code = values.GetValueOrDefault("StudentCode", "");
+            if (email is not null && await context.Students.AnyAsync(
+                x => x.Email != null && x.Email.ToLower() == email && x.StudentCode != code, cancellationToken))
+                throw new InvalidOperationException("Email đã được sử dụng cho sinh viên khác.");
+            return;
+        }
         if (entity != "rolepermission")
             return;
 

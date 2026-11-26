@@ -47,6 +47,7 @@ public sealed class StudentFormViewModel
     public DateOnly? DateOfBirth { get; set; }
 
     [Display(Name = "Giới tính")]
+    [EnumDataType(typeof(StudentGender), ErrorMessage = "Vui lòng chọn giới tính hợp lệ.")]
     public StudentGender? Gender { get; set; }
 
     [Display(Name = "Email")]

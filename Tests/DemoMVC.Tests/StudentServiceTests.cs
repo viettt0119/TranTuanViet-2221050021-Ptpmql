@@ -107,6 +107,136 @@ public class StudentServiceTests
         Assert.Contains("thay đổi", result.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Create_and_update_reject_email_duplicates_regardless_of_case_and_surrounding_spaces()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        await SeedProfilesAsync(fixture, " First@Example.Test ", "second@example.test");
+        var create = await fixture.Service.CreateAsync(Form(" first@example.test "));
+        Assert.False(create.Success);
+        Assert.Contains(nameof(StudentFormViewModel.Email), create.FieldErrors.Keys);
+
+        var second = await fixture.Context.Students.SingleAsync(x => x.Email == "second@example.test");
+        var edit = (await fixture.Service.GetForEditAsync(second.Id))!;
+        edit.Email = " FIRST@EXAMPLE.TEST ";
+        var update = await fixture.Service.UpdateAsync(second.Id, edit);
+        Assert.False(update.Success);
+        Assert.Contains(nameof(StudentFormViewModel.Email), update.FieldErrors.Keys);
+        Assert.Equal("second@example.test", second.Email);
+    }
+
+    [Fact]
+    public async Task Create_and_update_store_normalized_email_and_allow_the_same_record_to_keep_it()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        Assert.True((await fixture.Service.CreateAsync(Form(" Student@Example.Test "))).Success);
+        var student = await fixture.Context.Students.SingleAsync();
+        Assert.Equal("student@example.test", student.Email);
+
+        var edit = (await fixture.Service.GetForEditAsync(student.Id))!;
+        edit.Email = " STUDENT@EXAMPLE.TEST ";
+        Assert.True((await fixture.Service.UpdateAsync(student.Id, edit)).Success);
+        Assert.Equal("student@example.test", (await fixture.Context.Students.SingleAsync()).Email);
+    }
+
+    [Fact]
+    public async Task Student_validation_rejects_invalid_form_fields_before_reserving_a_code()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        var invalid = Form();
+        invalid.FullName = new string('A', 101);
+        invalid.Gender = (StudentGender)99;
+        invalid.TrainingSystemCode = "X";
+        invalid.PhoneNumber = "123";
+        var result = await fixture.Service.CreateAsync(invalid);
+
+        Assert.False(result.Success);
+        Assert.Contains(nameof(StudentFormViewModel.FullName), result.FieldErrors.Keys);
+        Assert.Contains(nameof(StudentFormViewModel.Gender), result.FieldErrors.Keys);
+        Assert.Contains(nameof(StudentFormViewModel.TrainingSystemCode), result.FieldErrors.Keys);
+        Assert.Contains(nameof(StudentFormViewModel.PhoneNumber), result.FieldErrors.Keys);
+        Assert.Empty(await fixture.Context.Students.ToListAsync());
+        Assert.Empty(await fixture.Context.StudentCodeCounters.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Student_requires_an_existing_department_and_database_protects_the_referenced_department()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        var invalid = Form();
+        invalid.DepartmentCode = "MISSING";
+        var rejected = await fixture.Service.CreateAsync(invalid);
+        Assert.False(rejected.Success);
+        Assert.Contains(nameof(StudentFormViewModel.DepartmentCode), rejected.FieldErrors.Keys);
+        Assert.Empty(await fixture.Context.StudentCodeCounters.ToListAsync());
+
+        Assert.True((await fixture.Service.CreateAsync(Form())).Success);
+        var department = await fixture.Context.Departments.SingleAsync(x => x.DepartmentCode == "CNTT");
+        fixture.Context.Departments.Remove(department);
+        await Assert.ThrowsAsync<DbUpdateException>(() => fixture.Context.SaveChangesAsync());
+        fixture.Context.ChangeTracker.Clear();
+        Assert.True(await fixture.Context.Departments.AnyAsync(x => x.DepartmentCode == "CNTT"));
+        Assert.Single(await fixture.Context.Students.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Deleting_a_student_does_not_reuse_an_issued_code()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        var first = await fixture.Service.CreateAsync(Form());
+        Assert.True(first.Success);
+        Assert.Equal("2621050001", first.EntityCode);
+        var student = await fixture.Context.Students.SingleAsync();
+        Assert.True((await fixture.Service.DeleteAsync(student.Id, student.ConcurrencyStamp)).Success);
+
+        var second = await fixture.Service.CreateAsync(Form());
+        Assert.True(second.Success);
+        Assert.Equal("2621050002", second.EntityCode);
+    }
+
+    [Fact]
+    public async Task Failed_insert_rolls_back_the_code_counter()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        // Mô phỏng dữ liệu cũ có mã nhưng chưa có bộ đếm tương ứng.
+        fixture.Context.Students.Add(Student("2621050001", "Existing", "CNTT", 2026));
+        await fixture.Context.SaveChangesAsync();
+
+        var failed = await fixture.Service.CreateAsync(Form());
+
+        Assert.False(failed.Success);
+        Assert.Single(await fixture.Context.Students.ToListAsync());
+        Assert.Empty(await fixture.Context.StudentCodeCounters.ToListAsync());
+    }
+
+    [Fact]
+    public async Task Export_uses_the_list_filters_and_sorting_but_includes_all_matching_pages()
+    {
+        await using var fixture = await StudentFixture.CreateAsync();
+        for (var i = 1; i <= 12; i++)
+            fixture.Context.Students.Add(Student($"262105{i:D4}", $"Match {i:D2}", "CNTT", 2026));
+        fixture.Context.Students.Add(Student("2521050001", "Match previous year", "CNTT", 2025));
+        fixture.Context.Students.Add(Student("2621050013", "Match other department", "KT", 2026));
+        fixture.Context.Students.Add(Student("2621050014", "Outside search", "CNTT", 2026));
+        await fixture.Context.SaveChangesAsync();
+        var filter = new StudentFilterViewModel
+        {
+            Q = "Match", DepartmentCode = "CNTT", AdmissionYear = 2026,
+            Sort = "name", Dir = "desc", PageSize = 10
+        };
+
+        var page = await fixture.Service.GetPagedAsync(filter);
+        var export = await fixture.Service.GetForExportAsync(filter);
+
+        Assert.Equal(12, page.Students.TotalRecords);
+        Assert.Equal(10, page.Students.Items.Count);
+        Assert.Equal(12, export.Count);
+        Assert.Equal("Match 12", export[0].FullName);
+        Assert.Equal("Match 01", export[^1].FullName);
+        Assert.Equal(page.Students.Items.Select(x => x.Id), export.Take(10).Select(x => x.Id));
+        Assert.All(export, x => Assert.NotNull(x.Department));
+    }
+
     [Theory]
     [InlineData("own@example.test")]
     [InlineData("  OWN@Example.TEST ")]
@@ -163,6 +293,13 @@ public class StudentServiceTests
         FullName = "Sinh vien",
         AccountType = AccountType.Student,
         EmailConfirmed = true
+    };
+
+    private static StudentFormViewModel Form(string? email = null) => new()
+    {
+        FullName = "Sinh viên kiểm thử", Address = "Hà Nội", DepartmentCode = "CNTT",
+        University = "Đại học Mỏ - Địa chất", AdmissionYear = 2026,
+        TrainingSystemCode = "21", MajorCode = "05", Email = email
     };
 
     private static async Task SeedProfilesAsync(StudentFixture fixture, string firstEmail, string secondEmail)

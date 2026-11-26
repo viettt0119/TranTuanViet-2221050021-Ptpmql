@@ -8,7 +8,7 @@
 }
 @section Breadcrumb { <partial name="_LessonBreadcrumb" /> }
 
-<section class="list-page">
+<section class="list-page" data-crud-list>
     <div class="page-heading">
         <div>
             <span class="page-eyebrow">BÀI 5</span>
@@ -21,6 +21,7 @@
 
     <div class="list-toolbar">
         <form asp-action="Index" method="get" class="search-form">
+            <input type="hidden" name="pageSize" value="@Model.PageSize" />
             <label class="visually-hidden" for="lec5-search">Tìm người dùng</label>
             <input id="lec5-search" name="q" value="@searchQuery" class="form-control" placeholder="Tìm theo tên đăng nhập..." />
             <label class="visually-hidden" for="lec5-role">Lọc theo quyền</label>
@@ -34,12 +35,12 @@
             <button type="submit" class="btn btn-outline-primary">Tìm kiếm</button>
             @if (hasFilter)
             {
-                <a asp-action="Index" class="btn btn-link">Xóa lọc</a>
+                <a asp-action="Index" asp-route-pageSize="@Model.PageSize" data-list-url class="btn btn-link">Xóa lọc</a>
             }
         </form>
     </div>
 
-    <div data-crud-list>
+    <div>
         <div class="table-responsive list-card">
             <table class="table table-hover align-middle mb-0">
                 <thead>

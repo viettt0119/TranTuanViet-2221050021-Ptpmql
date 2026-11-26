@@ -105,6 +105,107 @@ public class PermissionAuthorizationFilterTests
         Assert.Null(grantedContext.Result);
     }
 
+    [Theory]
+    [InlineData(SystemRoles.User, AccountType.Student)]
+    [InlineData(SystemRoles.Lecturer, AccountType.Staff)]
+    public async Task Default_student_and_staff_roles_cannot_open_or_change_account_management(
+        string roleName, AccountType accountType)
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+        await fixture.Catalog.SyncAsync();
+        await fixture.Catalog.EnsureSystemRolesAsync();
+        var principal = await fixture.CreateRoleMemberAsync(roleName, accountType);
+
+        // The same permission lookup controls menu visibility; both HTTP paths must also refuse access.
+        foreach (var (controllerType, controllerName, action) in AccountManagementEndpoints)
+        {
+            Assert.False(await fixture.Catalog.HasAccessAsync(principal, $"{controllerName}.{action}"));
+            foreach (var ajax in new[] { false, true })
+            {
+                var request = fixture.CreateContext(controllerType, controllerName, action, action);
+                request.HttpContext.User = principal;
+                if (ajax) request.HttpContext.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+                await fixture.Filter.OnAuthorizationAsync(request);
+
+                if (ajax)
+                    Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<JsonResult>(request.Result).StatusCode);
+                else
+                {
+                    var redirect = Assert.IsType<RedirectToActionResult>(request.Result);
+                    Assert.Equal("AccessDenied", redirect.ActionName);
+                    Assert.Equal("Account", redirect.ControllerName);
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Admin_can_open_and_change_account_management()
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+        await fixture.Catalog.SyncAsync();
+        await fixture.Catalog.EnsureSystemRolesAsync();
+        var principal = await fixture.CreateRoleMemberAsync(SystemRoles.Admin, AccountType.Staff);
+
+        foreach (var (controllerType, controllerName, action) in AccountManagementEndpoints)
+        {
+            Assert.True(await fixture.Catalog.HasAccessAsync(principal, $"{controllerName}.{action}"));
+            var request = fixture.CreateContext(controllerType, controllerName, action, action);
+            request.HttpContext.User = principal;
+            request.HttpContext.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+            await fixture.Filter.OnAuthorizationAsync(request);
+
+            Assert.Null(request.Result);
+        }
+    }
+
+    [Fact]
+    public async Task Account_management_read_access_does_not_allow_role_assignment_or_permission_changes()
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+        await fixture.Catalog.SyncAsync();
+        await fixture.Catalog.EnsureSystemRolesAsync();
+        var principal = await fixture.CreateRoleMemberAsync(SystemRoles.Lecturer, AccountType.Staff);
+        var role = await fixture.Context.Roles.SingleAsync(item => item.Name == SystemRoles.Lecturer);
+        var readPermissions = await fixture.Context.ApplicationPermissions
+            .Where(item => item.Key == "UserManagement.Index" || item.Key == "Role.Index")
+            .ToListAsync();
+        foreach (var permission in readPermissions)
+            fixture.Context.ApplicationRolePermissions.Add(new ApplicationRolePermission
+            {
+                RoleId = role.Id, PermissionId = permission.Id, IsGranted = true
+            });
+        await fixture.Context.SaveChangesAsync();
+        fixture.Catalog.InvalidateUser(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        foreach (var (controllerType, controllerName, action) in AccountManagementEndpoints)
+        {
+            var canRead = action == "Index";
+            Assert.Equal(canRead, await fixture.Catalog.HasAccessAsync(principal, $"{controllerName}.{action}"));
+            var request = fixture.CreateContext(controllerType, controllerName, action, action);
+            request.HttpContext.User = principal;
+            request.HttpContext.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+            await fixture.Filter.OnAuthorizationAsync(request);
+
+            if (canRead)
+                Assert.Null(request.Result);
+            else
+                Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<JsonResult>(request.Result).StatusCode);
+        }
+    }
+
+    private static readonly (Type ControllerType, string ControllerName, string Action)[] AccountManagementEndpoints =
+    [
+        (typeof(UserManagementController), "UserManagement", nameof(UserManagementController.Index)),
+        (typeof(UserManagementController), "UserManagement", nameof(UserManagementController.Roles)),
+        (typeof(RoleController), "Role", nameof(RoleController.Index)),
+        (typeof(RoleController), "Role", nameof(RoleController.Create)),
+        (typeof(RoleController), "Role", nameof(RoleController.Permissions))
+    ];
+
     [Fact]
     public async Task Action_without_any_attribute_is_denied_by_default()
     {
@@ -118,6 +219,52 @@ public class PermissionAuthorizationFilterTests
         await fixture.Filter.OnAuthorizationAsync(context);
 
         Assert.IsType<RedirectToActionResult>(context.Result);
+    }
+
+    [Fact]
+    public async Task Approval_modal_and_submit_use_the_same_permission_and_respect_revocation()
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+        var role = new IdentityRole("Approver");
+        var permission = new ApplicationPermission
+        {
+            Key = "UserManagement.Approve",
+            Controller = "UserManagement",
+            Action = "Approve",
+            Description = "Phê duyệt giảng viên"
+        };
+        var user = new ApplicationUser { Id = "approver", UserName = "approver@example.test" };
+        fixture.Context.Roles.Add(role);
+        fixture.Context.Users.Add(user);
+        fixture.Context.ApplicationPermissions.Add(permission);
+        await fixture.Context.SaveChangesAsync();
+        var grant = new ApplicationRolePermission { RoleId = role.Id, PermissionId = permission.Id, IsGranted = true };
+        fixture.Context.ApplicationRolePermissions.Add(grant);
+        fixture.Context.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = role.Id });
+        await fixture.Context.SaveChangesAsync();
+        var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, user.Id)], "test"));
+
+        foreach (var allowed in new[] { true, false })
+        {
+            grant.IsGranted = allowed;
+            await fixture.Context.SaveChangesAsync();
+            fixture.Catalog.InvalidateUser(user.Id);
+            foreach (var methodName in new[] { nameof(UserManagementController.ApproveConfirmation), nameof(UserManagementController.Approve) })
+            {
+                var method = typeof(UserManagementController).GetMethod(methodName)!;
+                var context = fixture.CreateContext(typeof(UserManagementController), "UserManagement", methodName,
+                    Permissions.GetActionName(method));
+                context.HttpContext.User = principal;
+                context.HttpContext.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+
+                await fixture.Filter.OnAuthorizationAsync(context);
+
+                if (allowed)
+                    Assert.Null(context.Result);
+                else
+                    Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<JsonResult>(context.Result).StatusCode);
+            }
+        }
     }
 
     [Fact]
@@ -352,6 +499,22 @@ public class PermissionAuthorizationFilterTests
 
         public AuthorizationFilterContext CreateContext(Controller controller) =>
             CreateContext(typeof(StudentController), "Student", nameof(StudentController.Index), "Index");
+
+        public async Task<ClaimsPrincipal> CreateRoleMemberAsync(string roleName, AccountType accountType)
+        {
+            var role = await Context.Roles.SingleAsync(item => item.Name == roleName);
+            var user = new ApplicationUser
+            {
+                Id = "account-under-test", UserName = "account@example.test", Email = "account@example.test",
+                AccountType = accountType, EmailConfirmed = true, IsApproved = true
+            };
+            Context.Users.Add(user);
+            await Context.SaveChangesAsync();
+            Context.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = role.Id });
+            await Context.SaveChangesAsync();
+            return new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, user.Id), new Claim(ClaimTypes.Role, roleName)], "test"));
+        }
 
         public AuthorizationFilterContext CreateContext(Type controllerType, string controllerName, string methodName, string actionName)
         {

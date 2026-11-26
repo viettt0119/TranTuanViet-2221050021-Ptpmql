@@ -18,111 +18,130 @@
     --app-muted: #a7b0bf;
 }
 
-body {
-    background: var(--app-bg);
-    color: var(--app-text);
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-
-.app-sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: 260px;
-    background: var(--app-surface);
-    border-right: 1px solid var(--app-border);
-    z-index: 1030;
-    transition: width .2s ease, transform .2s ease;
-}
-
-.app-sidebar.collapsed { width: 84px; }
-.app-sidebar.collapsed .sidebar-label,
-.app-sidebar.collapsed .sidebar-heading,
-.app-sidebar.collapsed .brand-text { display: none; }
-.app-sidebar.collapsed .sidebar-link { justify-content: center; }
-
-.app-main {
-    margin-left: 260px;
-    min-height: 100vh;
-    transition: margin-left .2s ease;
-}
-.app-main.sidebar-collapsed { margin-left: 84px; }
-
-.sidebar-brand,
-.topbar,
-.sidebar-link {
-    display: flex;
-    align-items: center;
-}
-
-.sidebar-brand {
-    height: 72px;
-    padding: 0 20px;
-    border-bottom: 1px solid var(--app-border);
-    color: var(--app-primary);
-    font-weight: 800;
-    text-decoration: none;
-}
-
-.sidebar-nav { padding: 16px 12px; }
-.sidebar-heading {
-    color: var(--app-muted);
-    font-size: .72rem;
-    font-weight: 800;
-    letter-spacing: .08em;
-    padding: 12px 12px 6px;
-    text-transform: uppercase;
-}
-
-.sidebar-link {
-    gap: 10px;
-    min-height: 44px;
-    padding: 8px 12px;
-    margin: 2px 0;
-    border-radius: 10px;
-    color: var(--app-text);
-    text-decoration: none;
-}
-.sidebar-link:hover,
-.sidebar-link.active {
-    background: rgba(55, 103, 198, .1);
-    color: var(--app-primary);
-}
-.sidebar-link i { font-size: 1.1rem; }
-
-.topbar {
-    height: 72px;
-    justify-content: space-between;
-    padding: 0 24px;
-    background: var(--app-surface);
-    border-bottom: 1px solid var(--app-border);
-}
-
-.app-content { padding: 24px; }
-.card, .list-card, .auth-card {
+.list-card, .auth-card {
     background: var(--app-surface);
     border: 1px solid var(--app-border);
     border-radius: var(--app-radius);
     box-shadow: var(--app-shadow);
 }
 
+/* ===== Khung trang ArchitectUI (wwwroot/lib/architectui) ===== */
+
+/* Logo dạng chữ thay cho ảnh logo mẫu của theme. */
+.app-header__logo .logo-src {
+    align-items: center;
+    background: none;
+    color: var(--bs-primary);
+    display: inline-flex;
+    font-size: 1.15rem;
+    font-weight: 800;
+    gap: .5rem;
+    height: auto;
+    letter-spacing: .04em;
+    text-decoration: none;
+    width: auto;
+}
+.app-header__logo .logo-src i { font-size: 1.35rem; }
+.app-header__logo .hamburger { padding: .5rem; }
+
+/* Thanh bên dùng Bootstrap Icons: canh giữa icon trong ô 34px của theme. */
+.vertical-nav-menu i.metismenu-icon.bi::before { vertical-align: middle; }
+.vertical-nav-menu li a[aria-current="page"] i.metismenu-icon { opacity: .9; color: var(--bs-primary); }
+
+/* Breadcrumb trên thanh trên: một dòng, cắt bớt khi hẹp, không đẩy nút tài khoản. */
+.app-header .app-header-left { min-width: 0; flex: 1 1 auto; }
+.app-header .app-header-left nav { min-width: 0; }
+.app-header .breadcrumb { flex-wrap: nowrap; white-space: nowrap; margin-bottom: 0; }
+.app-header .breadcrumb-item { overflow: hidden; text-overflow: ellipsis; }
+.app-header .breadcrumb-item.active { min-width: 0; }
+.app-header .app-header-right { flex: 0 0 auto; gap: .5rem; }
+
+.header-theme-toggle {
+    align-items: center;
+    border-radius: 50%;
+    display: inline-flex;
+    height: 2.5rem;
+    justify-content: center;
+    padding: 0;
+    width: 2.5rem;
+}
+.header-avatar {
+    align-items: center;
+    background: linear-gradient(135deg, #3f6ad8, #16aaff);
+    border-radius: 50%;
+    color: #fff;
+    display: inline-flex;
+    font-weight: 700;
+    height: 42px;
+    justify-content: center;
+    width: 42px;
+}
+.header-user-info .widget-heading {
+    font-weight: 600;
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.header-user-info .widget-subheading { opacity: .6; }
+
+/* Nội dung chính: theme dùng padding 30px; giữ nội dung không tràn ngang trên màn hình hẹp. */
+.app-main .app-main__inner { min-width: 0; }
+.app-main .app-main__outer { min-width: 0; }
+
+@media (max-width: 767.98px) {
+    /* Thanh tài khoản bật bằng nút "⋮" hiện dạng viên thuốc nổi. */
+    .app-header .app-header__content.header-mobile-open { gap: .25rem; }
+    .app-main .app-main__inner { padding: 1rem 1rem 0; }
+}
+
+/* Chế độ tối: theme ArchitectUI tô màu sáng cố định cho khung trang nên cần ghi đè. */
+[data-bs-theme="dark"] body.app-body { background: var(--app-bg); color: var(--app-text); }
+[data-bs-theme="dark"] .app-theme-white.app-container { background: var(--app-bg); }
+[data-bs-theme="dark"] .app-theme-white .app-header,
+[data-bs-theme="dark"] .app-theme-white .app-sidebar,
+[data-bs-theme="dark"] .app-header .app-header__content.header-mobile-open {
+    background: var(--app-surface);
+    border-color: var(--app-border);
+}
+[data-bs-theme="dark"] .vertical-nav-menu li a { color: var(--app-text); }
+[data-bs-theme="dark"] .vertical-nav-menu li a:hover,
+[data-bs-theme="dark"] .vertical-nav-menu li a.mm-active {
+    background: rgba(255, 255, 255, .07);
+    color: #9db8ff;
+}
+[data-bs-theme="dark"] .hamburger-inner,
+[data-bs-theme="dark"] .hamburger-inner::before,
+[data-bs-theme="dark"] .hamburger-inner::after { background-color: var(--app-text); }
+[data-bs-theme="dark"] .card,
+[data-bs-theme="dark"] .list-card { background: var(--app-surface); border-color: var(--app-border); color: var(--app-text); }
+/* Theme tô cứng #f8f9fa cho đầu/chân hộp thoại: ở chế độ tối tiêu đề sáng trên nền sáng sẽ không đọc được. */
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer { background: var(--app-surface); border-color: var(--app-border); }
+[data-bs-theme="dark"] .header-theme-toggle {
+    background: rgba(255, 255, 255, .08);
+    border-color: var(--app-border);
+    color: var(--app-text);
+}
+
 .auth-layout {
     min-height: 100vh;
     display: grid;
     place-items: center;
-    background: linear-gradient(135deg, rgba(55,103,198,.08), rgba(99,102,241,.04)), var(--app-bg);
+    /* Nền "plum plate" giống trang đăng nhập của ArchitectUI. */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 .auth-shell { width: min(520px, calc(100% - 32px)); }
 
 .empty-state { text-align: center; color: var(--app-muted); padding: 48px 16px; }
 .empty-state i { display: block; font-size: 2.5rem; margin-bottom: 8px; }
 
-/* Thanh trên cùng: email và breadcrumb dài được rút gọn trên một dòng, không đè lên nội dung hay làm cuộn ngang trang. */
-.min-w-0, .topbar nav { min-width: 0; }
-.user-menu-toggle { display: inline-flex; align-items: center; max-width: min(320px, 50vw); }
-.topbar .breadcrumb { flex-wrap: nowrap; white-space: nowrap; }
-.topbar .breadcrumb-item { overflow: hidden; text-overflow: ellipsis; }
-.topbar .breadcrumb-item.active { min-width: 0; }
-.sidebar-backdrop { display: none; }
+
+/* Chân bảng: ô "Mỗi trang" chỉ rộng bằng nội dung. Nếu giữ flex-basis 28rem của .page-size-form,
+   khi chân bảng xếp dọc trên điện thoại nó sẽ cao 28rem và tạo khoảng trống lớn. */
+.list-footer .page-size-form { flex: 0 0 auto; }
+
+/* Bảng xem trước nhập Excel: cuộn trong khung để nút xác nhận không bị đẩy quá xa. */
+.import-preview { max-height: 28rem; }
 
 .landing-page {
     background: #f5f7fb;
@@ -203,27 +222,6 @@ body {
     margin-top: 2rem;
 }
 
-@media (max-width: 991.98px) {
-    .app-sidebar {
-        width: 260px;
-        transform: translateX(-100%);
-        box-shadow: var(--app-shadow);
-    }
-    .app-sidebar.show { transform: translateX(0); }
-    /* Lớp phủ phía sau menu: menu che nút mở nên cần chạm ra ngoài để đóng. */
-    .app-sidebar.show ~ .sidebar-backdrop {
-        display: block;
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, .45);
-        z-index: 1025;
-    }
-    .app-main,
-    .app-main.sidebar-collapsed { margin-left: 0; }
-    .topbar { padding: 0 16px; }
-    .app-content { padding: 16px; }
-}
-
 @media (max-width: 575.98px) {
     .landing-header {
         align-items: flex-start;
@@ -247,8 +245,6 @@ body {
         padding-inline: 1rem;
     }
 
-    /* Màn hình hẹp chỉ giữ liên kết quay lại; tên trang đã có trong nội dung. */
-    .topbar .breadcrumb-item.active:not(:first-child) { display: none; }
 }
 
 /* Trang "Xem lại bài học" (chỉ Admin) */

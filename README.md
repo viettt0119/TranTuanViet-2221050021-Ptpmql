@@ -2,6 +2,53 @@
 
 Dự án thực hành ASP.NET Core MVC, Entity Framework Core và SQLite. README này tập trung vào kiến thức từng buổi.
 
+## Đối chiếu yêu cầu buổi 10–15
+
+Ma trận chức năng, các bước nghiệm thu và phạm vi kiểm tra được lưu tại
+[docs/acceptance-lessons-10-15.md](docs/acceptance-lessons-10-15.md).
+Tài liệu phân biệt chức năng có trong mã nguồn với kết quả kiểm thử và các luồng cần kiểm tra trên trình duyệt.
+
+| Buổi | Chức năng trong dự án |
+|---|---|
+| 10 | Quan hệ Sinh viên–Khoa, danh mục Khoa HUMG, sinh mã `YYHHNNSSSS` bằng bộ đếm theo nhóm năm/hệ/ngành |
+| 11 | CRUD qua Bootstrap modal và AJAX; validation trong modal, thông báo và cập nhật danh sách |
+| 12 | Tìm kiếm, bộ lọc và phân trang tại các trang danh sách; giữ trạng thái khi chuyển trang |
+| 13 | ASP.NET Core Identity, tài khoản Admin từ cấu hình, xác nhận email, gửi lại liên kết, quên/đổi mật khẩu |
+| 14 | CRUD vai trò, gán/gỡ vai trò, ma trận quyền theo `Controller.Action`, kiểm tra quyền ở server |
+| 15 | Nhập Excel cho Sinh viên, Khoa, Nhân viên, Sản phẩm và phân quyền vai trò; xem trước rồi chọn bổ sung/ghi đè |
+
+## Giao diện
+
+Khung trang quản trị dùng theme ArchitectUI HTML Free (DashboardPack, giấy phép MIT), đã biên dịch sẵn tại
+`wwwroot/lib/architectui/architectui.min.css`. Cách biên dịch lại và phạm vi theme được ghi tại
+[tools/architectui/README.md](tools/architectui/README.md). Build và deploy dự án không cần Node.
+
+## Dữ liệu khởi tạo và cấu hình chạy
+
+- Danh mục Khoa được quản lý qua migration trong `Migrations/` và `Data/UniversityDepartments.cs`.
+- `AdminSeed:Email`, `AdminSeed:Password`, `AdminSeed:FullName` cấu hình tài khoản quản trị ban đầu.
+  Dùng User Secrets hoặc biến môi trường `AdminSeed__Email`, `AdminSeed__Password`, `AdminSeed__FullName`;
+  không ghi mật khẩu vào mã nguồn hay tệp trong `wwwroot`.
+- Cấu hình email theo `Models/EmailSettings.cs`; `Email:PublicBaseUrl` là địa chỉ công khai dùng trong liên kết email.
+  Gửi email thực tế cần cấu hình SMTP hợp lệ; test tự động không chứng minh thư đã tới hộp thư người nhận.
+- Dữ liệu minh họa gồm 20 sinh viên và 20 nhân viên, nhận diện bằng email `student.sample.*@example.invalid`
+  và mã `DEMO-EMP-*`. Đây là dữ liệu hồ sơ, không tạo tài khoản đăng nhập cho các sinh viên/nhân viên này.
+- `DemoDataSeed:Enabled` điều khiển dữ liệu minh họa. Nếu không cấu hình, chỉ môi trường `Development` bật seed;
+  `Production` và `Staging` tắt. Có thể dùng biến môi trường `DemoDataSeed__Enabled=false` để tắt cả ở local.
+  Khi bật, startup bổ sung các mẫu còn thiếu; khi tắt, startup không tạo lại mẫu đã xóa và không tự xóa mẫu đã có.
+  Chỉ đặt `DemoDataSeed__Enabled=true` trên môi trường demo khi chủ động muốn dữ liệu minh họa.
+
+Chạy và kiểm tra từ thư mục dự án:
+
+```powershell
+dotnet run --project .\DemoMVC.csproj
+dotnet build .\DemoMVC.csproj --no-restore
+dotnet test .\Tests\DemoMVC.Tests\DemoMVC.Tests.csproj --no-restore
+```
+
+Hai lệnh kiểm tra dùng `--no-restore` cần các gói đã được restore. Chạy `dotnet restore` khi chuẩn bị máy mới.
+Nghiệm thu thay đổi dữ liệu trên CSDL kiểm thử riêng hoặc bản sao CSDL, không dùng trực tiếp dữ liệu hosting.
+
 ## Lec 1 - Tạo dự án MVC
 
 - Tạo dự án ASP.NET Core MVC bằng .NET CLI.
@@ -113,7 +160,7 @@ Ví dụ:
 - Entity nghiệp vụ: Sinh viên, Khoa, Nhân viên, Sản phẩm.
 - Startup tự migrate database khi ứng dụng chạy.
 
-## Hoàn thiện dự án: bài học chỉ Admin, đăng nhập theo tư cách
+## Tài khoản, đăng nhập và quyền truy cập
 
 Prompt kiểm tra và hoàn thiện toàn bộ dự án: [.github/prompts/hoan-thien-du-an.prompt.md](.github/prompts/hoan-thien-du-an.prompt.md).
 
@@ -124,14 +171,23 @@ Prompt kiểm tra và hoàn thiện toàn bộ dự án: [.github/prompts/hoan-t
 - Trang **Xem lại bài học** (`/Lesson`): danh sách bài giảng + bài thực hành, tìm kiếm theo tên/chủ đề, lọc theo buổi, phân trang.
   Mục "Bài học" trên sidebar chỉ hiện với Admin.
 
-### Đăng nhập / đăng ký theo tư cách
+### Đăng ký theo loại hồ sơ, đăng nhập chung
 | Tư cách | Mã khi đăng ký | Sau khi đăng ký |
 |---|---|---|
 | Sinh viên | Mã sinh viên: 10 chữ số, bắt đầu bằng 2 (VD `2521050001`) | Xác thực email → đăng nhập, role `User` |
 | Giảng viên / Cán bộ | Mã cán bộ: 2–4 chữ cái + 2–6 chữ số (VD `GV0123`) | Xác thực email **và** chờ Admin phê duyệt → role `GiangVien` |
 
-- Khi đăng nhập phải chọn đúng tư cách; tài khoản Admin dùng tư cách **Giảng viên / Quản trị**.
+- Mọi tài khoản dùng một trang **Đăng nhập tài khoản**, chỉ nhập email và mật khẩu.
+  Loại hồ sơ được chọn khi đăng ký; quyền được xác định từ các vai trò đã cấp trong CSDL.
+- Đăng nhập thông thường chuyển đến **Trang chủ** (`/Home/Dashboard`) cho cả Admin, sinh viên và cán bộ.
+  Liên kết nội bộ cần đăng nhập vẫn có thể quay lại qua `returnUrl`; liên kết ngoài bị từ chối.
+- Khách mở website thấy `/Home/Index`. Người đã đăng nhập mở `/` hoặc trang đăng nhập sẽ vào Trang chủ.
+  Đăng xuất trở về Index. Truy cập chức năng nội bộ khi chưa đăng nhập sẽ yêu cầu đăng nhập.
 - Mã SV / mã cán bộ là duy nhất.
-- Admin phê duyệt tại **Người dùng** → lọc "Chờ duyệt" → **Duyệt** (quyền riêng `UserManagement.Approve`).
+- Mục **Tài khoản & phân quyền** chứa hai tab **Người dùng** và **Vai trò & quyền**. Mỗi tab chỉ hiện
+  khi có quyền xem tương ứng; các nút quản lý kiểm tra quyền thao tác riêng. Tài khoản sinh viên/cán bộ
+  theo quyền mặc định không thấy mục này và bị chặn khi gọi URL/AJAX quản trị trực tiếp.
+- Admin phê duyệt tại **Tài khoản & phân quyền → Người dùng** → lọc "Chờ duyệt" → **Duyệt**
+  (quyền riêng `UserManagement.Approve`). Email xác thực và phê duyệt vẫn là điều kiện đăng nhập.
 - Vai trò hệ thống `Admin`, `User`, `GiangVien` không đổi tên / xoá được; quyền của `User` và `GiangVien` vẫn chỉnh trên ma trận.
-- Migration `AddAccountTypeAndApproval`: tài khoản cũ được coi là đã duyệt, tài khoản Admin cũ chuyển sang tư cách Giảng viên / Quản trị.
+- Migration `AddAccountTypeAndApproval`: tài khoản cũ được coi là đã duyệt, hồ sơ Admin cũ thuộc nhóm Cán bộ.

@@ -3,26 +3,7 @@
     ViewData["Title"] = "Sinh viên";
 }
 @section Breadcrumb {
-    <ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard">Tổng quan</a></li><li class="breadcrumb-item active">Sinh viên</li></ol>
+    <ol class="breadcrumb mb-0"><li class="breadcrumb-item"><a asp-controller="Home" asp-action="Dashboard">Trang chủ</a></li><li class="breadcrumb-item active">Sinh viên</li></ol>
 }
-<section data-crud-list>
-    <div class="d-flex justify-content-between align-items-start mb-4">
-        <div><span class="page-eyebrow">QUẢN LÝ ĐÀO TẠO</span><h1>Sinh viên</h1><p class="text-muted mb-0">Tra cứu và quản lý hồ sơ sinh viên.</p></div>
-        <div class="d-flex gap-2">
-            <a asp-permission="Student.Export" asp-action="Export" asp-route-q="@Model.Filter.Q" asp-route-departmentCode="@Model.Filter.DepartmentCode" asp-route-admissionYear="@Model.Filter.AdmissionYear" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Xuất Excel</a>
-            <a asp-permission="Student.Create" asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Thêm sinh viên</a>
-        </div>
-    </div>
-    <form asp-action="Index" method="get" class="card p-3 mb-3">
-        <div class="row g-2">
-            <div class="col-lg-4"><input name="q" value="@Model.Filter.Q" class="form-control" placeholder="Tìm mã, họ tên hoặc email..." /></div>
-            <div class="col-lg-3"><select name="departmentCode" class="form-select"><option value="">Tất cả khoa</option>@foreach (var department in Model.Departments) { <option value="@department.DepartmentCode" selected="@(Model.Filter.DepartmentCode == department.DepartmentCode)">@department.DepartmentName</option> }</select></div>
-            <div class="col-lg-2"><select name="admissionYear" class="form-select"><option value="">Tất cả năm</option>@foreach (var year in Model.AdmissionYears) { <option value="@year" selected="@(Model.Filter.AdmissionYear == year)">@year</option> }</select></div>
-            <input type="hidden" name="sort" value="@Model.Filter.Sort" /><input type="hidden" name="dir" value="@Model.Filter.Dir" />
-            <div class="col-lg-3 d-flex gap-2"><button class="btn btn-primary" type="submit"><i class="bi bi-funnel me-1"></i>Lọc</button><a asp-action="Index" class="btn btn-outline-secondary">Xoá lọc</a></div>
-        </div>
-    </form>
-    @await Html.PartialAsync("_StudentTable", Model)
-    @await Html.PartialAsync("_PagedListFooter", (object)Model.Students)
-</section>
+@await Html.PartialAsync("_StudentList", Model)
 @await Html.PartialAsync("_CrudModalHost")
