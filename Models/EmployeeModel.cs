@@ -13,7 +13,7 @@ namespace DemoMVC.Models
         [StringLength(100, ErrorMessage = "Họ tên không được quá 100 ký tự")]
         public string FullName { get; set; } = default!;
 
-        [DataType(DataType.DateTime)]
-        public DateTime HireDate { get; set; } = DateTime.Now; 
+        [DataType(DataType.Date)]
+        public DateTime HireDate { get; set; } = DateTime.Today;
     }
 }
