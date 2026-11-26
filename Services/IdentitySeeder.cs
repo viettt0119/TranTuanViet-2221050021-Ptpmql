@@ -9,7 +9,7 @@ public sealed class IdentitySeeder(
     UserManager<ApplicationUser> userManager,
     IOptions<IdentitySeedOptions> seedOptions)
 {
-    private static readonly string[] Roles = ["Admin", "User"];
+    private static readonly IReadOnlyList<string> Roles = SystemRoles.All;
 
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
@@ -40,7 +40,9 @@ public sealed class IdentitySeeder(
                 UserName = email,
                 Email = email,
                 FullName = fullName,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                AccountType = AccountType.Staff,
+                IsApproved = true
             };
 
             var createResult = await userManager.CreateAsync(admin, password);
@@ -67,6 +69,13 @@ public sealed class IdentitySeeder(
             if (!admin.EmailConfirmed)
             {
                 admin.EmailConfirmed = true;
+                needsUpdate = true;
+            }
+            // Admin đăng nhập bằng tư cách "Giảng viên / Quản trị".
+            if (admin.AccountType != AccountType.Staff || !admin.IsApproved)
+            {
+                admin.AccountType = AccountType.Staff;
+                admin.IsApproved = true;
                 needsUpdate = true;
             }
 

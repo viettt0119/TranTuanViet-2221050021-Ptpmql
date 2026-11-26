@@ -42,6 +42,12 @@
                 @if (canUser) { <a asp-controller="UserManagement" asp-action="Index" class="sidebar-link"><i class="bi bi-person-gear"></i><span class="sidebar-label">Người dùng</span></a> }
                 @if (canRole) { <a asp-controller="Role" asp-action="Index" class="sidebar-link"><i class="bi bi-shield-check"></i><span class="sidebar-label">Vai trò</span></a> }
             }
+            @* Bài thực hành Lec 1–6 là [AdminOnly]: chỉ hiện với Admin, không cấp được qua ma trận quyền. *@
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="sidebar-heading">Bài học</div>
+                <a asp-controller="Lesson" asp-action="Index" class="sidebar-link"><i class="bi bi-journal-bookmark"></i><span class="sidebar-label">Xem lại bài học</span></a>
+            }
         </nav>
     </aside>
     <div class="app-main" id="app-main">

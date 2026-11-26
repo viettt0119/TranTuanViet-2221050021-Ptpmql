@@ -26,3 +26,10 @@ public sealed class PermissionActionAttribute(string displayName) : Attribute
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
 public sealed class AuthenticatedOnlyAttribute : Attribute;
+
+/// <summary>
+/// Chỉ tài khoản thuộc role Admin được truy cập (các bài thực hành Lec 1–6, trang "Xem lại bài học").
+/// Action loại này không xuất hiện trên ma trận phân quyền động nên không thể cấp cho role khác.
+/// </summary>
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+public sealed class AdminOnlyAttribute : Attribute;

@@ -82,10 +82,17 @@ public static class Permissions
     }
 
     /// <summary>
-    /// false nếu action cho khách ([AllowAnonymous]) hoặc chỉ cần đăng nhập ([AuthenticatedOnly]).
+    /// false nếu action cho khách ([AllowAnonymous]), chỉ cần đăng nhập ([AuthenticatedOnly])
+    /// hoặc chỉ dành cho Admin ([AdminOnly]).
     /// </summary>
     public static bool RequiresPermission(Type controllerType, MethodInfo method) =>
-        !IsAnonymous(controllerType, method) && !IsAuthenticatedOnly(controllerType, method);
+        !IsAnonymous(controllerType, method) &&
+        !IsAuthenticatedOnly(controllerType, method) &&
+        !IsAdminOnly(controllerType, method);
+
+    public static bool IsAdminOnly(Type controllerType, MethodInfo method) =>
+        method.IsDefined(typeof(AdminOnlyAttribute), inherit: true) ||
+        controllerType.IsDefined(typeof(AdminOnlyAttribute), inherit: true);
 
     public static bool IsAnonymous(Type controllerType, MethodInfo method) =>
         method.IsDefined(typeof(AllowAnonymousAttribute), inherit: true) ||

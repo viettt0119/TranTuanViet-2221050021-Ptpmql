@@ -12,7 +12,7 @@ public class SqliteUnicodeFunctionsInterceptorTests
     [Theory]
     [InlineData("địa")]
     [InlineData("ĐỊA")]
-    [InlineData("Địa Chất")]
+    [InlineData("Địa")]
     public async Task ToLower_contains_matches_vietnamese_uppercase_text_when_ef_opens_the_connection(string term)
     {
         // DB in-memory dùng chung: EF tự mở/đóng kết nối của nó nên interceptor đăng ký qua OnConfiguring được gọi.
@@ -20,15 +20,17 @@ public class SqliteUnicodeFunctionsInterceptorTests
         await using var keepAlive = new SqliteConnection(connectionString);
         await keepAlive.OpenAsync();
         await using var context = CreateContext(connectionString);
-        await context.Database.EnsureCreatedAsync(); // HasData seed có Khoa "Địa chất" (DC).
+        await context.Database.EnsureCreatedAsync(); // HasData seed có "Khoa học và Kỹ thuật Địa chất" (DC) và "Trắc địa - Bản đồ..." (TD).
 
         var search = term.Trim().ToLowerInvariant(); // Giống cách controller chuẩn hóa từ khóa.
         var codes = await context.Departments
             .Where(d => d.DepartmentCode.ToLower().Contains(search) || d.DepartmentName.ToLower().Contains(search))
+            .OrderBy(d => d.DepartmentCode)
             .Select(d => d.DepartmentCode)
             .ToListAsync();
 
-        Assert.Equal(["DC"], codes);
+        // SQLite lower() gốc chỉ xử lý ASCII nên "ĐỊA"/"Địa" không khớp được khoa nào trước khi có interceptor.
+        Assert.Equal(["DC", "TD"], codes);
     }
 
     [Fact]
@@ -40,7 +42,7 @@ public class SqliteUnicodeFunctionsInterceptorTests
         await using var context = CreateContext(connectionString);
         await context.Database.EnsureCreatedAsync();
 
-        var found = await context.Departments.AnyAsync(d => d.DepartmentName.ToUpper() == "ĐỊA CHẤT");
+        var found = await context.Departments.AnyAsync(d => d.DepartmentName.ToUpper() == "KHOA HỌC VÀ KỸ THUẬT ĐỊA CHẤT");
 
         Assert.True(found);
     }

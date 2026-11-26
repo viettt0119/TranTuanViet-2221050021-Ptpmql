@@ -34,6 +34,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<DepartmentModel>().HasData(UniversityDepartments.All
             .Select(item => new DepartmentModel { DepartmentCode = item.Code, DepartmentName = item.Name }));
 
+        builder.Entity<ApplicationUser>(entity =>
+        {
+            // Mã SV / mã cán bộ duy nhất; SQLite cho phép nhiều NULL (tài khoản cũ, Admin chưa có mã).
+            entity.HasIndex(x => x.MemberCode).IsUnique();
+            // Mặc định ở CSDL = true: tài khoản có sẵn trước khi thêm cột được coi là đã duyệt.
+            // HasSentinel(true): EF chỉ bỏ cột khỏi INSERT khi giá trị là true, nên false (chờ duyệt) luôn được ghi.
+            // Thiếu dòng này, false trùng sentinel mặc định và bị CSDL thay bằng true → giảng viên tự được duyệt.
+            entity.Property(x => x.IsApproved).HasDefaultValue(true).HasSentinel(true);
+        });
+
         builder.Entity<ApplicationPermission>(entity =>
         {
             entity.HasIndex(x => x.Key).IsUnique();

@@ -13,17 +13,23 @@ public sealed class PermissionCatalogService(
     RoleManager<IdentityRole> roleManager,
     IMemoryCache memoryCache)
 {
-    // Quyền mặc định của role User khi role này chưa có quyền nào (chỉ xem và các trang bài học).
+    // Quyền mặc định của role User khi role này chưa có quyền nào (chỉ xem).
+    // Bài thực hành Lec 1–6 là [AdminOnly] nên không có trong danh sách này.
     public static readonly IReadOnlyList<string> DefaultUserPermissionKeys =
     [
         "Student.Index", "Student.Details",
         "Department.Index", "Department.Details",
         "Employee.Index", "Employee.Details",
-        "Product.Index", "Product.Details",
-        "Lec5.Index", "Lec5.Details",
-        "Lesson.Lesson1", "Lesson.Lesson2", "Lesson.Lesson3",
-        "Lesson.Lesson4", "Lesson.Lesson5", "Lesson.Lesson6",
-        "Lesson4.Index", "Lesson4.Greet", "Lesson4.ProductById"
+        "Product.Index", "Product.Details"
+    ];
+
+    // Quyền mặc định của role GiangVien (giảng viên đã được duyệt) khi role này chưa có quyền nào.
+    public static readonly IReadOnlyList<string> DefaultLecturerPermissionKeys =
+    [
+        "Student.Index", "Student.Details", "Student.Create", "Student.Edit", "Student.Export",
+        "Department.Index", "Department.Details",
+        "Employee.Index", "Employee.Details",
+        "Product.Index", "Product.Details"
     ];
 
     // Hệ thống cũ phân quyền theo module (vd. "Student.View"). Khi nâng cấp, quyền đã cấp được chuyển
@@ -48,7 +54,7 @@ public sealed class PermissionCatalogService(
 
     public async Task EnsureSystemRolesAsync(CancellationToken cancellationToken = default)
     {
-        foreach (var roleName in new[] { "Admin", "User" })
+        foreach (var roleName in SystemRoles.All)
         {
             if (!await roleManager.RoleExistsAsync(roleName))
                 await roleManager.CreateAsync(new IdentityRole(roleName));
@@ -79,6 +85,7 @@ public sealed class PermissionCatalogService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await EnsureDefaultUserPermissionsAsync(cancellationToken);
+        await EnsureDefaultPermissionsAsync(SystemRoles.Lecturer, DefaultLecturerPermissionKeys, cancellationToken);
     }
 
     /// <summary>
@@ -236,11 +243,18 @@ public sealed class PermissionCatalogService(
         }
     }
 
-    public async Task EnsureDefaultUserPermissionsAsync(CancellationToken cancellationToken = default)
+    public Task EnsureDefaultUserPermissionsAsync(CancellationToken cancellationToken = default) =>
+        EnsureDefaultPermissionsAsync(SystemRoles.User, DefaultUserPermissionKeys, cancellationToken);
+
+    /// <summary>Cấp bộ quyền mặc định cho role nếu role đó chưa có quyền nào (không ghi đè cấu hình của Admin).</summary>
+    public async Task EnsureDefaultPermissionsAsync(
+        string roleName,
+        IReadOnlyList<string> permissionKeys,
+        CancellationToken cancellationToken = default)
     {
-        var userRole = await roleManager.FindByNameAsync("User");
+        var userRole = await roleManager.FindByNameAsync(roleName);
         if (userRole is null)
-            throw new InvalidOperationException("Role User phải được khởi tạo.");
+            throw new InvalidOperationException($"Role {roleName} phải được khởi tạo.");
 
         var hasAnyPermission = await dbContext.ApplicationRolePermissions
             .AnyAsync(x => x.RoleId == userRole.Id, cancellationToken);
@@ -248,7 +262,7 @@ public sealed class PermissionCatalogService(
             return;
 
         var permissions = await dbContext.ApplicationPermissions
-            .Where(x => DefaultUserPermissionKeys.Contains(x.Key))
+            .Where(x => permissionKeys.Contains(x.Key))
             .ToListAsync(cancellationToken);
 
         foreach (var permission in permissions)

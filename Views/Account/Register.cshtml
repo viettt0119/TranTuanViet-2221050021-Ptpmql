@@ -1,44 +1,73 @@
 @model DemoMVC.Models.RegisterViewModel
+@using DemoMVC.Models
 @{
     Layout = "_AuthLayout";
     ViewData["Title"] = "Đăng ký";
+    var isStaff = Model.AccountType == AccountType.Staff;
 }
 
 <div class="auth-page">
-    <section class="auth-card">
-        <div class="auth-intro">
-            <span class="auth-eyebrow">DemoMVC</span>
-            <h1>Tạo tài khoản</h1>
-            <p>Đăng ký để bắt đầu sử dụng hệ thống. Sau khi tạo tài khoản, hãy mở email (ví dụ Gmail) và bấm liên kết xác thực để kích hoạt.</p>
+    <section class="auth-card auth-card-wide">
+        <div class="auth-header">
+            <span class="auth-header-icon bg-success"><i class="bi bi-person-plus-fill" aria-hidden="true"></i></span>
+            <h1>Đăng ký tài khoản</h1>
+            <p>Tạo tài khoản mới trên hệ thống DemoMVC</p>
         </div>
-        <form asp-action="Register" method="post">
-            <div asp-validation-summary="All" class="text-danger"></div>
+        <form asp-action="Register" method="post" id="register-form">
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+            @{ ViewData["AccountTypeMode"] = "register"; }
+            <partial name="_AccountTypePicker" model="Model.AccountType" />
+            <p class="small text-warning-emphasis mb-3" id="staff-approval-note" hidden="@(!isStaff)">
+                <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>Tài khoản Giảng viên/Cán bộ cần được Quản trị viên phê duyệt trước khi đăng nhập.
+            </p>
+
             <div class="mb-3">
-                <label asp-for="FullName" class="form-label">Họ tên</label>
-                <input asp-for="FullName" class="form-control form-control-lg" autocomplete="name" placeholder="Nguyễn Văn A" />
-                <span asp-validation-for="FullName" class="text-danger"></span>
+                <label asp-for="FullName" class="form-label fw-semibold">Họ và tên</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text"><i class="bi bi-person" aria-hidden="true"></i></span>
+                    <input asp-for="FullName" class="form-control" autocomplete="name" placeholder="Nhập họ và tên đầy đủ..." />
+                </div>
+                <span asp-validation-for="FullName" class="text-danger small"></span>
             </div>
             <div class="mb-3">
-                <label asp-for="Email" class="form-label">Email</label>
-                <input asp-for="Email" class="form-control form-control-lg" autocomplete="email" placeholder="name@example.com" />
-                <span asp-validation-for="Email" class="text-danger"></span>
+                <label asp-for="MemberCode" class="form-label fw-semibold" id="member-code-label">@Model.AccountType.CodeLabel()</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text"><i class="bi @(isStaff ? "bi-person-vcard" : "bi-person-badge")" id="member-code-icon" aria-hidden="true"></i></span>
+                    <input asp-for="MemberCode" class="form-control font-monospace" autocomplete="off"
+                           placeholder="@(isStaff ? "VD: GV0123" : "VD: 2521050001 (10 số, bắt đầu bằng 2)")"
+                           inputmode="@(isStaff ? "text" : "numeric")" />
+                </div>
+                <span asp-validation-for="MemberCode" class="text-danger small"></span>
             </div>
             <div class="mb-3">
-                <label asp-for="Password" class="form-label">Mật khẩu</label>
-                <input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" />
-                <div class="form-text">Tối thiểu 12 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt.</div>
-                <span asp-validation-for="Password" class="text-danger"></span>
+                <label asp-for="Email" class="form-label fw-semibold">Email</label>
+                <div class="input-group input-group-lg">
+                    <span class="input-group-text"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+                    <input asp-for="Email" class="form-control" autocomplete="email" placeholder="name@humg.edu.vn" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small"></span>
             </div>
             <div class="mb-3">
-                <label asp-for="ConfirmPassword" class="form-label">Xác nhận mật khẩu</label>
-                <input asp-for="ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" />
-                <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                <label asp-for="Password" class="form-label fw-semibold">Mật khẩu</label>
+                <input asp-for="Password" class="form-control form-control-lg" autocomplete="new-password" placeholder="Tối thiểu 12 ký tự, có chữ hoa, chữ thường, chữ số và ký tự đặc biệt" />
+                <span asp-validation-for="Password" class="text-danger small"></span>
             </div>
-            <button type="submit" class="btn btn-primary btn-lg w-100">Tạo tài khoản</button>
+            <div class="mb-3">
+                <label asp-for="ConfirmPassword" class="form-label fw-semibold">Xác nhận mật khẩu</label>
+                <input asp-for="ConfirmPassword" class="form-control form-control-lg" autocomplete="new-password" placeholder="Nhập lại mật khẩu..." />
+                <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+            </div>
+            <button type="submit" class="btn btn-success btn-lg w-100">
+                <i class="bi bi-person-check me-1" aria-hidden="true"></i>Đăng ký
+            </button>
         </form>
-        <div class="auth-links">
-            <span>Đã có tài khoản? <a asp-action="Login">Đăng nhập</a></span>
+        <div class="auth-footer">
+            <span>Đã có tài khoản? <a asp-action="Login">Đăng nhập ngay</a></span>
         </div>
     </section>
 </div>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/account-type.js" asp-append-version="true"></script>
+}

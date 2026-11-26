@@ -10,13 +10,12 @@ namespace Lesson4.Controllers
     // nên mọi action đều phải khai báo template riêng.
     [Route("Lesson4")]
     [Route("bai-hoc/dinh-tuyen")]
-    [PermissionModule("Bài 4 – Định tuyến", "Bài học", 81)]
+    [AdminOnly] // Bài thực hành: chỉ Admin, không nằm trên ma trận phân quyền.
     public class Lesson4Controller : Controller
     {
         // "" khớp với chính tiền tố: /Lesson4 và /bai-hoc/dinh-tuyen; "Index" khớp /Lesson4/Index.
         [HttpGet("")]
         [HttpGet("Index")]
-        [PermissionAction("Trang định tuyến, gửi form")]
         public IActionResult Index()
         {
             return View();
@@ -33,7 +32,6 @@ namespace Lesson4.Controllers
 
         // Tham số trên URL và tham số tuỳ chọn: /bai-hoc/dinh-tuyen/chao/Viet hoặc /bai-hoc/dinh-tuyen/chao/Viet/21
         [HttpGet("chao/{name}/{age:int?}")]
-        [PermissionAction("Ví dụ tham số URL")]
         public IActionResult Greet(string name, int? age)
         {
             ViewBag.ThongBao = age is null
@@ -46,7 +44,6 @@ namespace Lesson4.Controllers
         // và trang 404 tuỳ biến (Home/StatusCode/404) được hiển thị.
         // Dấu "~/" bỏ qua tiền tố của controller: URL là /san-pham/{id}, không phải /Lesson4/san-pham/{id}.
         [HttpGet("~/san-pham/{id:int:min(1)}")]
-        [PermissionAction("Ví dụ ràng buộc route")]
         public IActionResult ProductById(int id)
         {
             ViewBag.ThongBao = $"Đã khớp route ~/san-pham/{{id:int:min(1)}} với id = {id}.";

@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 
 namespace DemoMVC.Controllers;
 
-[PermissionModule("Người dùng demo (Lec5)", "Bài học", 90)]
+[AdminOnly] // Bài thực hành: chỉ Admin, không nằm trên ma trận phân quyền.
 public class Lec5Controller : Controller
 {
     private static readonly ConcurrentDictionary<int, Lec5Model> Users = new();
@@ -39,7 +39,7 @@ public class Lec5Controller : Controller
     [HttpGet]
     public IActionResult Index(string? q, string? role, int page = 1, int pageSize = 10)
     {
-        ViewBag.Title = "Index Page";
+        ViewBag.Title = "Thực hành buổi 5 – CRUD người dùng demo";
         ViewBag.DemoViewBag = "Dữ liệu này được truyền bằng ViewBag .";
         ViewData["DemoViewData"] = "Dữ liệu này được truyền bằng ViewData trên trang Index.";
 

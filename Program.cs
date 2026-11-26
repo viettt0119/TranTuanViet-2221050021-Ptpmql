@@ -39,6 +39,7 @@ builder.Services
     })
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddErrorDescriber<VietnameseIdentityErrorDescriber>()
+    .AddUserValidator<MemberCodeUserValidator>()
     .AddDefaultTokenProviders()
     .AddTokenProvider<EmailConfirmationTokenProvider<ApplicationUser>>("EmailConfirmation");
 

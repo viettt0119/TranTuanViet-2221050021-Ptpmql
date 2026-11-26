@@ -231,3 +231,44 @@ body {
         padding-inline: 1rem;
     }
 }
+
+/* Trang "Xem lại bài học" (chỉ Admin) */
+.lesson-card { color: inherit; transition: transform .15s ease, box-shadow .15s ease; }
+.lesson-card:hover, .lesson-card:focus-visible { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 23, 42, .12); color: inherit; }
+.lesson-card-icon {
+    display: inline-grid; place-items: center; width: 40px; height: 40px;
+    border-radius: 10px; background: rgba(55, 103, 198, .12); color: #3767c6; font-size: 1.25rem;
+}
+
+/* Đăng nhập / đăng ký theo tư cách (Sinh viên – Giảng viên / Cán bộ) */
+.auth-card.auth-card-wide { max-width: 560px; padding: 0; overflow: hidden; }
+.auth-card-wide > form, .auth-card-wide > .auth-footer { padding: 0 clamp(1.25rem, 4vw, 1.75rem); }
+.auth-card-wide > form { padding-top: 1.25rem; }
+.auth-header { text-align: center; padding: 1.5rem 1.5rem 1rem; border-bottom: 1px solid var(--app-border, #e6eaf0); }
+.auth-header h1 { font-size: 1.35rem; font-weight: 700; margin: .65rem 0 .2rem; }
+.auth-header p { color: #667085; margin: 0; font-size: .95rem; }
+.auth-header-icon {
+    display: inline-grid; place-items: center; width: 44px; height: 44px;
+    border-radius: 50%; color: #fff; font-size: 1.2rem;
+}
+.auth-footer { display: flex; flex-direction: column; align-items: center; gap: .35rem; padding-bottom: 1.25rem !important; margin-top: 1rem; color: #667085; font-size: .95rem; }
+.auth-footer a { font-weight: 600; text-decoration: none; }
+.auth-submit { background: linear-gradient(90deg, #0d6efd, #0dcaf0); border: 0; box-shadow: 0 .5rem 1rem rgba(13, 110, 253, .25); }
+.validation-summary-valid.alert { display: none; }
+
+.account-type-picker { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.account-type-option {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .4rem;
+    min-height: 96px; padding: .75rem; border: 1px solid; border-radius: .5rem;
+    text-align: center; font-weight: 600; font-size: .92rem; cursor: pointer; user-select: none;
+    transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
+}
+.account-type-option i { font-size: 1.3rem; }
+.btn-check:focus-visible + .account-type-option { box-shadow: 0 0 0 .25rem rgba(13, 110, 253, .3); }
+.account-type-student { border-color: #0d6efd; color: #0d6efd; }
+.btn-check:checked + .account-type-student { background: #0d6efd; color: #fff; }
+.account-type-staff-login { border-color: #dc3545; color: #dc3545; }
+.btn-check:checked + .account-type-staff-login { background: #dc3545; color: #fff; }
+.account-type-staff-register { border-color: #ffc107; color: #d39e00; }
+.btn-check:checked + .account-type-staff-register { background: #ffc107; color: #212529; }
+@media (max-width: 420px) { .account-type-picker { grid-template-columns: 1fr; } }

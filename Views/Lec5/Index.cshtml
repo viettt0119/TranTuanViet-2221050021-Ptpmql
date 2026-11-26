@@ -6,6 +6,7 @@
     ViewData["PagingRouteValues"] = new Dictionary<string, string?> { ["role"] = roleFilter };
     var hasFilter = !string.IsNullOrWhiteSpace(searchQuery) || !string.IsNullOrWhiteSpace(roleFilter);
 }
+@section Breadcrumb { <partial name="_LessonBreadcrumb" /> }
 
 <section class="list-page">
     <div class="page-heading">
@@ -15,7 +16,7 @@
             <p class="mb-0"><strong>ViewData:</strong> @ViewData["DemoViewData"]</p>
             <p class="mb-0"><strong>ViewBag:</strong> @ViewBag.DemoViewBag</p>
         </div>
-        <a asp-permission="Lec5.Create" asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm người dùng mới</a>
+        <a asp-action="Create" data-modal-url="@Url.Action("Create")" class="btn btn-primary">+ Thêm người dùng mới</a>
     </div>
 
     <div class="list-toolbar">
@@ -59,9 +60,9 @@
                                 <td class="fw-semibold">@user.Username</td>
                                 <td><span class="badge text-bg-secondary">@user.Role</span></td>
                                 <td class="text-end text-nowrap">
-                                    <a asp-permission="Lec5.Details" asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-outline-info">Chi tiết</a>
-                                    <a asp-permission="Lec5.Edit" asp-action="Edit" asp-route-id="@user.Id" data-modal-url="@Url.Action("Edit", new { id = user.Id })" class="btn btn-sm btn-outline-warning">Sửa</a>
-                                    <a asp-permission="Lec5.Delete" asp-action="Delete" asp-route-id="@user.Id" data-modal-url="@Url.Action("Delete", new { id = user.Id })" class="btn btn-sm btn-outline-danger">Xóa</a>
+                                    <a asp-action="Details" asp-route-id="@user.Id" data-modal-url="@Url.Action("Details", new { id = user.Id })" class="btn btn-sm btn-outline-info">Chi tiết</a>
+                                    <a asp-action="Edit" asp-route-id="@user.Id" data-modal-url="@Url.Action("Edit", new { id = user.Id })" class="btn btn-sm btn-outline-warning">Sửa</a>
+                                    <a asp-action="Delete" asp-route-id="@user.Id" data-modal-url="@Url.Action("Delete", new { id = user.Id })" class="btn btn-sm btn-outline-danger">Xóa</a>
                                 </td>
                             </tr>
                             stt++;

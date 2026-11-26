@@ -1,0 +1,5 @@
+@* Breadcrumb chung cho các trang bài giảng / thực hành Lec 1–6: quay lại trang "Xem lại bài học". *@
+<ol class="breadcrumb mb-0">
+    <li class="breadcrumb-item"><a asp-controller="Lesson" asp-action="Index">Xem lại bài học</a></li>
+    <li class="breadcrumb-item active">@(ViewData["Title"] ?? "Bài học")</li>
+</ol>

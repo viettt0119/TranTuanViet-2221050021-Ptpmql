@@ -4,6 +4,7 @@
     var registeredEmail = ViewData["RegisteredEmail"] as string;
     var emailSent = ViewData["EmailSent"] as bool? == true;
     var developmentLink = ViewData["DevelopmentConfirmationLink"] as string;
+    var pendingApproval = ViewData["PendingApproval"] as bool? == true;
 }
 <div class="auth-page">
     <section class="auth-card auth-success">
@@ -36,6 +37,14 @@
                     <a href="@developmentLink" class="text-break">@developmentLink</a>
                 </div>
             }
+        }
+        @if (pendingApproval)
+        {
+            <div class="alert alert-warning text-start small">
+                <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>
+                Bạn đăng ký với tư cách <strong>Giảng viên / Cán bộ</strong>. Sau khi xác thực email, tài khoản cần được
+                <strong>Quản trị viên phê duyệt</strong> trước khi đăng nhập.
+            </div>
         }
         <a asp-action="ResendConfirmation" asp-route-email="@registeredEmail" class="btn btn-outline-primary w-100 mb-2">Gửi lại email xác thực</a>
         <a asp-action="Login" class="btn btn-primary btn-lg w-100">Đi tới đăng nhập</a>

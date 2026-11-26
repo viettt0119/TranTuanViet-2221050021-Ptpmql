@@ -108,9 +108,9 @@ public class PermissionAuthorizationFilterTests
     [Fact]
     public async Task Action_without_any_attribute_is_denied_by_default()
     {
-        // Trước đây action thiếu [RequirePermission] (vd. Lec5) mở cho mọi người đã đăng nhập.
+        // Action không gắn attribute nào phải được cấp quyền "Controller.Action" mới vào được.
         await using var fixture = await FilterFixture.CreateAsync();
-        var context = fixture.CreateContext(typeof(Lec5Controller), "Lec5", nameof(Lec5Controller.Create), "Create");
+        var context = fixture.CreateContext(typeof(ProductController), "Product", nameof(ProductController.Create), "Create");
         context.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
             [new Claim(ClaimTypes.NameIdentifier, "user-without-permission"), new Claim(ClaimTypes.Role, "User")],
             "test"));
@@ -147,6 +147,7 @@ public class PermissionAuthorizationFilterTests
             .Select(x => x.Key)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var authenticatedOnly = new List<string>();
+        var adminOnlyControllers = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var controller in Permissions.GetControllerTypes(typeof(StudentController).Assembly))
         {
@@ -155,6 +156,12 @@ public class PermissionAuthorizationFilterTests
                 var key = Permissions.Key(Permissions.GetControllerName(controller), Permissions.GetActionName(method));
                 if (Permissions.IsAnonymous(controller, method))
                     continue;
+                if (Permissions.IsAdminOnly(controller, method))
+                {
+                    Assert.DoesNotContain(key, discovered);
+                    adminOnlyControllers.Add(Permissions.GetControllerName(controller));
+                    continue;
+                }
                 if (Permissions.IsAuthenticatedOnly(controller, method))
                 {
                     authenticatedOnly.Add(key);
@@ -169,6 +176,10 @@ public class PermissionAuthorizationFilterTests
         Assert.Equal(
             new[] { "Account.ChangePassword", "Account.Logout", "Home.Dashboard" },
             authenticatedOnly.Distinct().Order(StringComparer.Ordinal).ToArray());
+        // Chỉ các bài thực hành Lec 1–6 được dành riêng cho Admin.
+        Assert.Equal(
+            new[] { "Lec5", "Lesson", "Lesson4" },
+            adminOnlyControllers.Order(StringComparer.Ordinal).ToArray());
     }
 
     [Fact]
@@ -179,14 +190,116 @@ public class PermissionAuthorizationFilterTests
         Assert.Contains("Student.Index", keys);
         Assert.Contains("Student.Delete", keys);       // DeleteConfirmed có [ActionName("Delete")]
         Assert.DoesNotContain("Student.DeleteConfirmed", keys);
-        Assert.Contains("Lec5.Create", keys);
-        Assert.Contains("Lesson.Lesson1", keys);
-        Assert.Contains("Lesson4.Index", keys);
+        // Bài thực hành Lec 1–6 là [AdminOnly]: không nằm trên ma trận phân quyền động.
+        Assert.DoesNotContain(keys, key =>
+            key.StartsWith("Lesson.", StringComparison.Ordinal) ||
+            key.StartsWith("Lesson4.", StringComparison.Ordinal) ||
+            key.StartsWith("Lec5.", StringComparison.Ordinal));
         Assert.Contains("Role.Permissions", keys);
         Assert.Contains("UserManagement.Roles", keys);
         Assert.DoesNotContain(keys, key => key.StartsWith("Account.", StringComparison.Ordinal));
         Assert.Equal(keys.Count, keys.Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.All(PermissionCatalogService.DefaultUserPermissionKeys, key => Assert.Contains(key, keys));
+    }
+
+    [Theory]
+    [InlineData(typeof(LessonController), "Lesson", nameof(LessonController.Index))]
+    [InlineData(typeof(LessonController), "Lesson", nameof(LessonController.Lesson6))]
+    [InlineData(typeof(Lesson4.Controllers.Lesson4Controller), "Lesson4", "Index")]
+    [InlineData(typeof(Lec5Controller), "Lec5", nameof(Lec5Controller.Create))]
+    public async Task Lesson_pages_are_admin_only(Type controllerType, string controllerName, string action)
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+
+        var admin = fixture.CreateContext(controllerType, controllerName, action, action);
+        admin.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "admin-user"), new Claim(ClaimTypes.Role, "Admin")],
+            "test"));
+        await fixture.Filter.OnAuthorizationAsync(admin);
+        Assert.Null(admin.Result);
+
+        var user = fixture.CreateContext(controllerType, controllerName, action, action);
+        user.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "normal-user"), new Claim(ClaimTypes.Role, "User")],
+            "test"));
+        await fixture.Filter.OnAuthorizationAsync(user);
+        Assert.IsType<RedirectToActionResult>(user.Result);
+
+        var ajax = fixture.CreateContext(controllerType, controllerName, action, action);
+        ajax.HttpContext.Request.Headers["X-Requested-With"] = "XMLHttpRequest";
+        ajax.HttpContext.User = user.HttpContext.User;
+        await fixture.Filter.OnAuthorizationAsync(ajax);
+        Assert.Equal(StatusCodes.Status403Forbidden, Assert.IsType<JsonResult>(ajax.Result).StatusCode);
+    }
+
+    [Fact]
+    public async Task Leftover_lesson_grant_from_old_matrix_does_not_open_lesson_pages()
+    {
+        // CSDL cũ có thể còn quyền "Lesson.Lesson1" đã cấp cho role User; [AdminOnly] vẫn phải từ chối.
+        await using var fixture = await FilterFixture.CreateAsync();
+        var role = new IdentityRole { Id = "user-role", Name = "User", NormalizedName = "USER" };
+        var permission = new ApplicationPermission
+        {
+            Key = "Lesson.Lesson1",
+            Controller = "Lesson",
+            Action = "Lesson1",
+            Description = "Bài 1"
+        };
+        fixture.Context.Roles.Add(role);
+        fixture.Context.ApplicationPermissions.Add(permission);
+        fixture.Context.Users.Add(new ApplicationUser { Id = "old-user", UserName = "old@example.test", Email = "old@example.test" });
+        await fixture.Context.SaveChangesAsync();
+        fixture.Context.UserRoles.Add(new IdentityUserRole<string> { UserId = "old-user", RoleId = role.Id });
+        fixture.Context.ApplicationRolePermissions.Add(new ApplicationRolePermission
+        {
+            RoleId = role.Id,
+            PermissionId = permission.Id,
+            IsGranted = true
+        });
+        await fixture.Context.SaveChangesAsync();
+
+        var context = fixture.CreateContext(typeof(LessonController), "Lesson", nameof(LessonController.Lesson1), "Lesson1");
+        context.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "old-user"), new Claim(ClaimTypes.Role, "User")],
+            "test"));
+        await fixture.Filter.OnAuthorizationAsync(context);
+
+        Assert.IsType<RedirectToActionResult>(context.Result);
+    }
+
+    [Fact]
+    public async Task Sync_removes_lesson_permissions_left_in_the_database()
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+        fixture.Context.ApplicationPermissions.Add(new ApplicationPermission
+        {
+            Key = "Lec5.Index",
+            Controller = "Lec5",
+            Action = "Index",
+            Description = "Lec5"
+        });
+        await fixture.Context.SaveChangesAsync();
+
+        await fixture.Catalog.SyncAsync();
+
+        Assert.False(await fixture.Context.ApplicationPermissions.AnyAsync(x =>
+            x.Controller == "Lec5" || x.Controller == "Lesson" || x.Controller == "Lesson4"));
+    }
+
+    [Fact]
+    public void Lesson_catalog_links_point_to_existing_admin_only_actions()
+    {
+        var assembly = typeof(LessonController).Assembly;
+        foreach (var item in LessonController.Catalog)
+        {
+            var controller = Permissions.GetControllerTypes(assembly)
+                .Single(type => Permissions.GetControllerName(type) == item.Controller);
+            var method = Permissions.GetActionMethods(controller)
+                .First(candidate => Permissions.GetActionName(candidate) == item.Action);
+            Assert.True(Permissions.IsAdminOnly(controller, method), $"{item.Controller}.{item.Action} phải là [AdminOnly].");
+        }
+
+        Assert.Equal(Enumerable.Range(1, 6), LessonController.Catalog.Select(x => x.Lecture).Distinct().Order());
     }
 
     private sealed class FilterFixture : IAsyncDisposable

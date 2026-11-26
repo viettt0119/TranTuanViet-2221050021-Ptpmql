@@ -1,0 +1,30 @@
+@using DemoMVC.Models
+@model AccountType
+@*
+    Thẻ chọn tư cách dùng chung cho Đăng nhập / Đăng ký. Radio thật (name="AccountType") nên form vẫn chạy khi tắt JavaScript.
+    ViewData["AccountTypeMode"]: "login" hoặc "register" (chỉ đổi chữ và màu thẻ Giảng viên).
+*@
+@{
+    var isLogin = ViewData["AccountTypeMode"] as string == "login";
+    var verb = isLogin ? "Đăng nhập" : "Đăng ký";
+    var staffLabel = isLogin ? "Giảng viên / Quản trị" : "Giảng viên / Cán bộ";
+    var staffClass = isLogin ? "account-type-staff-login" : "account-type-staff-register";
+}
+<fieldset class="mb-3">
+    <legend class="form-label fw-semibold fs-6 mb-2">Tư cách @verb.ToLowerInvariant()</legend>
+    <div class="account-type-picker">
+        <input type="radio" class="btn-check" name="AccountType" id="account-type-student"
+               value="@AccountType.Student" checked="@(Model == AccountType.Student)" autocomplete="off" />
+        <label class="account-type-option account-type-student" for="account-type-student">
+            <i class="bi bi-mortarboard-fill" aria-hidden="true"></i>
+            <span>@verb với tư cách Sinh viên</span>
+        </label>
+
+        <input type="radio" class="btn-check" name="AccountType" id="account-type-staff"
+               value="@AccountType.Staff" checked="@(Model == AccountType.Staff)" autocomplete="off" />
+        <label class="account-type-option @staffClass" for="account-type-staff">
+            <i class="bi bi-person-video3" aria-hidden="true"></i>
+            <span>@verb với tư cách @staffLabel</span>
+        </label>
+    </div>
+</fieldset>

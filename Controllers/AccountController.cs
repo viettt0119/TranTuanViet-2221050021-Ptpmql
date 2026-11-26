@@ -38,11 +38,16 @@ public class AccountController(
         if (!ModelState.IsValid)
             return View(model);
 
+        var isStaff = model.AccountType == AccountType.Staff;
         var user = new ApplicationUser
         {
             UserName = model.Email.Trim(),
             Email = model.Email.Trim(),
             FullName = model.FullName.Trim(),
+            AccountType = model.AccountType,
+            MemberCode = model.NormalizedMemberCode,
+            // Giảng viên / Cán bộ tự đăng ký phải chờ Quản trị viên phê duyệt (UserManagement/Approve).
+            IsApproved = !isStaff,
             // Tài khoản chỉ đăng nhập được sau khi bấm liên kết xác thực gửi tới email người đăng ký.
             EmailConfirmed = false,
             CreatedAt = DateTimeOffset.UtcNow
@@ -54,18 +59,23 @@ public class AccountController(
             return View(model);
         }
 
-        var roleResult = await userManager.AddToRoleAsync(user, "User");
-        if (!roleResult.Succeeded)
+        // Sinh viên nhận role User ngay; giảng viên nhận role GiangVien khi được phê duyệt.
+        if (!isStaff)
         {
-            var deleteResult = await userManager.DeleteAsync(user);
-            AddIdentityErrors(roleResult);
-            if (!deleteResult.Succeeded)
-                AddIdentityErrors(deleteResult);
-            return View(model);
+            var roleResult = await userManager.AddToRoleAsync(user, SystemRoles.User);
+            if (!roleResult.Succeeded)
+            {
+                var deleteResult = await userManager.DeleteAsync(user);
+                AddIdentityErrors(roleResult);
+                if (!deleteResult.Succeeded)
+                    AddIdentityErrors(deleteResult);
+                return View(model);
+            }
         }
 
         var delivery = await TrySendConfirmationEmailAsync(user, cancellationToken);
         ViewData["RegisteredEmail"] = user.Email;
+        ViewData["PendingApproval"] = isStaff;
         ViewData["EmailSent"] = delivery.Sent;
         if (!delivery.Sent && environment.IsDevelopment())
             ViewData["DevelopmentConfirmationLink"] = delivery.Link;
@@ -112,8 +122,12 @@ public class AccountController(
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null) =>
-        View(new LoginViewModel { ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null });
+    public IActionResult Login(string? returnUrl = null, AccountType accountType = AccountType.Student) =>
+        View(new LoginViewModel
+        {
+            ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null,
+            AccountType = Enum.IsDefined(accountType) ? accountType : AccountType.Student
+        });
 
     [AllowAnonymous]
     [HttpPost]
@@ -123,6 +137,11 @@ public class AccountController(
     {
         if (!ModelState.IsValid)
             return View(model);
+
+        // Sai tư cách hoặc giảng viên chưa được duyệt: kiểm tra mật khẩu nhưng không cấp cookie đăng nhập.
+        var account = await userManager.FindByEmailAsync(model.Email.Trim());
+        if (account is not null && (account.AccountType != model.AccountType || !account.IsApproved))
+            return await RejectAccountGateAsync(account, model);
 
         var result = await signInManager.PasswordSignInAsync(
             model.Email.Trim(),
@@ -372,6 +391,48 @@ public class AccountController(
         }
     }
 
+    /// <summary>
+    /// Tài khoản tồn tại nhưng chọn sai tư cách hoặc chưa được duyệt. Chỉ nói rõ lý do khi mật khẩu đúng,
+    /// để người không biết mật khẩu không dò được tư cách / trạng thái của email; sai mật khẩu vẫn tính vào khoá tài khoản.
+    /// </summary>
+    private async Task<IActionResult> RejectAccountGateAsync(ApplicationUser account, LoginViewModel model)
+    {
+        var check = await signInManager.CheckPasswordSignInAsync(account, model.Password, lockoutOnFailure: true);
+        if (check.Succeeded)
+        {
+            ModelState.AddModelError(string.Empty, account.AccountType != model.AccountType
+                ? $"Tài khoản này đăng ký với tư cách {account.AccountType.DisplayName()}. Vui lòng chọn đúng tư cách đăng nhập."
+                : "Tài khoản Giảng viên / Cán bộ đang chờ Quản trị viên phê duyệt. Bạn sẽ đăng nhập được sau khi được duyệt.");
+            return View(model);
+        }
+
+        if (check.IsNotAllowed)
+        {
+            // CheckPasswordSignInAsync từ chối email chưa xác thực trước khi kiểm tra mật khẩu.
+            var unconfirmed = await CheckUnconfirmedAccountAsync(account.Email ?? model.Email.Trim(), model.Password);
+            if (unconfirmed == UnconfirmedLoginResult.PasswordValid)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "Tài khoản chưa xác thực email. Hãy mở hộp thư (kể cả thư mục Spam/Quảng cáo) và bấm liên kết xác thực, hoặc gửi lại email xác thực.");
+                ViewData["ShowResendConfirmation"] = true;
+                return View(model);
+            }
+            if (unconfirmed == UnconfirmedLoginResult.LockedOut)
+            {
+                ModelState.AddModelError(string.Empty, "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.");
+                return View(model);
+            }
+        }
+
+        ModelState.AddModelError(
+            string.Empty,
+            check.IsLockedOut
+                ? "Tài khoản tạm thời bị khóa. Vui lòng thử lại sau."
+                : "Email hoặc mật khẩu không đúng.");
+        return View(model);
+    }
+
     private async Task<UnconfirmedLoginResult> CheckUnconfirmedAccountAsync(string email, string password)
     {
         var user = await userManager.FindByEmailAsync(email);
@@ -462,7 +523,10 @@ public class AccountController(
     private void AddIdentityErrors(IdentityResult result)
     {
         foreach (var error in result.Errors)
-            ModelState.AddModelError(string.Empty, error.Description);
+        {
+            var field = error.Code == MemberCodeUserValidator.DuplicateCode ? nameof(RegisterViewModel.MemberCode) : string.Empty;
+            ModelState.AddModelError(field, error.Description);
+        }
     }
 
     private enum UnconfirmedLoginResult
