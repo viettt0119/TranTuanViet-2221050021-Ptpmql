@@ -43,4 +43,18 @@ public sealed class PagedList<T>
 
         return new PagedList<T>(items, pageIndex, pageSize, totalRecords);
     }
+
+    /// <summary>Phân trang cho dữ liệu đã nằm trong bộ nhớ (không qua EF Core).</summary>
+    public static PagedList<T> Create(IEnumerable<T> source, int pageIndex, int pageSize)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+
+        var all = source as IReadOnlyCollection<T> ?? source.ToList();
+        pageSize = PageSizeOptions.Contains(pageSize) ? pageSize : PageSizeOptions[0];
+        int totalPages = (int)Math.Ceiling(all.Count / (double)pageSize);
+        pageIndex = totalPages == 0 ? 1 : Math.Clamp(pageIndex, 1, totalPages);
+
+        var items = all.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList();
+        return new PagedList<T>(items, pageIndex, pageSize, all.Count);
+    }
 }

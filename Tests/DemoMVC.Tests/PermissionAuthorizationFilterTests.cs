@@ -70,7 +70,7 @@ public class PermissionAuthorizationFilterTests
         var role = new IdentityRole { Id = "granted-role", Name = "Granted", NormalizedName = "GRANTED" };
         var permission = new ApplicationPermission
         {
-            Key = Permissions.Student.View,
+            Key = "Student.Index",
             Controller = "Student",
             Action = "Index",
             Description = "Sinh viên – Xem"
@@ -106,18 +106,84 @@ public class PermissionAuthorizationFilterTests
     }
 
     [Fact]
-    public void Every_public_student_action_has_permission()
+    public async Task Action_without_any_attribute_is_denied_by_default()
     {
-        foreach (var method in typeof(StudentController).GetMethods(
-                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
-        {
-            if (method.IsSpecialName || method.GetCustomAttribute<Microsoft.AspNetCore.Mvc.NonActionAttribute>() is not null)
-                continue;
+        // Trước đây action thiếu [RequirePermission] (vd. Lec5) mở cho mọi người đã đăng nhập.
+        await using var fixture = await FilterFixture.CreateAsync();
+        var context = fixture.CreateContext(typeof(Lec5Controller), "Lec5", nameof(Lec5Controller.Create), "Create");
+        context.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "user-without-permission"), new Claim(ClaimTypes.Role, "User")],
+            "test"));
 
-            var permission = method.GetCustomAttribute<RequirePermissionAttribute>();
-            Assert.NotNull(permission);
-            Assert.StartsWith("Student.", permission!.Key);
+        await fixture.Filter.OnAuthorizationAsync(context);
+
+        Assert.IsType<RedirectToActionResult>(context.Result);
+    }
+
+    [Fact]
+    public async Task Authenticated_only_action_needs_login_but_no_permission()
+    {
+        await using var fixture = await FilterFixture.CreateAsync();
+        var context = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Index), "Index");
+        context.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+            [new Claim(ClaimTypes.NameIdentifier, "user-without-permission")],
+            "test"));
+
+        await fixture.Filter.OnAuthorizationAsync(context);
+        Assert.Null(context.Result);
+
+        var anonymous = fixture.CreateContext(typeof(HomeController), "Home", nameof(HomeController.Index), "Index");
+        await fixture.Filter.OnAuthorizationAsync(anonymous);
+        Assert.IsType<ChallengeResult>(anonymous.Result);
+    }
+
+    [Fact]
+    public void Every_action_of_every_controller_is_anonymous_authenticated_only_or_has_a_permission()
+    {
+        var discovered = Permissions.Discover(typeof(StudentController).Assembly)
+            .Select(x => x.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var authenticatedOnly = new List<string>();
+
+        foreach (var controller in Permissions.GetControllerTypes(typeof(StudentController).Assembly))
+        {
+            foreach (var method in Permissions.GetActionMethods(controller))
+            {
+                var key = Permissions.Key(Permissions.GetControllerName(controller), Permissions.GetActionName(method));
+                if (Permissions.IsAnonymous(controller, method))
+                    continue;
+                if (Permissions.IsAuthenticatedOnly(controller, method))
+                {
+                    authenticatedOnly.Add(key);
+                    continue;
+                }
+
+                Assert.Contains(key, discovered);
+            }
         }
+
+        // Danh sách action chỉ cần đăng nhập phải nhỏ và có chủ đích; thêm action mới vào đây là một quyết định bảo mật.
+        Assert.Equal(
+            new[] { "Account.ChangePassword", "Account.Logout", "Home.Index" },
+            authenticatedOnly.Distinct().Order(StringComparer.Ordinal).ToArray());
+    }
+
+    [Fact]
+    public void Discovery_covers_previously_unprotected_controllers_and_uses_action_names()
+    {
+        var keys = Permissions.All().Select(x => x.Key).ToList();
+
+        Assert.Contains("Student.Index", keys);
+        Assert.Contains("Student.Delete", keys);       // DeleteConfirmed có [ActionName("Delete")]
+        Assert.DoesNotContain("Student.DeleteConfirmed", keys);
+        Assert.Contains("Lec5.Create", keys);
+        Assert.Contains("Lesson.Lesson1", keys);
+        Assert.Contains("Lesson4.Index", keys);
+        Assert.Contains("Role.Permissions", keys);
+        Assert.Contains("UserManagement.Roles", keys);
+        Assert.DoesNotContain(keys, key => key.StartsWith("Account.", StringComparison.Ordinal));
+        Assert.Equal(keys.Count, keys.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.All(PermissionCatalogService.DefaultUserPermissionKeys, key => Assert.Contains(key, keys));
     }
 
     private sealed class FilterFixture : IAsyncDisposable
@@ -168,16 +234,18 @@ public class PermissionAuthorizationFilterTests
             return new FilterFixture(connection, provider, context, studentService, catalog, filter);
         }
 
-        public AuthorizationFilterContext CreateContext(Controller controller)
+        public AuthorizationFilterContext CreateContext(Controller controller) =>
+            CreateContext(typeof(StudentController), "Student", nameof(StudentController.Index), "Index");
+
+        public AuthorizationFilterContext CreateContext(Type controllerType, string controllerName, string methodName, string actionName)
         {
             var action = new ControllerActionDescriptor
             {
-                ControllerName = "Student",
-                ActionName = "Index",
-                ControllerTypeInfo = typeof(StudentController).GetTypeInfo(),
-                MethodInfo = typeof(StudentController).GetMethod(
-                    nameof(StudentController.Index),
-                    BindingFlags.Instance | BindingFlags.Public)!
+                ControllerName = controllerName,
+                ActionName = actionName,
+                ControllerTypeInfo = controllerType.GetTypeInfo(),
+                MethodInfo = controllerType.GetMethods(BindingFlags.Instance | BindingFlags.Public)
+                    .First(method => method.Name == methodName)
             };
             var httpContext = new DefaultHttpContext();
             httpContext.Request.Method = HttpMethods.Get;

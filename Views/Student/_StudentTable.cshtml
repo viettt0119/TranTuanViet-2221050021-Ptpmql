@@ -26,7 +26,7 @@
                     <td><span class="badge text-bg-primary-subtle text-primary">@student.DepartmentName</span></td>
                     <td>@student.AdmissionYear</td>
                     <td class="text-end text-nowrap">
-                        <a asp-permission="Student.View" asp-action="Details" asp-route-id="@student.Id" data-modal-url="@Url.Action("Details", new { id = student.Id })" class="btn btn-sm btn-outline-info" title="Xem" data-bs-toggle="tooltip"><i class="bi bi-eye"></i></a>
+                        <a asp-permission="Student.Details" asp-action="Details" asp-route-id="@student.Id" data-modal-url="@Url.Action("Details", new { id = student.Id })" class="btn btn-sm btn-outline-info" title="Xem" data-bs-toggle="tooltip"><i class="bi bi-eye"></i></a>
                         <a asp-permission="Student.Edit" asp-action="Edit" asp-route-id="@student.Id" data-modal-url="@Url.Action("Edit", new { id = student.Id })" class="btn btn-sm btn-outline-warning" title="Sửa" data-bs-toggle="tooltip"><i class="bi bi-pencil"></i></a>
                         <a asp-permission="Student.Delete" asp-action="Delete" asp-route-id="@student.Id" data-modal-url="@Url.Action("Delete", new { id = student.Id })" class="btn btn-sm btn-outline-danger" title="Xoá" data-bs-toggle="tooltip"><i class="bi bi-trash"></i></a>
                     </td>

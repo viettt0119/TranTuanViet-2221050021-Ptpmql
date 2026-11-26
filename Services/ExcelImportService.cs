@@ -5,7 +5,7 @@ using OfficeOpenXml;
 
 namespace DemoMVC.Services;
 
-public sealed class ExcelImportService(ApplicationDbContext context)
+public sealed class ExcelImportService(ApplicationDbContext context, StudentCodeGenerator studentCodeGenerator)
 {
     public async Task<ExcelImportResult> ImportAsync(
         Stream stream,
@@ -73,6 +73,7 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             "employee" => new[] { "EmpId", "FullName", "HireDate" },
             "product" => new[] { "Id", "Name", "Price" },
             "student" => new[] { "FullName", "Address", "University", "DepartmentCode", "AdmissionYear", "TrainingSystemCode", "MajorCode" },
+            "rolepermission" => new[] { "RoleName", "Permission" },
             _ => Array.Empty<string>()
         };
         if (requiredHeaders.Length == 0)
@@ -103,12 +104,14 @@ public sealed class ExcelImportService(ApplicationDbContext context)
                 "employee" => values.GetValueOrDefault("EmpId", ""),
                 "product" => values.GetValueOrDefault("Id", ""),
                 "student" => values.GetValueOrDefault("StudentCode", ""),
+                "rolepermission" => $"{values.GetValueOrDefault("RoleName", "")}|{values.GetValueOrDefault("Permission", "")}",
                 _ => ""
             };
 
             try
             {
                 ValidatePreviewRow(normalizedEntity, values);
+                await ValidatePreviewRowAsync(normalizedEntity, values, cancellationToken);
                 if (!string.IsNullOrWhiteSpace(key) && !seenKeys.Add(key))
                     throw new InvalidOperationException($"Khoá '{key}' bị trùng trong file.");
 
@@ -197,9 +200,21 @@ public sealed class ExcelImportService(ApplicationDbContext context)
                     throw new InvalidOperationException("Họ tên, địa chỉ và mã Khoa là bắt buộc.");
                 if (!int.TryParse(values.GetValueOrDefault("AdmissionYear"), out var year) || year is < 2000 or > 2099)
                     throw new InvalidOperationException("Năm nhập học phải từ 2000 đến 2099.");
-                if (values.GetValueOrDefault("TrainingSystemCode") is not { Length: 2 } ||
-                    values.GetValueOrDefault("MajorCode") is not { Length: 2 })
+                var trainingSystemCode = values.GetValueOrDefault("TrainingSystemCode") ?? "";
+                var majorCode = values.GetValueOrDefault("MajorCode") ?? "";
+                if (trainingSystemCode.Length != 2 || !trainingSystemCode.All(char.IsAsciiDigit) ||
+                    majorCode.Length != 2 || !majorCode.All(char.IsAsciiDigit))
                     throw new InvalidOperationException("Mã hệ và mã ngành phải gồm 2 chữ số.");
+                var studentCode = values.GetValueOrDefault("StudentCode");
+                if (!string.IsNullOrWhiteSpace(studentCode))
+                {
+                    var prefix = StudentCodeGenerator.Prefix(year, trainingSystemCode, majorCode);
+                    if (!StudentCodeGenerator.TryGetSequence(studentCode, out _))
+                        throw new InvalidOperationException("Mã sinh viên phải gồm đúng 10 chữ số (để trống để hệ thống tự sinh).");
+                    if (!studentCode.StartsWith(prefix, StringComparison.Ordinal))
+                        throw new InvalidOperationException(
+                            $"Mã sinh viên {studentCode} không khớp năm/hệ/ngành của dòng (phải bắt đầu bằng {prefix}).");
+                }
                 if (values.TryGetValue("Email", out var email) &&
                     !string.IsNullOrWhiteSpace(email) &&
                     !System.Net.Mail.MailAddress.TryCreate(email, out _))
@@ -232,6 +247,7 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             "student" => !string.IsNullOrWhiteSpace(values.GetValueOrDefault("StudentCode")) &&
                 await context.Students.AnyAsync(
                     item => item.StudentCode == values["StudentCode"], cancellationToken),
+            "rolepermission" => await FindRolePermissionAsync(values, cancellationToken) is not null,
             _ => false
         };
     }
@@ -252,6 +268,8 @@ public sealed class ExcelImportService(ApplicationDbContext context)
                 return await ExecuteProductAsync(row.Values, mode, cancellationToken);
             case "student":
                 return await ExecuteStudentAsync(row.Values, mode, cancellationToken);
+            case "rolepermission":
+                return await ExecuteRolePermissionAsync(row.Values, mode, cancellationToken);
             default:
                 throw new InvalidOperationException("Loại dữ liệu không được hỗ trợ.");
         }
@@ -339,6 +357,8 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             if (values.TryGetValue("Gender", out var existingGenderText) &&
                 Enum.TryParse<StudentGender>(existingGenderText, ignoreCase: true, out var existingGender))
                 existing.Gender = existingGender;
+            // Mã cũ có thể được nhập trước khi có cơ chế đồng bộ bộ đếm: đảm bảo bộ đếm không tụt sau mã này.
+            await studentCodeGenerator.ReserveExistingCodeAsync(existing, cancellationToken);
             return 2;
         }
 
@@ -362,35 +382,92 @@ public sealed class ExcelImportService(ApplicationDbContext context)
             Enum.TryParse<StudentGender>(genderText, ignoreCase: true, out var gender))
             student.Gender = gender;
         if (string.IsNullOrWhiteSpace(student.StudentCode))
-            await AssignNextStudentCodeAsync(student, cancellationToken);
+            await studentCodeGenerator.AssignNextCodeAsync(student, cancellationToken);
+        else
+            await studentCodeGenerator.ReserveExistingCodeAsync(student, cancellationToken);
         context.Students.Add(student);
         return 1;
-    }
-
-    private async Task AssignNextStudentCodeAsync(StudentModel student, CancellationToken cancellationToken)
-    {
-        var changed = await context.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "StudentCodeCounters"
-                ("AdmissionYear", "TrainingSystemCode", "MajorCode", "LastNumber")
-            VALUES ({student.AdmissionYear}, {student.TrainingSystemCode}, {student.MajorCode}, 1)
-            ON CONFLICT ("AdmissionYear", "TrainingSystemCode", "MajorCode")
-            DO UPDATE SET "LastNumber" = "LastNumber" + 1
-            WHERE "LastNumber" < 9999;
-            """, cancellationToken);
-        if (changed == 0)
-            throw new InvalidOperationException("Nhóm năm/hệ/ngành này đã cấp hết 9999 mã.");
-        var number = await context.StudentCodeCounters
-            .AsNoTracking()
-            .Where(item => item.AdmissionYear == student.AdmissionYear &&
-                item.TrainingSystemCode == student.TrainingSystemCode &&
-                item.MajorCode == student.MajorCode)
-            .Select(item => item.LastNumber)
-            .SingleAsync(cancellationToken);
-        student.StudentCode = $"{student.AdmissionYear % 100:D2}{student.TrainingSystemCode}{student.MajorCode}{number:D4}";
     }
 
     private static string? NormalizeImportOptional(Dictionary<string, string> values, string key) =>
         values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
             ? value.Trim()
             : null;
+
+    // ----- Phân quyền role (bảng ApplicationRolePermissions) -----
+    // Cột: RoleName | Permission (khoá Controller.Action, vd. Student.Index) | IsGranted (tuỳ chọn, mặc định 1).
+    // Bảng ApplicationPermissions (danh mục quyền) tự sinh từ code; StudentCodeCounters tự đồng bộ khi nhập sinh viên.
+
+    private async Task ValidatePreviewRowAsync(string entity, Dictionary<string, string> values, CancellationToken cancellationToken)
+    {
+        if (entity != "rolepermission")
+            return;
+
+        var roleName = values.GetValueOrDefault("RoleName")?.Trim();
+        var permissionKey = values.GetValueOrDefault("Permission")?.Trim();
+        if (string.IsNullOrEmpty(roleName) || string.IsNullOrEmpty(permissionKey))
+            throw new InvalidOperationException("RoleName và Permission là bắt buộc.");
+        if (string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Vai trò Admin luôn có toàn bộ quyền, không nhập phân quyền cho Admin.");
+        if (await FindRoleAsync(roleName, cancellationToken) is null)
+            throw new InvalidOperationException($"Vai trò '{roleName}' không tồn tại. Hãy tạo vai trò trước.");
+        if (!await context.ApplicationPermissions.AnyAsync(item => item.Key == permissionKey, cancellationToken))
+            throw new InvalidOperationException($"Quyền '{permissionKey}' không tồn tại (dạng Controller.Action, vd. Student.Index).");
+        ParseGranted(values);
+    }
+
+    private static bool ParseGranted(Dictionary<string, string> values)
+    {
+        var text = values.GetValueOrDefault("IsGranted")?.Trim().ToLowerInvariant();
+        return text switch
+        {
+            null or "" or "1" or "true" or "x" or "yes" or "có" or "co" => true,
+            "0" or "false" or "no" or "không" or "khong" => false,
+            _ => throw new InvalidOperationException("IsGranted chỉ nhận 1/0, true/false, có/không hoặc để trống (= có).")
+        };
+    }
+
+    private Task<Microsoft.AspNetCore.Identity.IdentityRole?> FindRoleAsync(string roleName, CancellationToken cancellationToken)
+    {
+        var normalized = roleName.Trim().ToUpperInvariant();
+        return context.Roles.FirstOrDefaultAsync(item => item.NormalizedName == normalized, cancellationToken);
+    }
+
+    private async Task<ApplicationRolePermission?> FindRolePermissionAsync(Dictionary<string, string> values, CancellationToken cancellationToken)
+    {
+        var role = await FindRoleAsync(values.GetValueOrDefault("RoleName") ?? "", cancellationToken);
+        if (role is null)
+            return null;
+        var permissionKey = values.GetValueOrDefault("Permission")?.Trim() ?? "";
+        return await context.ApplicationRolePermissions
+            .FirstOrDefaultAsync(item => item.RoleId == role.Id && item.Permission.Key == permissionKey, cancellationToken);
+    }
+
+    private async Task<int> ExecuteRolePermissionAsync(Dictionary<string, string> values, ExcelImportMode mode, CancellationToken cancellationToken)
+    {
+        await ValidatePreviewRowAsync("rolepermission", values, cancellationToken);
+        var granted = ParseGranted(values);
+        var existing = await FindRolePermissionAsync(values, cancellationToken);
+        if (existing is not null)
+        {
+            if (mode == ExcelImportMode.Append) return 0;
+            existing.IsGranted = granted;
+            return 2;
+        }
+
+        var role = (await FindRoleAsync(values["RoleName"], cancellationToken))!;
+        var permissionKey = values["Permission"].Trim();
+        var permission = await context.ApplicationPermissions.SingleAsync(item => item.Key == permissionKey, cancellationToken);
+        // Hai dòng cùng role+quyền trong file đã bị chặn ở bước xem trước, nhưng vẫn kiểm tra bản đang chờ lưu.
+        if (context.ApplicationRolePermissions.Local.Any(item => item.RoleId == role.Id && item.PermissionId == permission.Id))
+            return 0;
+
+        context.ApplicationRolePermissions.Add(new ApplicationRolePermission
+        {
+            RoleId = role.Id,
+            PermissionId = permission.Id,
+            IsGranted = granted
+        });
+        return 1;
+    }
 }

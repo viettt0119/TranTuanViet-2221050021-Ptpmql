@@ -1,0 +1,83 @@
+@model DemoMVC.Controllers.RoleController.RolePermissionsViewModel
+@{
+    var readOnly = Model.ReadOnlyReason is not null;
+}
+<div class="modal fade" tabindex="-1" aria-labelledby="rolePermissionsTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <form action="@Url.Action("Permissions", new { id = Model.Role.Id })" method="post" data-ajax-modal-form class="d-flex flex-column overflow-hidden" style="min-height: 0;">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="rolePermissionsTitle">Phân quyền cho vai trò @Model.Role.Name</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    @if (readOnly)
+                    {
+                        <div class="alert alert-info">@Model.ReadOnlyReason</div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Mỗi ô là một action của controller (khóa <code>Controller.Action</code>). Action GET và POST cùng tên dùng chung một quyền.
+                            Ô bị khóa là quyền bạn không có nên không thể cấp cho người khác.</p>
+                    }
+                    @foreach (var group in Model.Items.GroupBy(x => x.Group))
+                    {
+                        <h3 class="fs-6 text-uppercase text-muted mt-3">@group.Key</h3>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle permission-matrix">
+                                <tbody>
+                                    @foreach (var module in group.GroupBy(x => x.ModuleDisplayName))
+                                    {
+                                        var moduleId = $"perm-module-{module.First().PermissionId}";
+                                        var editableCount = module.Count(x => x.CanEdit);
+                                        <tr>
+                                            <th scope="row" class="text-nowrap" style="width: 14rem;">
+                                                @if (editableCount > 0)
+                                                {
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="@moduleId" data-permission-module-toggle
+                                                               checked="@module.Where(x => x.CanEdit).All(x => x.IsGranted)" />
+                                                        <label class="form-check-label" for="@moduleId">@module.Key</label>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    @module.Key
+                                                }
+                                            </th>
+                                            <td>
+                                                <div class="d-flex flex-wrap gap-3">
+                                                    @foreach (var permission in module)
+                                                    {
+                                                        var inputId = $"perm-{permission.PermissionId}";
+                                                        <div class="form-check mb-0">
+                                                            <input class="form-check-input" type="checkbox" name="selectedPermissions" value="@permission.PermissionId"
+                                                                   id="@inputId" checked="@permission.IsGranted" disabled="@(!permission.CanEdit)" />
+                                                            <label class="form-check-label" for="@inputId" title="@permission.PermissionKey">@permission.ActionDisplayName</label>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    @if (!readOnly)
+                    {
+                        <button type="button" class="btn btn-outline-secondary me-auto" data-permission-select-all>Chọn tất cả</button>
+                    }
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@(readOnly ? "Đóng" : "Hủy")</button>
+                    @if (!readOnly)
+                    {
+                        <button type="submit" class="btn btn-primary">Lưu quyền</button>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -119,10 +119,13 @@ OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("DemoMVC");
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    app.UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}");
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// Trang lỗi tuỳ biến cho URL sai (404), không có quyền (403)... ở mọi môi trường, kể cả khi chạy local.
+// Lỗi exception khi Development vẫn hiện trang chi tiết của ASP.NET Core để dễ debug.
+app.UseStatusCodePagesWithReExecute("/Home/StatusCode/{0}");
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

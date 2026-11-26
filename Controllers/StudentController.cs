@@ -9,12 +9,12 @@ using OfficeOpenXml;
 
 namespace DemoMVC.Controllers;
 
+[PermissionModule("Sinh viên", "Đào tạo", 10)]
 public class StudentController(
     ApplicationDbContext context,
     StudentService studentService) : Controller
 {
     [HttpGet]
-    [RequirePermission(Permissions.Student.View)]
     public async Task<IActionResult> Index([FromQuery] StudentFilterViewModel filter)
     {
         var model = await studentService.GetPagedAsync(filter, HttpContext.RequestAborted);
@@ -26,7 +26,6 @@ public class StudentController(
     }
 
     [HttpGet]
-    [RequirePermission(Permissions.Student.View)]
     public async Task<IActionResult> Details(int? id)
     {
         if (id is null) return NotFound();
@@ -37,7 +36,6 @@ public class StudentController(
     }
 
     [HttpGet]
-    [RequirePermission(Permissions.Student.Create)]
     public async Task<IActionResult> Create()
     {
         if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
@@ -53,7 +51,6 @@ public class StudentController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.Student.Create)]
     public async Task<IActionResult> Create(StudentFormViewModel form)
     {
         if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
@@ -73,7 +70,6 @@ public class StudentController(
     }
 
     [HttpGet]
-    [RequirePermission(Permissions.Student.Edit)]
     public async Task<IActionResult> Edit(int? id)
     {
         if (id is null) return NotFound();
@@ -85,7 +81,6 @@ public class StudentController(
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.Student.Edit)]
     public async Task<IActionResult> Edit(int id, StudentFormViewModel form)
     {
         if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
@@ -104,7 +99,6 @@ public class StudentController(
     }
 
     [HttpGet]
-    [RequirePermission(Permissions.Student.Delete)]
     public async Task<IActionResult> Delete(int? id)
     {
         if (id is null) return NotFound();
@@ -118,7 +112,6 @@ public class StudentController(
     [HttpPost]
     [ActionName("Delete")]
     [ValidateAntiForgeryToken]
-    [RequirePermission(Permissions.Student.Delete)]
     public async Task<IActionResult> DeleteConfirmed(int id, Guid concurrencyStamp)
     {
         if (!IsAjaxRequest()) return RedirectToAction(nameof(Index));
@@ -136,7 +129,6 @@ public class StudentController(
     }
 
     [HttpGet]
-    [RequirePermission(Permissions.Student.Export)]
     public async Task<IActionResult> Export([FromQuery] StudentFilterViewModel filter)
     {
         var query = context.Students.AsNoTracking().Include(student => student.Department).AsQueryable();

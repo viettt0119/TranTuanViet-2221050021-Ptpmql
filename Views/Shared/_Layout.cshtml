@@ -1,12 +1,12 @@
 @inject DemoMVC.Services.PermissionCatalogService PermissionCatalogService
 @{
-    var canStudent = await PermissionCatalogService.HasAccessAsync(User, "Student.View");
-    var canDepartment = await PermissionCatalogService.HasAccessAsync(User, "Department.View");
-    var canEmployee = await PermissionCatalogService.HasAccessAsync(User, "Employee.View");
-    var canProduct = await PermissionCatalogService.HasAccessAsync(User, "Product.View");
-    var canExcel = await PermissionCatalogService.HasAccessAsync(User, "ExcelImport.View");
-    var canUser = await PermissionCatalogService.HasAccessAsync(User, "User.View");
-    var canRole = await PermissionCatalogService.HasAccessAsync(User, "Role.View");
+    var canStudent = await PermissionCatalogService.HasAccessAsync(User, "Student.Index");
+    var canDepartment = await PermissionCatalogService.HasAccessAsync(User, "Department.Index");
+    var canEmployee = await PermissionCatalogService.HasAccessAsync(User, "Employee.Index");
+    var canProduct = await PermissionCatalogService.HasAccessAsync(User, "Product.Index");
+    var canExcel = await PermissionCatalogService.HasAccessAsync(User, "ExcelImport.Index");
+    var canUser = await PermissionCatalogService.HasAccessAsync(User, "UserManagement.Index");
+    var canRole = await PermissionCatalogService.HasAccessAsync(User, "Role.Index");
 }
 <!DOCTYPE html>
 <html lang="vi" data-bs-theme="light">
@@ -69,6 +69,7 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/password-toggle.js" asp-append-version="true"></script>
     <script src="~/js/crud-modal.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>

@@ -200,13 +200,38 @@ namespace DemoMVC.Migrations
                     b.HasData(
                         new
                         {
+                            DepartmentCode = "MO",
+                            DepartmentName = "Mỏ"
+                        },
+                        new
+                        {
+                            DepartmentCode = "DK",
+                            DepartmentName = "Dầu khí và Năng lượng"
+                        },
+                        new
+                        {
+                            DepartmentCode = "DC",
+                            DepartmentName = "Khoa học và Kỹ thuật Địa chất"
+                        },
+                        new
+                        {
+                            DepartmentCode = "TD",
+                            DepartmentName = "Trắc địa - Bản đồ và Quản lý đất đai"
+                        },
+                        new
+                        {
                             DepartmentCode = "CNTT",
                             DepartmentName = "Công nghệ thông tin"
                         },
                         new
                         {
+                            DepartmentCode = "CD",
+                            DepartmentName = "Cơ - Điện"
+                        },
+                        new
+                        {
                             DepartmentCode = "KT",
-                            DepartmentName = "Kinh tế"
+                            DepartmentName = "Kinh tế - Quản trị kinh doanh"
                         },
                         new
                         {
@@ -215,13 +240,18 @@ namespace DemoMVC.Migrations
                         },
                         new
                         {
-                            DepartmentCode = "MO",
-                            DepartmentName = "Khoa học mỏ"
+                            DepartmentCode = "MT",
+                            DepartmentName = "Môi trường"
                         },
                         new
                         {
-                            DepartmentCode = "DC",
-                            DepartmentName = "Địa chất"
+                            DepartmentCode = "KHCB",
+                            DepartmentName = "Khoa học cơ bản"
+                        },
+                        new
+                        {
+                            DepartmentCode = "LLCT",
+                            DepartmentName = "Lý luận chính trị"
                         });
                 });
 

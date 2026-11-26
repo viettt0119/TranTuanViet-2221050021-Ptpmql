@@ -7,6 +7,7 @@ namespace DemoMVC.Controllers
 
     using Microsoft.AspNetCore.Mvc;
 
+    [PermissionModule("Sản phẩm", "Kinh doanh", 40)]
     public class ProductController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -16,7 +17,6 @@ namespace DemoMVC.Controllers
         _context = context; 
     }
         [HttpGet]
-        [RequirePermission(Permissions.Product.View)]
         public async Task<IActionResult> Index(string? q, int page = 1, int pageSize = 10)
         {
             var productsQuery = _context.Products.AsQueryable();
@@ -36,7 +36,6 @@ namespace DemoMVC.Controllers
             return View(products);
         }
         [HttpGet]
-        [RequirePermission(Permissions.Product.View)]
         public async Task<IActionResult> Details(int id)
         {
             var product = await _context.Products.FindAsync(id);
@@ -44,7 +43,6 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
-        [RequirePermission(Permissions.Product.Create)]
         public IActionResult Create()
         {
             ViewData["ModalTitle"] = "Thêm sản phẩm";
@@ -54,7 +52,6 @@ namespace DemoMVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Product.Create)]
         public async Task<IActionResult> Create([Bind("Name,Price")] ProductModel product)
         {
             if (!ModelState.IsValid)
@@ -66,7 +63,6 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
-        [RequirePermission(Permissions.Product.Edit)]
         public async Task<IActionResult> Edit(int id)
         {
             var product = await _context.Products.FindAsync(id);
@@ -79,7 +75,6 @@ namespace DemoMVC.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Product.Edit)]
         public async Task<IActionResult> Edit(int id, [Bind("Name,Price")] ProductModel form)
         {
             if (!ModelState.IsValid)
@@ -95,7 +90,6 @@ namespace DemoMVC.Controllers
         }
 
         [HttpGet]
-        [RequirePermission(Permissions.Product.Delete)]
         public async Task<IActionResult> Delete(int id)
         {
             var product = await _context.Products.FindAsync(id);
@@ -107,7 +101,6 @@ namespace DemoMVC.Controllers
 
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [RequirePermission(Permissions.Product.Delete)]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var product = await _context.Products.FindAsync(id);

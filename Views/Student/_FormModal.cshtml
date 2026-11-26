@@ -26,12 +26,12 @@
                 </div>
                 <hr /><h6 class="mb-3">Thông tin đào tạo</h6>
                 <div class="row g-3">
-                    <div class="col-md-6"><label asp-for="University" class="form-label"></label><input asp-for="University" class="form-control" /></div>
+                    <div class="col-md-6"><label asp-for="University" class="form-label"></label><input asp-for="University" class="form-control" /><span asp-validation-for="University" class="text-danger"></span></div>
                     <div class="col-md-6"><label asp-for="DepartmentCode" class="form-label"></label><select asp-for="DepartmentCode" asp-items="ViewBag.DepartmentCode" class="form-select"><option value="">-- Chọn Khoa --</option></select><span asp-validation-for="DepartmentCode" class="text-danger"></span></div>
                     @if (isCreate) {
-                        <div class="col-md-4"><label asp-for="AdmissionYear" class="form-label"></label><input asp-for="AdmissionYear" class="form-control" /></div>
-                        <div class="col-md-4"><label asp-for="TrainingSystemCode" class="form-label"></label><input asp-for="TrainingSystemCode" class="form-control" maxlength="2" /></div>
-                        <div class="col-md-4"><label asp-for="MajorCode" class="form-label"></label><input asp-for="MajorCode" class="form-control" maxlength="2" /></div>
+                        <div class="col-md-4"><label asp-for="AdmissionYear" class="form-label"></label><input asp-for="AdmissionYear" class="form-control" min="2000" max="2099" /><span asp-validation-for="AdmissionYear" class="text-danger"></span></div>
+                        <div class="col-md-4"><label asp-for="TrainingSystemCode" class="form-label"></label><input asp-for="TrainingSystemCode" class="form-control" maxlength="2" inputmode="numeric" /><span asp-validation-for="TrainingSystemCode" class="text-danger"></span></div>
+                        <div class="col-md-4"><label asp-for="MajorCode" class="form-label"></label><input asp-for="MajorCode" class="form-control" maxlength="2" inputmode="numeric" /><span asp-validation-for="MajorCode" class="text-danger"></span></div>
                     }
                 </div>
             </div>

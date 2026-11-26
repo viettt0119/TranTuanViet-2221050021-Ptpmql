@@ -13,8 +13,38 @@ public sealed class PermissionCatalogService(
     RoleManager<IdentityRole> roleManager,
     IMemoryCache memoryCache)
 {
-    private readonly object _invalidateLock = new();
-    private CancellationTokenSource _allUsersCacheTokenSource = new();
+    // Quyền mặc định của role User khi role này chưa có quyền nào (chỉ xem và các trang bài học).
+    public static readonly IReadOnlyList<string> DefaultUserPermissionKeys =
+    [
+        "Student.Index", "Student.Details",
+        "Department.Index", "Department.Details",
+        "Employee.Index", "Employee.Details",
+        "Product.Index", "Product.Details",
+        "Lec5.Index", "Lec5.Details",
+        "Lesson.Lesson1", "Lesson.Lesson2", "Lesson.Lesson3",
+        "Lesson.Lesson4", "Lesson.Lesson5", "Lesson.Lesson6",
+        "Lesson4.Index", "Lesson4.Greet", "Lesson4.ProductById"
+    ];
+
+    // Hệ thống cũ phân quyền theo module (vd. "Student.View"). Khi nâng cấp, quyền đã cấp được chuyển
+    // sang các action tương ứng để role không bị mất quyền.
+    private static readonly Dictionary<string, string[]> LegacyActionMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["View"] = ["Index", "Details", "DownloadTemplate"],
+        ["Create"] = ["Create"],
+        ["Edit"] = ["Edit", "Permissions", "Roles"],
+        ["Delete"] = ["Delete"],
+        ["Export"] = ["Export"],
+        ["Import"] = ["Import", "Confirm"]
+    };
+
+    private static readonly Dictionary<string, string> LegacyModuleMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["User"] = "UserManagement"
+    };
+
+    private static readonly object InvalidateLock = new();
+    private static CancellationTokenSource _allUsersCacheTokenSource = new();
 
     public async Task EnsureSystemRolesAsync(CancellationToken cancellationToken = default)
     {
@@ -26,82 +56,122 @@ public sealed class PermissionCatalogService(
 
         var adminRole = await roleManager.FindByNameAsync("Admin")
             ?? throw new InvalidOperationException("Không thể khởi tạo role Admin.");
-        var permissions = await dbContext.ApplicationPermissions.ToListAsync(cancellationToken);
+        var permissionIds = await dbContext.ApplicationPermissions.Select(x => x.Id).ToListAsync(cancellationToken);
+        var adminGrants = await dbContext.ApplicationRolePermissions
+            .Where(x => x.RoleId == adminRole.Id)
+            .ToDictionaryAsync(x => x.PermissionId, cancellationToken);
 
-        foreach (var permission in permissions)
+        foreach (var permissionId in permissionIds)
         {
-            var exists = await dbContext.ApplicationRolePermissions.AnyAsync(
-                x => x.RoleId == adminRole.Id && x.PermissionId == permission.Id,
-                cancellationToken);
-            if (!exists)
+            if (adminGrants.TryGetValue(permissionId, out var grant))
             {
-                dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
-                {
-                    RoleId = adminRole.Id,
-                    PermissionId = permission.Id,
-                    IsGranted = true
-                });
+                grant.IsGranted = true;
+                continue;
             }
+
+            dbContext.ApplicationRolePermissions.Add(new ApplicationRolePermission
+            {
+                RoleId = adminRole.Id,
+                PermissionId = permissionId,
+                IsGranted = true
+            });
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await EnsureDefaultUserPermissionsAsync(cancellationToken);
     }
 
-    public async Task SyncAsync(CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Đồng bộ bảng ApplicationPermissions với danh sách Controller/Action phát hiện bằng reflection.
+    /// </summary>
+    public Task SyncAsync(CancellationToken cancellationToken = default) =>
+        SyncAsync(Permissions.All(), cancellationToken);
+
+    public async Task SyncAsync(IReadOnlyList<PermissionMetadata> metadata, CancellationToken cancellationToken = default)
     {
-        var metadata = Permissions.All();
         var existing = await dbContext.ApplicationPermissions
-            .ToDictionaryAsync(x => x.Key, cancellationToken);
+            .ToDictionaryAsync(x => x.Key, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
         foreach (var item in metadata)
         {
-            if (existing.TryGetValue(item.Key, out var permission))
+            if (!existing.TryGetValue(item.Key, out var permission))
             {
-                permission.Controller = item.Module;
-                permission.Action = item.Key[(item.Module.Length + 1)..];
-                permission.Description = $"{item.ModuleDisplayName} – {item.ActionDisplayName}";
-                permission.Module = item.Module;
-                permission.ModuleDisplayName = item.ModuleDisplayName;
-                permission.ActionDisplayName = item.ActionDisplayName;
-                permission.Group = item.Group;
-                permission.SortOrder = item.SortOrder;
-                permission.IsAnonymous = false;
-                permission.IsAdminOnly = false;
+                permission = new ApplicationPermission { Key = item.Key, Area = string.Empty };
+                dbContext.ApplicationPermissions.Add(permission);
             }
-            else
-            {
-                dbContext.ApplicationPermissions.Add(new ApplicationPermission
-                {
-                    Key = item.Key,
-                    Controller = item.Module,
-                    Action = item.Key[(item.Module.Length + 1)..],
-                    Area = string.Empty,
-                    Description = $"{item.ModuleDisplayName} – {item.ActionDisplayName}",
-                    Module = item.Module,
-                    ModuleDisplayName = item.ModuleDisplayName,
-                    ActionDisplayName = item.ActionDisplayName,
-                    Group = item.Group,
-                    SortOrder = item.SortOrder
-                });
-            }
+
+            permission.Controller = item.Controller;
+            permission.Action = item.Action;
+            permission.Module = item.Controller;
+            permission.Description = $"{item.ModuleDisplayName} – {item.ActionDisplayName}";
+            permission.ModuleDisplayName = item.ModuleDisplayName;
+            permission.ActionDisplayName = item.ActionDisplayName;
+            permission.Group = item.Group;
+            permission.SortOrder = item.SortOrder;
+            permission.IsAnonymous = false;
+            permission.IsAdminOnly = false;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var validKeys = metadata.Select(x => x.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var stalePermissions = await dbContext.ApplicationPermissions
-            .Where(x => !validKeys.Contains(x.Key))
+        var allPermissions = await dbContext.ApplicationPermissions
             .Include(x => x.RolePermissions)
             .ToListAsync(cancellationToken);
+        var currentByKey = allPermissions
+            .Where(x => validKeys.Contains(x.Key))
+            .ToDictionary(x => x.Key, StringComparer.OrdinalIgnoreCase);
+        var stalePermissions = allPermissions.Where(x => !validKeys.Contains(x.Key)).ToList();
 
         foreach (var stale in stalePermissions)
         {
+            MigrateLegacyGrants(stale, currentByKey);
             dbContext.ApplicationRolePermissions.RemoveRange(stale.RolePermissions);
             dbContext.ApplicationPermissions.Remove(stale);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        InvalidateAll();
+    }
+
+    private void MigrateLegacyGrants(
+        ApplicationPermission stale,
+        IReadOnlyDictionary<string, ApplicationPermission> currentByKey)
+    {
+        var separator = stale.Key.IndexOf('.');
+        if (separator <= 0)
+            return;
+
+        var module = stale.Key[..separator];
+        var action = stale.Key[(separator + 1)..];
+        if (!LegacyActionMap.TryGetValue(action, out var targetActions))
+            return;
+
+        var controller = LegacyModuleMap.GetValueOrDefault(module, module);
+        foreach (var grant in stale.RolePermissions.Where(x => x.IsGranted))
+        {
+            foreach (var targetAction in targetActions)
+            {
+                if (!currentByKey.TryGetValue(Permissions.Key(controller, targetAction), out var target))
+                    continue;
+
+                var existing = target.RolePermissions.FirstOrDefault(x => x.RoleId == grant.RoleId);
+                if (existing is not null)
+                {
+                    existing.IsGranted = true;
+                    continue;
+                }
+
+                var migrated = new ApplicationRolePermission
+                {
+                    RoleId = grant.RoleId,
+                    PermissionId = target.Id,
+                    IsGranted = true
+                };
+                target.RolePermissions.Add(migrated);
+                dbContext.ApplicationRolePermissions.Add(migrated);
+            }
+        }
     }
 
     public async Task<bool> HasAccessAsync(ClaimsPrincipal user, string permissionKey)
@@ -138,7 +208,9 @@ public sealed class PermissionCatalogService(
                 (_, permission) => permission.Key)
             .ToHashSetAsync(StringComparer.OrdinalIgnoreCase);
 
-        var allUsersToken = _allUsersCacheTokenSource.Token;
+        CancellationToken allUsersToken;
+        lock (InvalidateLock)
+            allUsersToken = _allUsersCacheTokenSource.Token;
         var options = new MemoryCacheEntryOptions()
             .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
             .AddExpirationToken(new CancellationChangeToken(allUsersToken));
@@ -152,9 +224,11 @@ public sealed class PermissionCatalogService(
             memoryCache.Remove($"permissions:{userId}");
     }
 
+    // Service là scoped nhưng cache là singleton: token phải dùng chung giữa các request
+    // thì đổi quyền ở request này mới xoá được cache tạo ở request khác.
     public void InvalidateAll()
     {
-        lock (_invalidateLock)
+        lock (InvalidateLock)
         {
             _allUsersCacheTokenSource.Cancel();
             _allUsersCacheTokenSource.Dispose();
@@ -173,16 +247,8 @@ public sealed class PermissionCatalogService(
         if (hasAnyPermission)
             return;
 
-        var defaultKeys = new[]
-        {
-            Permissions.Student.View,
-            Permissions.Department.View,
-            Permissions.Employee.View,
-            Permissions.Product.View
-        };
-
         var permissions = await dbContext.ApplicationPermissions
-            .Where(x => defaultKeys.Contains(x.Key))
+            .Where(x => DefaultUserPermissionKeys.Contains(x.Key))
             .ToListAsync(cancellationToken);
 
         foreach (var permission in permissions)
@@ -197,6 +263,4 @@ public sealed class PermissionCatalogService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
-
-    public static string BuildPermissionKey(string module, string action) => $"{module}.{action}";
 }
