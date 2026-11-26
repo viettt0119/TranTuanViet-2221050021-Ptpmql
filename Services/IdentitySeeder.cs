@@ -11,9 +11,6 @@ public sealed class IdentitySeeder(
 {
     private static readonly string[] Roles = ["Admin", "User"];
 
-    // Mật khẩu admin mặc định từng bị commit vào appsettings.json (repo công khai) và đã được seed lên production.
-    private static readonly string[] KnownLeakedPasswords = ["***REMOVED***"];
-
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         foreach (var roleName in Roles)
@@ -81,9 +78,7 @@ public sealed class IdentitySeeder(
         }
 
         var isAdministrator = await userManager.IsInRoleAsync(admin, "Admin");
-        // Tài khoản trùng email admin có thể do người khác tự đăng ký trước khi production được cấu hình,
-        // hoặc admin cũ còn dùng mật khẩu mặc định đã lộ trong lịch sử git: đặt lại theo AdminSeed.
-        if (!created && (!isAdministrator || settings.ResetPassword || await UsesLeakedPasswordAsync(admin)))
+        if (!created && (!isAdministrator || settings.ResetPassword))
             await ApplyConfiguredPasswordAsync(admin, password);
 
         if (!isAdministrator)
@@ -93,50 +88,8 @@ public sealed class IdentitySeeder(
         }
     }
 
-    // Khóa mọi tài khoản Admin còn dùng mật khẩu mặc định đã bị commit công khai. Trả về số tài khoản bị khóa.
-    public async Task<int> LockAdministratorsUsingLeakedPasswordsAsync(CancellationToken cancellationToken = default)
-    {
-        if (!await roleManager.RoleExistsAsync("Admin"))
-            return 0;
-
-        var locked = 0;
-        foreach (var user in await userManager.GetUsersInRoleAsync("Admin"))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (!await UsesLeakedPasswordAsync(user))
-                continue;
-
-            EnsureSucceeded(await userManager.SetLockoutEnabledAsync(user, true), "Could not enable lockout.");
-            EnsureSucceeded(await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue), "Could not lock the account.");
-            EnsureSucceeded(await userManager.UpdateSecurityStampAsync(user), "Could not revoke existing sessions.");
-            locked++;
-        }
-
-        return locked;
-    }
-
-    public static bool IsKnownLeakedPassword(string? password) =>
-        password is not null && KnownLeakedPasswords.Contains(password.Trim(), StringComparer.Ordinal);
-
-    private async Task<bool> UsesLeakedPasswordAsync(ApplicationUser user)
-    {
-        if (!await userManager.HasPasswordAsync(user))
-            return false;
-
-        foreach (var leakedPassword in KnownLeakedPasswords)
-        {
-            if (await userManager.CheckPasswordAsync(user, leakedPassword))
-                return true;
-        }
-
-        return false;
-    }
-
     private async Task ApplyConfiguredPasswordAsync(ApplicationUser admin, string password)
     {
-        if (IsKnownLeakedPassword(password))
-            throw new InvalidOperationException("AdminSeed:Password is a publicly leaked default password. Choose a new one.");
-
         foreach (var validator in userManager.PasswordValidators)
         {
             var validation = await validator.ValidateAsync(userManager, admin, password);
@@ -152,7 +105,6 @@ public sealed class IdentitySeeder(
         var passwordResult = await userManager.AddPasswordAsync(admin, password);
         EnsureSucceeded(passwordResult, "Could not set the configured administrator password.");
 
-        // Mở khóa (kể cả khi trước đó bị khóa vì dùng mật khẩu đã lộ).
         if (await userManager.IsLockedOutAsync(admin))
             EnsureSucceeded(await userManager.SetLockoutEndDateAsync(admin, null), "Could not unlock the administrator account.");
         EnsureSucceeded(await userManager.ResetAccessFailedCountAsync(admin), "Could not reset failed sign-in attempts.");

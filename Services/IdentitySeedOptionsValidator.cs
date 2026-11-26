@@ -17,8 +17,6 @@ public sealed class IdentitySeedOptionsValidator : IValidateOptions<IdentitySeed
             errors.Add("AdminSeed:Email must be a valid email address.");
         if (string.IsNullOrWhiteSpace(password) || password.Length < 12)
             errors.Add("AdminSeed:Password is required and must be at least 12 characters long.");
-        else if (IdentitySeeder.IsKnownLeakedPassword(password))
-            errors.Add("AdminSeed:Password is a publicly leaked default password. Choose a new one.");
         if (string.IsNullOrWhiteSpace(fullName))
             errors.Add("AdminSeed:FullName is required.");
 

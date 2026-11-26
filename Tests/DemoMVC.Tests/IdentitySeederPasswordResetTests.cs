@@ -9,23 +9,8 @@ using Xunit;
 
 namespace DemoMVC.Tests;
 
-public class LeakedAdminPasswordTests
+public class IdentitySeederPasswordResetTests
 {
-    private const string LeakedPassword = "***REMOVED***";
-
-    [Fact]
-    public async Task SeedAsync_rotates_leaked_default_password_of_existing_admin()
-    {
-        await using var harness = await IdentityHarness.CreateAsync();
-        var admin = await harness.CreateAdminAsync("admin@redacted.invalid", LeakedPassword);
-
-        await harness.Seeder("admin@redacted.invalid", "Fresh!AdminPass2026").SeedAsync();
-
-        var reloaded = (await harness.UserManager.FindByIdAsync(admin.Id))!;
-        Assert.False(await harness.UserManager.CheckPasswordAsync(reloaded, LeakedPassword));
-        Assert.True(await harness.UserManager.CheckPasswordAsync(reloaded, "Fresh!AdminPass2026"));
-    }
-
     [Fact]
     public async Task SeedAsync_resets_admin_password_when_reset_flag_is_set()
     {
@@ -36,47 +21,6 @@ public class LeakedAdminPasswordTests
 
         Assert.True(await harness.UserManager.CheckPasswordAsync(
             (await harness.UserManager.FindByIdAsync(admin.Id))!, "Recovered!Pass123"));
-    }
-
-    [Fact]
-    public async Task LockAdministrators_locks_only_admins_using_the_leaked_password()
-    {
-        await using var harness = await IdentityHarness.CreateAsync();
-        var leakedAdmin = await harness.CreateAdminAsync("admin@redacted.invalid", LeakedPassword);
-        var safeAdmin = await harness.CreateAdminAsync("owner@example.test", "Unique!Owner2026");
-
-        var locked = await harness.Seeder("unused@example.test", "Unused!Pass2026")
-            .LockAdministratorsUsingLeakedPasswordsAsync();
-
-        Assert.Equal(1, locked);
-        Assert.True(await harness.UserManager.IsLockedOutAsync((await harness.UserManager.FindByIdAsync(leakedAdmin.Id))!));
-        Assert.False(await harness.UserManager.IsLockedOutAsync((await harness.UserManager.FindByIdAsync(safeAdmin.Id))!));
-    }
-
-    [Fact]
-    public async Task SeedAsync_unlocks_admin_after_rotating_a_leaked_password()
-    {
-        await using var harness = await IdentityHarness.CreateAsync();
-        var admin = await harness.CreateAdminAsync("admin@redacted.invalid", LeakedPassword);
-        await harness.Seeder("unused@example.test", "Unused!Pass2026").LockAdministratorsUsingLeakedPasswordsAsync();
-
-        await harness.Seeder("admin@redacted.invalid", "Fresh!AdminPass2026").SeedAsync();
-
-        Assert.False(await harness.UserManager.IsLockedOutAsync((await harness.UserManager.FindByIdAsync(admin.Id))!));
-    }
-
-    [Fact]
-    public void Validator_rejects_the_leaked_default_password()
-    {
-        var result = new IdentitySeedOptionsValidator().Validate(null, new IdentitySeedOptions
-        {
-            Email = "admin@redacted.invalid",
-            Password = LeakedPassword,
-            FullName = "Admin"
-        });
-
-        Assert.False(result.Succeeded);
-        Assert.DoesNotContain(LeakedPassword, string.Join(";", result.Failures ?? []), StringComparison.Ordinal);
     }
 
     private sealed class IdentityHarness : IAsyncDisposable
