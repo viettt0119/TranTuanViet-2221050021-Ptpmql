@@ -113,6 +113,15 @@ app.Logger.LogInformation(
     "Data Protection keys: {KeyLocation}",
     dataProtectionKeysPath ?? "default per-user key ring (configure DataProtection:KeysPath on shared hosting)");
 
+// Thiếu PublicBaseUrl thì liên kết trong email được tạo theo header Host của request, có thể bị giả mạo.
+if (!app.Environment.IsDevelopment() &&
+    string.IsNullOrWhiteSpace(app.Configuration[$"{EmailSettings.SectionName}:{nameof(EmailSettings.PublicBaseUrl)}"]))
+{
+    app.Logger.LogWarning(
+        "Email:PublicBaseUrl is not configured, so links in account emails follow the request Host header, which can be spoofed. " +
+        "Set Email__PublicBaseUrl to the public address of the site.");
+}
+
 // Configure the HTTP request pipeline.
 OfficeOpenXml.ExcelPackage.License.SetNonCommercialOrganization("DemoMVC");
 
